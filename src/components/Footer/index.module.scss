@@ -1,0 +1,403 @@
+.footer {
+  margin-top: 80px;
+
+  color: #ffffff;
+
+  background:
+    radial-gradient(
+      circle at 10% 20%,
+      rgba(168, 50, 104, 0.16),
+      transparent 30%
+    ),
+    #171316;
+}
+
+.container {
+  width: min(100% - 40px, 1280px);
+  margin: 0 auto;
+}
+
+/* ========================================
+   MAIN FOOTER
+======================================== */
+
+.footerMain {
+  display: grid;
+
+  grid-template-columns:
+    minmax(280px, 2fr)
+    repeat(3, minmax(130px, 1fr));
+
+  gap: 70px;
+
+  padding: 70px 0 60px;
+}
+
+/* ========================================
+   BRAND
+======================================== */
+
+.brandSection {
+  max-width: 420px;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+
+  color: #ffffff;
+
+  text-decoration: none;
+}
+
+.logoIcon {
+  width: 44px;
+  height: 44px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 14px;
+
+  color: #ffffff;
+  font-size: 20px;
+
+  background: linear-gradient(
+    135deg,
+    #a83268,
+    #d96a91
+  );
+
+  box-shadow:
+    0 10px 30px rgba(168, 50, 104, 0.25);
+}
+
+.logoText {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+.logoName {
+  font-size: 20px;
+  font-weight: 800;
+
+  letter-spacing: -0.4px;
+}
+
+.logoTagline {
+  color: #aaa0a5;
+
+  font-size: 10px;
+  font-weight: 500;
+
+  white-space: nowrap;
+}
+
+.description {
+  max-width: 400px;
+
+  margin-top: 22px;
+
+  color: #aaa0a5;
+
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+/* ========================================
+   EMAIL
+======================================== */
+
+.emailLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  margin-top: 24px;
+
+  color: #d7d0d4;
+
+  font-size: 13px;
+  font-weight: 500;
+
+  text-decoration: none;
+
+  transition:
+    color 0.2s ease;
+}
+
+.emailLink:hover {
+  color: #ffffff;
+}
+
+.emailIcon {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 9px;
+
+  color: #d96a91;
+
+  background: rgba(168, 50, 104, 0.12);
+}
+
+.emailIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ========================================
+   LINK COLUMNS
+======================================== */
+
+.linkColumn h3 {
+  margin: 0 0 20px;
+
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.linkColumn ul {
+  display: flex;
+  flex-direction: column;
+
+  gap: 13px;
+
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+.linkColumn li {
+  margin: 0;
+}
+
+.linkColumn a {
+  color: #aaa0a5;
+
+  font-size: 13px;
+  font-weight: 500;
+
+  text-decoration: none;
+
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.linkColumn a:hover {
+  color: #ffffff;
+
+  transform: translateX(2px);
+}
+
+/* ========================================
+   BOTTOM
+======================================== */
+
+.footerBottom {
+  min-height: 76px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.copyright,
+.madeWith {
+  margin: 0;
+
+  color: #82787e;
+
+  font-size: 12px;
+}
+
+.madeWith {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.madeWith svg {
+  width: 13px;
+  height: 13px;
+
+  color: #d96a91;
+}
+
+/* ========================================
+   SOCIAL
+======================================== */
+
+.socialLinks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.socialLink {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+
+  color: #aaa0a5;
+
+  background: rgba(255, 255, 255, 0.03);
+
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.socialLink svg {
+  width: 15px;
+  height: 15px;
+}
+
+.socialLink:hover {
+  color: #ffffff;
+
+  background: rgba(168, 50, 104, 0.25);
+
+  border-color: rgba(217, 106, 145, 0.3);
+
+  transform: translateY(-2px);
+}
+
+/* ========================================
+   TABLET
+======================================== */
+
+@media (max-width: 950px) {
+  .footerMain {
+    grid-template-columns: 2fr 1fr 1fr;
+
+    gap: 45px;
+  }
+
+  .brandSection {
+    grid-column: 1 / -1;
+    max-width: 650px;
+  }
+
+  .footerBottom {
+    flex-wrap: wrap;
+
+    padding: 20px 0;
+  }
+}
+
+/* ========================================
+   MOBILE
+======================================== */
+
+@media (max-width: 650px) {
+  .container {
+    width: min(100% - 28px, 1280px);
+  }
+
+  .footer {
+    margin-top: 60px;
+  }
+
+  .footerMain {
+    grid-template-columns: 1fr 1fr;
+
+    gap: 40px 30px;
+
+    padding: 50px 0 40px;
+  }
+
+  .brandSection {
+    grid-column: 1 / -1;
+  }
+
+  .description {
+    max-width: 100%;
+
+    font-size: 13px;
+  }
+
+  .footerBottom {
+    flex-direction: column;
+
+    justify-content: center;
+
+    text-align: center;
+
+    gap: 16px;
+
+    padding: 24px 0 28px;
+  }
+
+  .socialLinks {
+    order: -1;
+  }
+}
+
+/* ========================================
+   SMALL MOBILE
+======================================== */
+
+@media (max-width: 400px) {
+  .container {
+    width: min(100% - 20px, 1280px);
+  }
+
+  .footerMain {
+    grid-template-columns: 1fr;
+
+    gap: 32px;
+  }
+
+  .linkColumn {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+    padding-bottom: 25px;
+  }
+
+  .linkColumn:last-child {
+    border-bottom: 0;
+
+    padding-bottom: 0;
+  }
+
+  .logoTagline {
+    display: none;
+  }
+}
+
+/* ========================================
+   REDUCED MOTION
+======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .emailLink,
+  .linkColumn a,
+  .socialLink {
+    transition: none;
+  }
+}

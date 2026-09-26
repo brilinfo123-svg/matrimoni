@@ -1,0 +1,816 @@
+.page {
+    position: relative;
+    min-height: calc(100vh - 76px);
+    padding: 48px 0 80px;
+    overflow: hidden;
+    background:
+    radial-gradient(
+    circle at 8% 4%,
+    rgba(168, 50, 104, 0.07),
+    transparent 25%
+    ),
+    #faf9fa;
+    }
+    
+    .backgroundGlow,
+    .backgroundGlowTwo {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(2px);
+    }
+    
+    .backgroundGlow {
+    width: 420px;
+    height: 420px;
+    top: -220px;
+    right: -160px;
+    background: rgba(217, 106, 145, 0.09);
+    }
+    
+    .backgroundGlowTwo {
+    width: 320px;
+    height: 320px;
+    bottom: 10%;
+    left: -200px;
+    background: rgba(168, 50, 104, 0.05);
+    }
+    
+    .container {
+    position: relative;
+    z-index: 1;
+    width: min(100% - 40px, 1180px);
+    margin: 0 auto;
+    }
+    
+    .pageHeader {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 28px;
+    }
+    
+    .eyebrow {
+    display: block;
+    margin-bottom: 8px;
+    color: #a83268;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    }
+    
+    .pageHeader h1 {
+    color: #222;
+    font-size: clamp(30px, 4vw, 42px);
+    line-height: 1.1;
+    letter-spacing: -0.035em;
+    }
+    
+    .pageHeader p {
+    max-width: 620px;
+    margin-top: 10px;
+    color: #777;
+    font-size: 15px;
+    line-height: 1.7;
+    }
+    
+    .editButton,
+    .sideButton,
+    .preferenceButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 800;
+    transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+    }
+    
+    .editButton {
+    min-height: 46px;
+    padding: 0 18px;
+    color: #fff;
+    background: linear-gradient(
+    135deg,
+    #a83268,
+    #c24e7e
+    );
+    box-shadow: 0 12px 28px rgba(168, 50, 104, 0.18);
+    }
+    
+    .editButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 34px rgba(168, 50, 104, 0.24);
+    }
+    
+    .profileHero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    padding: 30px;
+    margin-bottom: 26px;
+    border: 1px solid rgba(168, 50, 104, 0.1);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 18px 55px rgba(43, 31, 37, 0.07);
+    backdrop-filter: blur(12px);
+    }
+    
+    .profileMain {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    min-width: 0;
+    }
+    
+    .photoWrapper {
+    position: relative;
+    flex: 0 0 auto;
+    }
+    
+    .profilePhoto {
+    display: grid;
+    width: 116px;
+    height: 116px;
+    place-items: center;
+    border: 5px solid #fff;
+    border-radius: 50%;
+    background:
+    radial-gradient(
+    circle at 30% 20%,
+    #f8d5e1,
+    #e8a8bd 48%,
+    #a83268 100%
+    );
+    box-shadow:
+    0 14px 35px rgba(168, 50, 104, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+    }
+    
+    .profilePhoto span {
+    color: #fff;
+    font-size: 30px;
+    font-weight: 900;
+    letter-spacing: -0.05em;
+    }
+    
+    .verifiedBadge {
+    position: absolute;
+    right: 1px;
+    bottom: 5px;
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    color: #fff;
+    background: #a83268;
+    box-shadow: 0 5px 15px rgba(168, 50, 104, 0.22);
+    }
+    
+    .onlineDot {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    width: 13px;
+    height: 13px;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    background: #42a66a;
+    }
+    
+    .profileIdentity {
+    min-width: 0;
+    }
+    
+    .nameRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    }
+    
+    .nameRow h2 {
+    color: #222;
+    font-size: 28px;
+    letter-spacing: -0.03em;
+    }
+    
+    .verifiedText {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    color: #a83268;
+    background: #fff2f7;
+    font-size: 11px;
+    font-weight: 800;
+    }
+    
+    .profileMeta {
+    margin-top: 8px;
+    color: #555;
+    font-size: 15px;
+    font-weight: 700;
+    }
+    
+    .profileMeta span {
+    margin: 0 7px;
+    color: #bbb;
+    }
+    
+    .location {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    color: #888;
+    font-size: 14px;
+    }
+    
+    .location svg {
+    color: #a83268;
+    }
+    
+    .profileTags {
+    margin-top: 16px;
+    }
+    
+    .profileTags span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 11px;
+    border: 1px solid #f1dce5;
+    border-radius: 999px;
+    color: #8e3a60;
+    background: #fff8fb;
+    font-size: 12px;
+    font-weight: 700;
+    }
+    
+    .completion {
+    width: 270px;
+    flex: 0 0 auto;
+    padding: 18px;
+    border: 1px solid #f0e5ea;
+    border-radius: 18px;
+    background: #fffafd;
+    }
+    
+    .completionTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    }
+    
+    .completionTop div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    }
+    
+    .completionTop div span {
+    color: #777;
+    font-size: 12px;
+    font-weight: 700;
+    }
+    
+    .completionTop strong {
+    color: #a83268;
+    font-size: 18px;
+    }
+    
+    .completionIcon {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 10px;
+    color: #a83268;
+    background: #fff0f6;
+    }
+    
+    .progressTrack {
+    height: 7px;
+    margin-top: 14px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #f0e7eb;
+    }
+    
+    .progressBar {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(
+    90deg,
+    #a83268,
+    #df7fa1
+    );
+    }
+    
+    .completeLink {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 13px;
+    color: #a83268;
+    font-size: 12px;
+    font-weight: 800;
+    }
+    
+    .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+    gap: 24px;
+    }
+    
+    .mainContent {
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+    }
+    
+    .card {
+    padding: 25px;
+    border: 1px solid #eee8eb;
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 12px 35px rgba(43, 31, 37, 0.045);
+    }
+    
+    .sectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 22px;
+    }
+    
+    .sectionTitle {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    }
+    
+    .sectionIcon {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 11px;
+    color: #a83268;
+    background: #fff1f6;
+    }
+    
+    .sectionTitle h2 {
+    color: #272326;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+    }
+    
+    .editLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #a83268;
+    font-size: 13px;
+    font-weight: 800;
+    }
+    
+    .editLink:hover {
+    text-decoration: underline;
+    }
+    
+    .detailsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 30px;
+    }
+    
+    .detailItem {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #f1edef;
+    }
+    
+    .detailItem span {
+    color: #999;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    }
+    
+    .detailItem strong {
+    overflow: hidden;
+    color: #333;
+    font-size: 14px;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    }
+    
+    .aboutText {
+    max-width: 850px;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.85;
+    }
+    
+    .subsection h3 {
+    margin-bottom: 16px;
+    color: #555;
+    font-size: 13px;
+    font-weight: 800;
+    }
+    
+    .divider {
+    height: 1px;
+    margin: 22px 0;
+    background: #f0ecee;
+    }
+    
+    .interests {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    }
+    
+    .interests span {
+    padding: 9px 13px;
+    border: 1px solid #eedde5;
+    border-radius: 999px;
+    color: #7e3658;
+    background: #fff8fb;
+    font-size: 12px;
+    font-weight: 700;
+    }
+    
+    .preferenceIntro {
+    margin: -8px 0 20px;
+    color: #888;
+    font-size: 13px;
+    line-height: 1.6;
+    }
+    
+    .preferenceButton {
+    min-height: 44px;
+    margin-top: 20px;
+    padding: 0 15px;
+    border: 1px solid #ead9e1;
+    color: #a83268;
+    background: #fff8fb;
+    }
+    
+    .preferenceButton:hover {
+    background: #fff1f6;
+    transform: translateY(-1px);
+    }
+    
+    .sidebar {
+    display: grid;
+    gap: 18px;
+    position: sticky;
+    top: 100px;
+    }
+    
+    .sideCard {
+    position: relative;
+    padding: 25px;
+    overflow: hidden;
+    border: 1px solid rgba(168, 50, 104, 0.12);
+    border-radius: 20px;
+    background:
+    radial-gradient(
+    circle at 100% 0,
+    rgba(217, 106, 145, 0.13),
+    transparent 45%
+    ),
+    #fff;
+    box-shadow: 0 15px 40px rgba(43, 31, 37, 0.06);
+    }
+    
+    .sideIcon {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    place-items: center;
+    margin-bottom: 18px;
+    border-radius: 14px;
+    color: #fff;
+    background: linear-gradient(
+    135deg,
+    #a83268,
+    #d96a91
+    );
+    box-shadow: 0 10px 25px rgba(168, 50, 104, 0.18);
+    }
+    
+    .sideEyebrow {
+    color: #a83268;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    }
+    
+    .sideCard h3 {
+    margin-top: 8px;
+    color: #282327;
+    font-size: 20px;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+    }
+    
+    .sideCard > p {
+    margin-top: 10px;
+    color: #777;
+    font-size: 13px;
+    line-height: 1.7;
+    }
+    
+    .verificationList {
+    display: grid;
+    gap: 13px;
+    margin: 22px 0;
+    padding: 16px;
+    border: 1px solid #f0e7eb;
+    border-radius: 14px;
+    background: #fffafd;
+    }
+    
+    .verificationItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    }
+    
+    .verificationItem > span {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    }
+    
+    .done {
+    color: #fff;
+    background: #a83268;
+    }
+    
+    .pending {
+    color: #a83268;
+    background: #fff0f5;
+    }
+    
+    .verificationItem div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    }
+    
+    .verificationItem strong {
+    color: #333;
+    font-size: 12px;
+    }
+    
+    .verificationItem div span {
+    color: #999;
+    font-size: 11px;
+    }
+    
+    .sideButton {
+    width: 100%;
+    min-height: 44px;
+    padding: 0 14px;
+    color: #fff;
+    background: #a83268;
+    }
+    
+    .sideButton:hover {
+    background: #8f2858;
+    transform: translateY(-1px);
+    }
+    
+    .privacyCard {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+    padding: 18px;
+    border: 1px solid #ece5e8;
+    border-radius: 18px;
+    background: #fff;
+    }
+    
+    .privacyIcon {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border-radius: 11px;
+    color: #a83268;
+    background: #fff1f6;
+    }
+    
+    .privacyCard strong {
+    display: block;
+    color: #333;
+    font-size: 13px;
+    }
+    
+    .privacyCard p {
+    margin-top: 5px;
+    color: #888;
+    font-size: 12px;
+    line-height: 1.55;
+    }
+    
+    .privacyCard > a {
+    grid-column: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 4px;
+    color: #a83268;
+    font-size: 12px;
+    font-weight: 800;
+    }
+    
+    @media (max-width: 1050px) {
+    .layout {
+    grid-template-columns: minmax(0, 1fr) 290px;
+    }
+    
+    .profileHero {
+    align-items: flex-start;
+    }
+    
+    .completion {
+    width: 240px;
+    }
+    }
+    
+    @media (max-width: 850px) {
+    .page {
+    padding: 35px 0 60px;
+    }
+    
+    .pageHeader {
+    align-items: flex-start;
+    }
+    
+    .profileHero {
+    flex-direction: column;
+    }
+    
+    .completion {
+    width: 100%;
+    }
+    
+    .layout {
+    grid-template-columns: 1fr;
+    }
+    
+    .sidebar {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    }
+    
+    @media (max-width: 600px) {
+    .container {
+    width: min(100% - 28px, 1180px);
+    }
+    
+    .pageHeader {
+    flex-direction: column;
+    gap: 18px;
+    }
+    
+    .editButton {
+    width: 100%;
+    }
+    
+    .profileHero {
+    padding: 22px;
+    border-radius: 20px;
+    }
+    
+    .profileMain {
+    align-items: flex-start;
+    }
+    
+    .profilePhoto {
+    width: 88px;
+    height: 88px;
+    }
+    
+    .profilePhoto span {
+    font-size: 24px;
+    }
+    
+    .verifiedBadge {
+    width: 27px;
+    height: 27px;
+    }
+    
+    .nameRow h2 {
+    font-size: 23px;
+    }
+    
+    .profileTags span {
+    max-width: 100%;
+    line-height: 1.4;
+    }
+    
+    .card {
+    padding: 20px;
+    border-radius: 18px;
+    }
+    
+    .detailsGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    }
+    
+    .sidebar {
+    grid-template-columns: 1fr;
+    }
+    }
+    
+    @media (max-width: 400px) {
+    .container {
+    width: min(100% - 20px, 1180px);
+    }
+    
+    .profileHero {
+    padding: 18px;
+    }
+    
+    .profileMain {
+    gap: 14px;
+    }
+    
+    .profilePhoto {
+    width: 76px;
+    height: 76px;
+    }
+    
+    .profilePhoto span {
+    font-size: 20px;
+    }
+    
+    .nameRow {
+    gap: 6px;
+    }
+    
+    .nameRow h2 {
+    font-size: 20px;
+    }
+    
+    .profileMeta {
+    font-size: 13px;
+    }
+    
+    .profileTags span {
+    font-size: 11px;
+    }
+    
+    .card {
+    padding: 17px;
+    }
+    
+    .sectionTitle h2 {
+    font-size: 16px;
+    }
+    
+    .editLink span {
+    display: none;
+    }
+    }
+    
+    @media (prefers-reduced-motion: reduce) {
+    .editButton,
+    .preferenceButton,
+    .sideButton {
+    transition: none;
+    }
+    }
+    

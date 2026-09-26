@@ -1,0 +1,751 @@
+.section {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  padding: 110px 0 80px;
+  background: #ffffff;
+}
+
+.container {
+  position: relative;
+  z-index: 2;
+  width: min(100% - 40px, 1280px);
+  margin: 0 auto;
+}
+
+/* --------------------------------
+   Background
+--------------------------------- */
+
+.backgroundGlow,
+.backgroundGlowTwo {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  filter: blur(10px);
+}
+
+.backgroundGlow {
+  width: 550px;
+  height: 550px;
+  top: 20px;
+  left: -300px;
+  background: rgba(168, 50, 104, 0.06);
+}
+
+.backgroundGlowTwo {
+  width: 500px;
+  height: 500px;
+  right: -280px;
+  bottom: -220px;
+  background: rgba(217, 106, 145, 0.055);
+}
+
+/* --------------------------------
+   Main Card
+--------------------------------- */
+
+.card {
+  position: relative;
+  min-height: 500px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(330px, 0.75fr);
+  align-items: center;
+  overflow: hidden;
+  padding: 75px 80px;
+  border-radius: 38px;
+  background:
+    radial-gradient(
+      circle at 78% 45%,
+      rgba(217, 106, 145, 0.19),
+      transparent 30%
+    ),
+    linear-gradient(
+      135deg,
+      #fff8fa 0%,
+      #fff1f5 48%,
+      #fce7ee 100%
+    );
+  box-shadow:
+    0 35px 90px rgba(62, 25, 43, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.decorativeCircleOne,
+.decorativeCircleTwo {
+  position: absolute;
+  border: 1px solid rgba(168, 50, 104, 0.08);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.decorativeCircleOne {
+  width: 480px;
+  height: 480px;
+  right: -170px;
+  top: -180px;
+}
+
+.decorativeCircleTwo {
+  width: 340px;
+  height: 340px;
+  right: -80px;
+  bottom: -190px;
+}
+
+/* --------------------------------
+   Content
+--------------------------------- */
+
+.content {
+  position: relative;
+  z-index: 5;
+  max-width: 690px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 20px;
+  color: #a83268;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.eyebrowIcon {
+  width: 31px;
+  height: 31px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(168, 50, 104, 0.12);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.eyebrowIcon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.title {
+  max-width: 680px;
+  color: #282126;
+  font-size: clamp(40px, 4.4vw, 64px);
+  font-weight: 780;
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+}
+
+.title span {
+  display: block;
+  color: #a83268;
+}
+
+.description {
+  max-width: 610px;
+  margin-top: 23px;
+  color: #76686f;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+/* --------------------------------
+   Actions
+--------------------------------- */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: 32px;
+}
+
+.primaryButton,
+.secondaryButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border-radius: 15px;
+  font-size: 13px;
+  font-weight: 750;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    background 0.25s ease;
+}
+
+.primaryButton {
+  gap: 9px;
+  padding: 0 20px;
+  color: #ffffff;
+  background: #a83268;
+  box-shadow: 0 12px 28px rgba(168, 50, 104, 0.22);
+}
+
+.primaryButton svg:first-child {
+  width: 17px;
+  height: 17px;
+}
+
+.primaryButton svg:last-child {
+  width: 15px;
+  height: 15px;
+  transition: transform 0.25s ease;
+}
+
+.primaryButton:hover {
+  transform: translateY(-2px);
+  background: #922a59;
+  box-shadow: 0 16px 32px rgba(168, 50, 104, 0.27);
+}
+
+.primaryButton:hover svg:last-child {
+  transform: translateX(3px);
+}
+
+.secondaryButton {
+  padding: 0 20px;
+  border: 1px solid rgba(168, 50, 104, 0.15);
+  color: #a83268;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.secondaryButton:hover {
+  transform: translateY(-2px);
+  background: #ffffff;
+  box-shadow: 0 10px 25px rgba(168, 50, 104, 0.08);
+}
+
+/* --------------------------------
+   Trust Row
+--------------------------------- */
+
+.trustRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  margin-top: 29px;
+}
+
+.trustItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #8a7c83;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.checkIcon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 18px;
+  border-radius: 50%;
+  color: #a83268;
+  background: rgba(168, 50, 104, 0.08);
+}
+
+.checkIcon svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* --------------------------------
+   Visual
+--------------------------------- */
+
+.visual {
+  position: relative;
+  z-index: 2;
+  min-height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.heartGlow {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(168, 50, 104, 0.19) 0%,
+    rgba(217, 106, 145, 0.11) 38%,
+    rgba(255, 255, 255, 0) 72%
+  );
+}
+
+.heartOrb {
+  position: relative;
+  z-index: 2;
+  width: 170px;
+  height: 170px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(168, 50, 104, 0.14);
+  border-radius: 50%;
+  color: #a83268;
+  background:
+    radial-gradient(
+      circle at 35% 30%,
+      rgba(255, 255, 255, 0.95),
+      rgba(255, 235, 242, 0.82)
+    );
+  box-shadow:
+    0 30px 60px rgba(168, 50, 104, 0.16),
+    inset 0 0 35px rgba(255, 255, 255, 0.75);
+}
+
+.heartOrb::before,
+.heartOrb::after {
+  content: "";
+  position: absolute;
+  border: 1px solid rgba(168, 50, 104, 0.1);
+  border-radius: 50%;
+}
+
+.heartOrb::before {
+  width: 215px;
+  height: 215px;
+}
+
+.heartOrb::after {
+  width: 270px;
+  height: 270px;
+  border-color: rgba(168, 50, 104, 0.06);
+}
+
+.heartOrb svg {
+  position: relative;
+  z-index: 2;
+  width: 58px;
+  height: 58px;
+  stroke-width: 1.4;
+}
+
+/* --------------------------------
+   Floating Cards
+--------------------------------- */
+
+.floatingCard {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 145px;
+  padding: 12px 14px;
+  border: 1px solid rgba(168, 50, 104, 0.1);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 15px 35px rgba(62, 25, 43, 0.09);
+  backdrop-filter: blur(14px);
+}
+
+.cardOne {
+  top: 42px;
+  right: 10px;
+}
+
+.cardTwo {
+  bottom: 35px;
+  left: 15px;
+}
+
+.floatingIcon {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+  border-radius: 10px;
+  color: #a83268;
+  background: #fff0f5;
+}
+
+.floatingIcon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.floatingCard div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.floatingCard strong {
+  color: #30292e;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.floatingCard span {
+  color: #968990;
+  font-size: 9px;
+}
+
+/* --------------------------------
+   Sparkles
+--------------------------------- */
+
+.sparkleOne,
+.sparkleTwo,
+.sparkleThree {
+  position: absolute;
+  z-index: 3;
+  border-radius: 50%;
+  background: #a83268;
+}
+
+.sparkleOne {
+  width: 7px;
+  height: 7px;
+  top: 100px;
+  left: 45px;
+}
+
+.sparkleTwo {
+  width: 5px;
+  height: 5px;
+  right: 70px;
+  bottom: 110px;
+}
+
+.sparkleThree {
+  width: 4px;
+  height: 4px;
+  top: 175px;
+  right: 25px;
+}
+
+/* --------------------------------
+   Bottom Note
+--------------------------------- */
+
+.bottomNote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 700px;
+  margin: 25px auto 0;
+  color: #95888e;
+  text-align: center;
+}
+
+.noteIcon {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  border-radius: 8px;
+  color: #a83268;
+  background: #fff5f8;
+}
+
+.noteIcon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.bottomNote p {
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+/* --------------------------------
+   1100px
+--------------------------------- */
+
+@media (max-width: 1100px) {
+  .card {
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+    gap: 30px;
+    padding: 65px 55px;
+  }
+
+  .visual {
+    min-height: 330px;
+  }
+
+  .heartOrb {
+    width: 145px;
+    height: 145px;
+  }
+
+  .heartOrb svg {
+    width: 50px;
+    height: 50px;
+  }
+
+  .heartOrb::before {
+    width: 190px;
+    height: 190px;
+  }
+
+  .heartOrb::after {
+    width: 235px;
+    height: 235px;
+  }
+}
+
+/* --------------------------------
+   900px
+--------------------------------- */
+
+@media (max-width: 900px) {
+  .section {
+    padding: 85px 0 65px;
+  }
+
+  .card {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 65px 55px 45px;
+  }
+
+  .content {
+    max-width: 720px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .eyebrow,
+  .actions,
+  .trustRow {
+    justify-content: center;
+  }
+
+  .description {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .visual {
+    min-height: 340px;
+    max-width: 500px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .cardOne {
+    right: 0;
+  }
+
+  .cardTwo {
+    left: 0;
+  }
+}
+
+/* --------------------------------
+   650px
+--------------------------------- */
+
+@media (max-width: 650px) {
+  .section {
+    padding: 70px 0 55px;
+  }
+
+  .container {
+    width: min(100% - 28px, 1280px);
+  }
+
+  .card {
+    min-height: auto;
+    padding: 48px 24px 30px;
+    border-radius: 28px;
+  }
+
+  .title {
+    font-size: clamp(36px, 9.5vw, 49px);
+  }
+
+  .description {
+    margin-top: 19px;
+    font-size: 13px;
+    line-height: 1.75;
+  }
+
+  .actions {
+    flex-direction: column;
+    width: 100%;
+    margin-top: 27px;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    width: 100%;
+    min-height: 50px;
+  }
+
+  .trustRow {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+    width: fit-content;
+    margin: 25px auto 0;
+    text-align: left;
+  }
+
+  .visual {
+    min-height: 320px;
+  }
+
+  .heartOrb {
+    width: 125px;
+    height: 125px;
+  }
+
+  .heartOrb svg {
+    width: 45px;
+    height: 45px;
+  }
+
+  .heartOrb::before {
+    width: 165px;
+    height: 165px;
+  }
+
+  .heartOrb::after {
+    width: 205px;
+    height: 205px;
+  }
+
+  .heartGlow {
+    width: 250px;
+    height: 250px;
+  }
+
+  .cardOne {
+    top: 15px;
+    right: -3px;
+  }
+
+  .cardTwo {
+    bottom: 12px;
+    left: -3px;
+  }
+
+  .bottomNote {
+    align-items: flex-start;
+  }
+}
+
+/* --------------------------------
+   430px
+--------------------------------- */
+
+@media (max-width: 430px) {
+  .container {
+    width: min(100% - 20px, 1280px);
+  }
+
+  .card {
+    padding: 40px 18px 25px;
+    border-radius: 24px;
+  }
+
+  .eyebrow {
+    margin-bottom: 16px;
+    font-size: 10px;
+  }
+
+  .eyebrowIcon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .title {
+    font-size: 34px;
+  }
+
+  .visual {
+    min-height: 285px;
+  }
+
+  .heartOrb {
+    width: 105px;
+    height: 105px;
+  }
+
+  .heartOrb svg {
+    width: 38px;
+    height: 38px;
+  }
+
+  .heartOrb::before {
+    width: 140px;
+    height: 140px;
+  }
+
+  .heartOrb::after {
+    width: 175px;
+    height: 175px;
+  }
+
+  .heartGlow {
+    width: 220px;
+    height: 220px;
+  }
+
+  .floatingCard {
+    min-width: 130px;
+    padding: 9px 10px;
+  }
+
+  .floatingIcon {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
+  .floatingCard strong {
+    font-size: 10px;
+  }
+
+  .floatingCard span {
+    font-size: 8px;
+  }
+
+  .cardOne {
+    right: -8px;
+  }
+
+  .cardTwo {
+    left: -8px;
+  }
+
+  .bottomNote {
+    margin-top: 18px;
+  }
+
+  .bottomNote p {
+    font-size: 9px;
+  }
+}
+
+/* --------------------------------
+   Reduced Motion
+--------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .primaryButton,
+  .secondaryButton,
+  .primaryButton svg:last-child {
+    transition: none;
+  }
+}

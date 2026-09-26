@@ -1,0 +1,50 @@
+.loading {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+  }
+  
+  .spinner {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid #f6dce5;
+    border-top-color: #c84f73;
+    border-radius: 50%;
+    animation: rotate 0.8s linear infinite;
+  
+    svg {
+      width: 18px;
+      height: 18px;
+      color: #c84f73;
+      animation: heartPulse 0.8s ease-in-out infinite;
+    }
+  }
+  
+  @keyframes rotate {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  @keyframes heartPulse {
+    0%,
+    100% {
+      transform: scale(1);
+    }
+  
+    50% {
+      transform: scale(1.12);
+    }
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    .spinner,
+    .spinner svg {
+      animation: none;
+    }
+  }
