@@ -32,7 +32,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         ) {
           return null;
         }
-
+       
         const email = String(credentials.email)
           .trim()
           .toLowerCase();
