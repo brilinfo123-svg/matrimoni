@@ -132,7 +132,7 @@ return ( <div className={styles.page}> <div className={styles.backgroundGlow} />
       </div>
 
       <Link
-        href="/dashboard/profile/edit"
+        href="/edit"
         className={styles.editButton}
       >
         <FiEdit3 aria-hidden="true" />
@@ -211,7 +211,7 @@ return ( <div className={styles.page}> <div className={styles.backgroundGlow} />
         </div>
 
         <Link
-          href="/dashboard/profile/edit"
+          href="/edit"
           className={styles.completeLink}
         >
           Complete your profile

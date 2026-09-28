@@ -1,5 +1,9 @@
-import { auth } from "@/auth";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
+import {
+  AUTH_COOKIE_NAME,
+  verifyAuthToken,
+} from "@/lib/auth";
 
 const protectedRoutes = [
   "/dashboard",
@@ -11,20 +15,44 @@ const protectedRoutes = [
   "/settings",
 ];
 
-export const proxy = auth((req) => {
+export async function proxy(
+  req: NextRequest,
+) {
   const pathname = req.nextUrl.pathname;
-  const isLoggedIn = !!req.auth;
 
-  const isProtectedRoute = protectedRoutes.some(
-    (route) =>
-      pathname === route ||
-      pathname.startsWith(`${route}/`),
-  );
+  const isProtectedRoute =
+    protectedRoutes.some(
+      (route) =>
+        pathname === route ||
+        pathname.startsWith(`${route}/`),
+    );
 
-  if (isProtectedRoute && !isLoggedIn) {
+  /*
+   * Public route hai to directly allow karo.
+   */
+  if (!isProtectedRoute) {
+    return NextResponse.next();
+  }
+
+  /*
+   * Custom JWT cookie read karo.
+   */
+  const token = req.cookies.get(
+    AUTH_COOKIE_NAME,
+  )?.value;
+
+  /*
+   * Cookie nahi hai = user logged out.
+   */
+  if (!token) {
+    console.log(
+      "PROXY: No auth cookie for:",
+      pathname,
+    );
+
     const loginUrl = new URL(
       "/login",
-      req.nextUrl.origin,
+      req.url,
     );
 
     loginUrl.searchParams.set(
@@ -32,11 +60,61 @@ export const proxy = auth((req) => {
       pathname + req.nextUrl.search,
     );
 
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(
+      loginUrl,
+    );
   }
 
+  /*
+   * JWT verify karo.
+   */
+  const session =
+    await verifyAuthToken(token);
+
+  /*
+   * Invalid / expired JWT.
+   */
+  if (!session) {
+    console.log(
+      "PROXY: Invalid or expired session for:",
+      pathname,
+    );
+
+    const loginUrl = new URL(
+      "/login",
+      req.url,
+    );
+
+    loginUrl.searchParams.set(
+      "callbackUrl",
+      pathname + req.nextUrl.search,
+    );
+
+    /*
+     * Invalid cookie remove kar do.
+     */
+    const response =
+      NextResponse.redirect(loginUrl);
+
+    response.cookies.delete(
+      AUTH_COOKIE_NAME,
+    );
+
+    return response;
+  }
+
+  /*
+   * User authenticated hai.
+   */
+  console.log(
+    "PROXY: Authenticated user:",
+    session.userId,
+    "Route:",
+    pathname,
+  );
+
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: [

@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-
+import { useMemo, useState } from "react";
 import {
   FiCheck,
   FiChevronDown,
@@ -28,7 +27,6 @@ type MatchProfile = {
   education: string;
   compatibility: number;
   initials: string;
-  photo?: string | null;
   verified: boolean;
   online: boolean;
   height: string;
@@ -38,141 +36,163 @@ type MatchProfile = {
   about: string;
 };
 
+const matchProfiles: MatchProfile[] = [
+  {
+    id: "ananya-sharma",
+    name: "Ananya Sharma",
+    age: 28,
+    location: "Toronto, Canada",
+    profession: "Product Designer",
+    education: "Master's Degree",
+    compatibility: 94,
+    initials: "AS",
+    verified: true,
+    online: true,
+    height: "5'5\"",
+    maritalStatus: "Never married",
+    phone: "+14165550123",
+    newMatch: true,
+    about:
+      "Creative, positive and family-oriented. Enjoys meaningful conversations, travel, photography and discovering new places.",
+  },
+  {
+    id: "priya-mehta",
+    name: "Priya Mehta",
+    age: 27,
+    location: "Vancouver, Canada",
+    profession: "Software Engineer",
+    education: "Bachelor's Degree",
+    compatibility: 91,
+    initials: "PM",
+    verified: true,
+    online: false,
+    height: "5'4\"",
+    maritalStatus: "Never married",
+    phone: "+16045550123",
+    newMatch: true,
+    about:
+      "Calm, ambitious and caring. Loves technology, books, weekend trips and spending quality time with family.",
+  },
+  {
+    id: "meera-kapoor",
+    name: "Meera Kapoor",
+    age: 29,
+    location: "Brampton, Canada",
+    profession: "Marketing Manager",
+    education: "Master's Degree",
+    compatibility: 88,
+    initials: "MK",
+    verified: true,
+    online: true,
+    height: "5'6\"",
+    maritalStatus: "Never married",
+    phone: "+19055550123",
+    newMatch: false,
+    about:
+      "Warm, outgoing and thoughtful. Enjoys music, cooking, fitness and exploring different cultures.",
+  },
+  {
+    id: "riya-patel",
+    name: "Riya Patel",
+    age: 26,
+    location: "Mississauga, Canada",
+    profession: "Financial Analyst",
+    education: "Bachelor's Degree",
+    compatibility: 86,
+    initials: "RP",
+    verified: false,
+    online: false,
+    height: "5'3\"",
+    maritalStatus: "Never married",
+    phone: "+19055550124",
+    newMatch: true,
+    about:
+      "Friendly and practical with a positive outlook. Enjoys movies, travel, fitness and spending time with loved ones.",
+  },
+  {
+    id: "neha-verma",
+    name: "Neha Verma",
+    age: 30,
+    location: "Ottawa, Canada",
+    profession: "HR Manager",
+    education: "Master's Degree",
+    compatibility: 84,
+    initials: "NV",
+    verified: true,
+    online: true,
+    height: "5'5\"",
+    maritalStatus: "Never married",
+    phone: "+16135550123",
+    newMatch: false,
+    about:
+      "Kind, independent and family-focused. Loves reading, coffee, travelling and meaningful conversations.",
+  },
+  {
+    id: "simran-kaur",
+    name: "Simran Kaur",
+    age: 28,
+    location: "Calgary, Canada",
+    profession: "Business Analyst",
+    education: "Bachelor's Degree",
+    compatibility: 82,
+    initials: "SK",
+    verified: true,
+    online: false,
+    height: "5'6\"",
+    maritalStatus: "Never married",
+    phone: "+14035550123",
+    newMatch: false,
+    about:
+      "Easygoing and optimistic. Enjoys hiking, music, photography and building a balanced lifestyle.",
+  },
+];
+
 type Tab = "all" | "high" | "new";
 
-type ApiResponse = {
-  success: boolean;
-  message?: string;
-  users: MatchProfile[];
-};
-
 export default function MatchesPage() {
-  const [profiles, setProfiles] = useState<MatchProfile[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("compatibility");
 
-  const [shortlisted, setShortlisted] = useState<string[]>([]);
-  const [interestsSent, setInterestsSent] = useState<string[]>([]);
+  const [shortlisted, setShortlisted] = useState<string[]>(
+    [],
+  );
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [interestsSent, setInterestsSent] = useState<
+    string[]
+  >([]);
 
-  /*
-   * Load matches
-   */
-  useEffect(() => {
-    let mounted = true;
-  
-    async function loadMatches() {
-      try {
-        setLoading(true);
-        setError("");
-  
-        const response = await fetch("/api/matches", {
-          method: "GET",
-          cache: "no-store",
-        });
-  
-        const data = (await response.json()) as ApiResponse;
-  
-        if (!response.ok || !data.success) {
-          throw new Error(
-            data.message || "Failed to load matches",
-          );
-        }
-  
-        if (mounted) {
-          setProfiles(
-            Array.isArray(data.users)
-              ? data.users
-              : [],
-          );
-        }
-      } catch (err) {
-        console.error(
-          "Failed to load matches:",
-          err,
-        );
-  
-        if (mounted) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Something went wrong while loading matches.",
-          );
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    }
-  
-    loadMatches();
-  
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  /*
-   * Dynamic stats
-   */
-  const totalMatches = profiles.length;
-
-  const newMatches = profiles.filter(
-    (profile) => profile.newMatch,
-  ).length;
-
-  const highMatches = profiles.filter(
-    (profile) => profile.compatibility >= 90,
-  ).length;
-
-  /*
-   * Filter + Search + Sort
-   */
   const filteredProfiles = useMemo(() => {
-    let result = [...profiles];
+    let profiles = [...matchProfiles];
 
-    /*
-     * Tabs
-     */
     if (activeTab === "high") {
-      result = result.filter(
+      profiles = profiles.filter(
         (profile) => profile.compatibility >= 90,
       );
     }
 
     if (activeTab === "new") {
-      result = result.filter(
+      profiles = profiles.filter(
         (profile) => profile.newMatch,
       );
     }
 
-    /*
-     * Search
-     */
     if (search.trim()) {
-      const query = search.trim().toLowerCase();
+      const query = search.toLowerCase();
 
-      result = result.filter((profile) =>
+      profiles = profiles.filter((profile) =>
         [
           profile.name,
           profile.location,
           profile.profession,
           profile.education,
-          profile.maritalStatus,
         ].some((value) =>
-          String(value).toLowerCase().includes(query),
+          value.toLowerCase().includes(query),
         ),
       );
     }
 
-    /*
-     * Sort
-     */
-    result.sort((a, b) => {
+    profiles.sort((a, b) => {
       if (sortBy === "compatibility") {
         return b.compatibility - a.compatibility;
       }
@@ -184,12 +204,9 @@ export default function MatchesPage() {
       return a.name.localeCompare(b.name);
     });
 
-    return result;
-  }, [profiles, activeTab, search, sortBy]);
+    return profiles;
+  }, [activeTab, search, sortBy]);
 
-  /*
-   * Shortlist
-   */
   const toggleShortlist = (id: string) => {
     setShortlisted((current) =>
       current.includes(id)
@@ -198,72 +215,13 @@ export default function MatchesPage() {
     );
   };
 
-  /*
-   * Interest
-   */
   const sendInterest = (id: string) => {
     setInterestsSent((current) =>
-      current.includes(id) ? current : [...current, id],
+      current.includes(id)
+        ? current
+        : [...current, id],
     );
   };
-
-  /*
-   * Loading
-   */
-  if (loading) {
-    return (
-      <main className={styles.page}>
-        <div className={styles.backgroundGlow} />
-        <div className={styles.backgroundGlowTwo} />
-
-        <div className="container">
-          <section className={styles.emptyState}>
-            <div className={styles.emptyIcon}>
-              <FiHeart aria-hidden="true" />
-            </div>
-
-            <h2>Finding your matches...</h2>
-
-            <p>
-              We are checking your preferences and finding
-              compatible profiles.
-            </p>
-          </section>
-        </div>
-      </main>
-    );
-  }
-
-  /*
-   * Error
-   */
-  if (error) {
-    return (
-      <main className={styles.page}>
-        <div className={styles.backgroundGlow} />
-        <div className={styles.backgroundGlowTwo} />
-
-        <div className="container">
-          <section className={styles.emptyState}>
-            <div className={styles.emptyIcon}>
-              <FiUsers aria-hidden="true" />
-            </div>
-
-            <h2>Unable to load matches</h2>
-
-            <p>{error}</p>
-
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-            >
-              Try again
-            </button>
-          </section>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className={styles.page}>
@@ -282,30 +240,30 @@ export default function MatchesPage() {
             <h1>Matches made for you</h1>
 
             <p>
-              Discover profiles that align with your preferences
-              and what you&apos;re looking for.
+              Discover profiles that align with your
+              preferences and what you&apos;re looking for.
             </p>
           </div>
 
           <div className={styles.headerStats}>
             <div>
-              <strong>{totalMatches}</strong>
+              <strong>24</strong>
               <span>Total matches</span>
             </div>
 
             <div>
-              <strong>{newMatches}</strong>
+              <strong>8</strong>
               <span>New matches</span>
             </div>
 
             <div>
-              <strong>{highMatches}</strong>
+              <strong>5</strong>
               <span>90%+ compatible</span>
             </div>
           </div>
         </section>
 
-        {/* Search & Sort */}
+        {/* Search */}
         <section className={styles.controls}>
           <div className={styles.searchBox}>
             <FiSearch aria-hidden="true" />
@@ -313,7 +271,9 @@ export default function MatchesPage() {
             <input
               type="search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(event) =>
+                setSearch(event.target.value)
+              }
               placeholder="Search by name, location or profession..."
               aria-label="Search matches"
             />
@@ -325,17 +285,15 @@ export default function MatchesPage() {
             <div>
               <select
                 value={sortBy}
-                onChange={(event) => setSortBy(event.target.value)}
+                onChange={(event) =>
+                  setSortBy(event.target.value)
+                }
                 aria-label="Sort matches"
               >
                 <option value="compatibility">
                   Compatibility
                 </option>
-
-                <option value="newest">
-                  New matches
-                </option>
-
+                <option value="newest">New matches</option>
                 <option value="name">Name</option>
               </select>
 
@@ -354,7 +312,7 @@ export default function MatchesPage() {
             onClick={() => setActiveTab("all")}
           >
             All matches
-            <span>{totalMatches}</span>
+            <span>{matchProfiles.length}</span>
           </button>
 
           <button
@@ -365,7 +323,7 @@ export default function MatchesPage() {
             onClick={() => setActiveTab("high")}
           >
             Highly compatible
-            <span>{highMatches}</span>
+            <span>5</span>
           </button>
 
           <button
@@ -376,7 +334,7 @@ export default function MatchesPage() {
             onClick={() => setActiveTab("new")}
           >
             New matches
-            <span>{newMatches}</span>
+            <span>4</span>
           </button>
         </div>
 
@@ -392,9 +350,9 @@ export default function MatchesPage() {
             </strong>
 
             <p>
-              Only profiles with a compatibility score of 50%
-              or higher are shown. You&apos;re always in control
-              of who you connect with.
+              Compatibility is calculated from profile
+              information and preferences. You&apos;re always
+              in control of who you connect with.
             </p>
           </div>
         </div>
@@ -412,26 +370,25 @@ export default function MatchesPage() {
                       : "Recommended for you"}
                 </h2>
 
-                <span>{filteredProfiles.length} profiles</span>
+                <span>
+                  {filteredProfiles.length} profiles
+                </span>
               </div>
             </div>
 
             <div className={styles.profileGrid}>
               {filteredProfiles.map((profile) => {
-                const isShortlisted = shortlisted.includes(
-                  profile.id,
-                );
+                const isShortlisted =
+                  shortlisted.includes(profile.id);
 
-                const interestSent = interestsSent.includes(
-                  profile.id,
-                );
+                const interestSent =
+                  interestsSent.includes(profile.id);
 
                 return (
                   <article
                     key={profile.id}
                     className={styles.profileCard}
                   >
-                    {/* Card Top */}
                     <div className={styles.cardTop}>
                       {profile.newMatch && (
                         <span className={styles.newBadge}>
@@ -442,7 +399,9 @@ export default function MatchesPage() {
                       <button
                         type="button"
                         className={`${styles.starButton} ${
-                          isShortlisted ? styles.starred : ""
+                          isShortlisted
+                            ? styles.starred
+                            : ""
                         }`}
                         onClick={() =>
                           toggleShortlist(profile.id)
@@ -464,24 +423,18 @@ export default function MatchesPage() {
                       </button>
                     </div>
 
-                    {/* Photo */}
                     <div className={styles.photoWrapper}>
                       <Link
                         href={`/profile/${profile.id}`}
                         className={styles.profilePhoto}
                       >
-                        {profile.photo ? (
-                          <img
-                            src={profile.photo}
-                            alt={profile.name}
-                          />
-                        ) : (
-                          <span>{profile.initials}</span>
-                        )}
+                        <span>{profile.initials}</span>
 
                         {profile.online && (
                           <span
-                            className={styles.onlineDot}
+                            className={
+                              styles.onlineDot
+                            }
                           />
                         )}
                       </Link>
@@ -500,54 +453,76 @@ export default function MatchesPage() {
                       </div>
                     </div>
 
-                    {/* Content */}
                     <div className={styles.cardContent}>
                       <div className={styles.nameRow}>
-                        <Link href={`/profile/${profile.id}`}>
+                        <Link
+                          href={`/profile/${profile.id}`}
+                        >
                           <h3>{profile.name}</h3>
                         </Link>
 
                         {profile.verified && (
                           <span
-                            className={styles.verifiedIcon}
+                            className={
+                              styles.verifiedIcon
+                            }
                             title="Verified profile"
                           >
-                            <FiCheck aria-hidden="true" />
+                            <FiCheck
+                              aria-hidden="true"
+                            />
                           </span>
                         )}
                       </div>
 
                       <div className={styles.basicInfo}>
-                        <span>{profile.age} years</span>
+                        <span>
+                          {profile.age} years
+                        </span>
                         <span>•</span>
-                        <span>{profile.height}</span>
+                        <span>
+                          {profile.height}
+                        </span>
                         <span>•</span>
-                        <span>{profile.maritalStatus}</span>
+                        <span>
+                          {profile.maritalStatus}
+                        </span>
                       </div>
 
                       <div className={styles.location}>
-                        <FiMapPin aria-hidden="true" />
-                        <span>{profile.location}</span>
+                        <FiMapPin
+                          aria-hidden="true"
+                        />
+                        <span>
+                          {profile.location}
+                        </span>
                       </div>
 
                       <div className={styles.profession}>
-                        <FiUser aria-hidden="true" />
-                        <span>{profile.profession}</span>
+                        <FiUser
+                          aria-hidden="true"
+                        />
+                        <span>
+                          {profile.profession}
+                        </span>
                       </div>
 
                       <div className={styles.education}>
-                        <span>{profile.education}</span>
+                        <span>
+                          {profile.education}
+                        </span>
                       </div>
 
                       <p className={styles.about}>
                         {profile.about}
                       </p>
 
-                      {/* Actions */}
                       <div className={styles.cardActions}>
                         <button
                           type="button"
-                          className={`${styles.interestButton} ${
+                          className={`${
+                            styles.interestButton
+                          } ${
                             interestSent
                               ? styles.interestSent
                               : ""
@@ -566,52 +541,60 @@ export default function MatchesPage() {
                           />
 
                           <span>
-                            {interestSent ? "Sent" : "Interest"}
+                            {interestSent
+                              ? "Sent"
+                              : "Interest"}
                           </span>
                         </button>
 
                         <Link
-                          href={`/messages?profile=${profile.id}`}
-                          className={styles.messageButton}
+                          href="/messages"
+                          className={
+                            styles.messageButton
+                          }
                           aria-label={`Message ${profile.name}`}
                         >
-                          <FiMessageCircle aria-hidden="true" />
+                          <FiMessageCircle
+                            aria-hidden="true"
+                          />
                         </Link>
 
-                        {profile.phone && (
-                          <a
-                            href={`tel:${profile.phone}`}
-                            className={styles.callButton}
-                            aria-label={`Call ${profile.name}`}
-                          >
-                            <FiPhone aria-hidden="true" />
-                          </a>
-                        )}
+                        <a
+                          href={`tel:${profile.phone}`}
+                          className={styles.callButton}
+                          aria-label={`Call ${profile.name}`}
+                        >
+                          <FiPhone
+                            aria-hidden="true"
+                          />
+                        </a>
 
-                        {profile.phone && (
-                          <a
-                            href={`https://wa.me/${profile.phone.replace(
-                              /\D/g,
-                              "",
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.whatsappButton}
-                            aria-label={`WhatsApp ${profile.name}`}
-                          >
-                            <FiMessageCircle aria-hidden="true" />
-                          </a>
-                        )}
+                        <a
+                          href={`https://wa.me/${profile.phone.replace(
+                            /\D/g,
+                            "",
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={
+                            styles.whatsappButton
+                          }
+                          aria-label={`WhatsApp ${profile.name}`}
+                        >
+                          <FiMessageCircle
+                            aria-hidden="true"
+                          />
+                        </a>
                       </div>
 
-                      {/* View Profile */}
                       <Link
                         href={`/profile/${profile.id}`}
                         className={styles.viewProfile}
                       >
                         <span>View full profile</span>
-
-                        <FiChevronDown aria-hidden="true" />
+                        <FiChevronDown
+                          aria-hidden="true"
+                        />
                       </Link>
                     </div>
                   </article>
@@ -620,7 +603,6 @@ export default function MatchesPage() {
             </div>
           </section>
         ) : (
-          /* Empty Results */
           <section className={styles.emptyState}>
             <div className={styles.emptyIcon}>
               <FiUsers aria-hidden="true" />
@@ -629,9 +611,8 @@ export default function MatchesPage() {
             <h2>No matches found</h2>
 
             <p>
-              We couldn&apos;t find any profiles matching your
-              preferences above 50%. Try updating your
-              preferences.
+              Try changing your search or exploring all
+              matches.
             </p>
 
             <button
@@ -657,14 +638,16 @@ export default function MatchesPage() {
 
             <p>
               Update your partner preferences to discover
-              profiles that better match what you&apos;re looking
-              for.
+              profiles that better match what you&apos;re
+              looking for.
             </p>
           </div>
 
           <Link href="/dashboard/preferences">
             Update preferences
-            <FiChevronDown aria-hidden="true" />
+            <FiChevronDown
+              aria-hidden="true"
+            />
           </Link>
         </section>
       </div>

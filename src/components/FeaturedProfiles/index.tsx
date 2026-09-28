@@ -117,7 +117,7 @@ export default function FeaturedProfiles() {
                   ================================= */}
 
                   <div className={styles.imageWrapper}>
-                    {profile.image ? (
+                    {profile.image ? ( 
                       <Image
                         src={profile.image}
                         alt={`${profile.name} profile`}

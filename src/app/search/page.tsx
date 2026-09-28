@@ -1,661 +1,1018 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
 import {
-FiCheck,
-FiChevronDown,
-FiFilter,
-FiHeart,
-FiMapPin,
-FiMessageCircle,
-FiSearch,
-FiShield,
-FiSliders,
-FiStar,
-FiUser,
-FiX,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import Link from "next/link";
+
+import {
+  FiCheck,
+  FiChevronDown,
+  FiFilter,
+  FiSearch,
+  FiShield,
+  FiSliders,
+  FiUser,
+  FiX,
 } from "react-icons/fi";
 
 import styles from "./search.module.scss";
 
-type Profile = {
-id: string;
-name: string;
-age: number;
-location: string;
-profession: string;
-education: string;
-compatibility: number;
-initials: string;
-verified: boolean;
-online: boolean;
-height: string;
-maritalStatus: string;
-};
-
-const profiles: Profile[] = [
-{
-id: "ananya-sharma",
-name: "Ananya Sharma",
-age: 28,
-location: "Toronto, Canada",
-profession: "Product Designer",
-education: "Master's Degree",
-compatibility: 94,
-initials: "AS",
-verified: true,
-online: true,
-height: "5'5",
-maritalStatus: "Never married",
-},
-{
-id: "priya-mehta",
-name: "Priya Mehta",
-age: 27,
-location: "Vancouver, Canada",
-profession: "Software Engineer",
-education: "Bachelor's Degree",
-compatibility: 91,
-initials: "PM",
-verified: true,
-online: false,
-height: "5'4",
-maritalStatus: "Never married",
-},
-{
-id: "meera-kapoor",
-name: "Meera Kapoor",
-age: 29,
-location: "Brampton, Canada",
-profession: "Marketing Manager",
-education: "Master's Degree",
-compatibility: 88,
-initials: "MK",
-verified: true,
-online: true,
-height: "5'6",
-maritalStatus: "Never married",
-},
-{
-id: "riya-patel",
-name: "Riya Patel",
-age: 26,
-location: "Mississauga, Canada",
-profession: "Financial Analyst",
-education: "Bachelor's Degree",
-compatibility: 86,
-initials: "RP",
-verified: false,
-online: false,
-height: "5'3",
-maritalStatus: "Never married",
-},
-{
-id: "neha-verma",
-name: "Neha Verma",
-age: 30,
-location: "Ottawa, Canada",
-profession: "HR Manager",
-education: "Master's Degree",
-compatibility: 84,
-initials: "NV",
-verified: true,
-online: true,
-height: "5'5",
-maritalStatus: "Never married",
-},
-{
-id: "simran-kaur",
-name: "Simran Kaur",
-age: 28,
-location: "Calgary, Canada",
-profession: "Business Analyst",
-education: "Bachelor's Degree",
-compatibility: 82,
-initials: "SK",
-verified: true,
-online: false,
-height: "5'6",
-maritalStatus: "Never married",
-},
-];
+import ProfileCard, {
+  type Profile,
+} from "@/components/ProfileCard/index";
 
 function FilterSelect({
-label,
-value,
-options,
-onChange,
+  label,
+  value,
+  options,
+  onChange,
 }: {
-label: string;
-value: string;
-options: string[];
-onChange: (value: string) => void;
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
 }) {
-return ( <div className={styles.filterField}> <label>{label}</label>
+  return (
+    <div className={styles.filterField}>
+      <label>{label}</label>
 
+      <div className={styles.selectWrapper}>
+        <select
+          value={value}
+          onChange={(event) =>
+            onChange(event.target.value)
+          }
+        >
+          {options.map((option) => (
+            <option
+              key={option}
+              value={option}
+            >
+              {option}
+            </option>
+          ))}
+        </select>
 
-  <div className={styles.selectWrapper}>
-    <select
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-    >
-      {options.map((option) => (
-        <option key={option} value={option}>
-          {option}
-        </option>
-      ))}
-    </select>
-
-    <FiChevronDown aria-hidden="true" />
-  </div>
-</div>
-
-);
-}
-
-function ProfileCard({
-profile,
-shortlisted,
-onShortlist,
-}: {
-profile: Profile;
-shortlisted: boolean;
-onShortlist: () => void;
-}) {
-return ( <article className={styles.profileCard}>
-<Link
-href={`/profile/${profile.id}`}
-className={styles.profileImageLink}
-aria-label={`View ${profile.name}'s profile`}
-> <div className={styles.profileImage}> <span>{profile.initials}</span>
-
-
-      {profile.online && (
-        <span className={styles.onlineBadge}>
-          <span />
-          Online
-        </span>
-      )}
-
-      <div className={styles.compatibility}>
-        <FiStar aria-hidden="true" />
-        <strong>{profile.compatibility}%</strong>
-        <span>match</span>
+        <FiChevronDown aria-hidden="true" />
       </div>
     </div>
-  </Link>
+  );
+}
 
-  <div className={styles.profileContent}>
-    <div className={styles.profileNameRow}>
-      <Link
-        href={`/profile/${profile.id}`}
-        className={styles.profileName}
-      >
-        {profile.name}
-      </Link>
+function getAgeRange(value: string) {
+  if (value === "Any age") {
+    return null;
+  }
 
-      {profile.verified && (
-        <span
-          className={styles.verifiedIcon}
-          title="Verified profile"
-        >
-          <FiCheck aria-hidden="true" />
-        </span>
-      )}
-    </div>
+  const match = value.match(
+    /^(\d+)\s*-\s*(\d+)$/,
+  );
 
-    <p className={styles.profileMeta}>
-      {profile.age} years
-      <span>•</span>
-      {profile.profession}
-    </p>
+  if (!match) {
+    return null;
+  }
 
-    <div className={styles.profileLocation}>
-      <FiMapPin aria-hidden="true" />
-      <span>{profile.location}</span>
-    </div>
-
-    <div className={styles.profileDetails}>
-      <span>{profile.education}</span>
-      <span>{profile.height}</span>
-      <span>{profile.maritalStatus}</span>
-    </div>
-
-    <div className={styles.cardActions}>
-      <button
-        type="button"
-        className={`${styles.shortlistButton} ${
-          shortlisted ? styles.shortlisted : ""
-        }`}
-        onClick={onShortlist}
-        aria-label={
-          shortlisted
-            ? `Remove ${profile.name} from shortlist`
-            : `Add ${profile.name} to shortlist`
-        }
-      >
-        <FiHeart
-          aria-hidden="true"
-          fill={shortlisted ? "currentColor" : "none"}
-        />
-      </button>
-
-      <Link
-        href={`/profile/${profile.id}`}
-        className={styles.viewButton}
-      >
-        View profile
-      </Link>
-
-      <Link
-        href="/dashboard/messages"
-        className={styles.messageButton}
-        aria-label={`Message ${profile.name}`}
-      >
-        <FiMessageCircle aria-hidden="true" />
-      </Link>
-    </div>
-  </div>
-</article>
-
-);
+  return {
+    min: Number(match[1]),
+    max: Number(match[2]),
+  };
 }
 
 export default function SearchPage() {
-const [search, setSearch] = useState("");
-const [location, setLocation] = useState("Any location");
-const [age, setAge] = useState("25 - 32");
-const [education, setEducation] = useState("Any education");
-const [profession, setProfession] = useState("Any profession");
-const [maritalStatus, setMaritalStatus] =
-useState("Never married");
-const [sort, setSort] = useState("Best match");
-const [verifiedOnly, setVerifiedOnly] = useState(false);
-const [showFilters, setShowFilters] = useState(false);
-const [shortlisted, setShortlisted] = useState<string[]>([]);
+  const [profiles, setProfiles] =
+    useState<Profile[]>([]);
 
-const filteredProfiles = useMemo(() => {
-let result = [...profiles];
+  const [loading, setLoading] =
+    useState(true);
 
-if (search.trim()) {
-  const query = search.toLowerCase();
+  const [error, setError] =
+    useState("");
 
-  result = result.filter(
-    (profile) =>
-      profile.name.toLowerCase().includes(query) ||
-      profile.profession.toLowerCase().includes(query) ||
-      profile.location.toLowerCase().includes(query),
-  );
-}
+  const [search, setSearch] =
+    useState("");
 
-if (location !== "Any location") {
-  result = result.filter((profile) =>
-    profile.location.includes(location),
-  );
-}
+  const [location, setLocation] =
+    useState("Any location");
 
-if (education !== "Any education") {
-  result = result.filter(
-    (profile) => profile.education === education,
-  );
-}
+  const [age, setAge] =
+    useState("Any age");
 
-if (profession !== "Any profession") {
-  result = result.filter(
-    (profile) => profile.profession === profession,
-  );
-}
+  const [education, setEducation] =
+    useState("Any education");
 
-if (maritalStatus !== "Any status") {
-  result = result.filter(
-    (profile) =>
-      profile.maritalStatus === maritalStatus,
-  );
-}
+  const [profession, setProfession] =
+    useState("Any profession");
 
-if (verifiedOnly) {
-  result = result.filter((profile) => profile.verified);
-}
+  const [maritalStatus, setMaritalStatus] =
+    useState("Any status");
 
-if (sort === "Highest match") {
-  result.sort(
-    (a, b) => b.compatibility - a.compatibility,
-  );
-}
+  const [sort, setSort] =
+    useState("Newest");
 
-if (sort === "Newest") {
-  result.reverse();
-}
+  const [verifiedOnly, setVerifiedOnly] =
+    useState(false);
 
-return result;
+  const [showFilters, setShowFilters] =
+    useState(false);
 
-}, [
-search,
-location,
-education,
-profession,
-maritalStatus,
-verifiedOnly,
-sort,
-]);
+  const [shortlisted, setShortlisted] =
+    useState<string[]>([]);
 
-const toggleShortlist = (id: string) => {
-setShortlisted((current) =>
-current.includes(id)
-? current.filter((item) => item !== id)
-: [...current, id],
-);
-};
+  /*
+   * Fetch users from MongoDB API
+   */
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      try {
+        setLoading(true);
+        setError("");
 
-const resetFilters = () => {
-setSearch("");
-setLocation("Any location");
-setAge("25 - 32");
-setEducation("Any education");
-setProfession("Any profession");
-setMaritalStatus("Never married");
-setSort("Best match");
-setVerifiedOnly(false);
-};
+        const response = await fetch(
+          "/api/users",
+          {
+            method: "GET",
+            cache: "no-store",
+          },
+        );
 
-return ( <div className={styles.page}> <div className={styles.backgroundGlow} /> <div className={styles.backgroundGlowTwo} />
-  <div className="container">
-    <header className={styles.pageHeader}>
-      <div>
-        <span className={styles.eyebrow}>
-          Discover
-        </span>
+        if (!response.ok) {
+          throw new Error(
+            "Failed to fetch profiles",
+          );
+        }
 
-        <h1>Find meaningful connections</h1>
+        const data = await response.json();
 
-        <p>
-          Explore profiles based on your preferences,
-          compatibility, and shared interests.
-        </p>
-      </div>
+        if (!data.success) {
+          throw new Error(
+            data.message ||
+              "Failed to load profiles",
+          );
+        }
 
-      <Link
-        href="/profile"
-        className={styles.profileButton}
-      >
-        <FiUser aria-hidden="true" />
-        <span>My profile</span>
-      </Link>
-    </header>
+        setProfiles(data.users || []);
+      } catch (error) {
+        console.error(error);
 
-    <section className={styles.searchPanel}>
-      <div className={styles.searchBox}>
-        <FiSearch
-          className={styles.searchIcon}
-          aria-hidden="true"
-        />
+        setError(
+          "Unable to load profiles. Please try again.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        <input
-          type="search"
-          value={search}
-          onChange={(event) =>
-            setSearch(event.target.value)
+    fetchProfiles();
+  }, []);
+
+  /*
+   * Generate filter options from
+   * actual MongoDB data.
+   */
+  const locationOptions = useMemo(() => {
+    const locations = profiles
+      .map((profile) => profile.city)
+      .filter(Boolean);
+
+    return [
+      "Any location",
+      ...Array.from(
+        new Set(locations),
+      ).sort(),
+    ];
+  }, [profiles]);
+
+  const educationOptions = useMemo(() => {
+    const values = profiles
+      .map(
+        (profile) =>
+          profile.education,
+      )
+      .filter(Boolean);
+
+    return [
+      "Any education",
+      ...Array.from(
+        new Set(values),
+      ).sort(),
+    ];
+  }, [profiles]);
+
+  const professionOptions = useMemo(() => {
+    const values = profiles
+      .map(
+        (profile) =>
+          profile.profession,
+      )
+      .filter(Boolean);
+
+    return [
+      "Any profession",
+      ...Array.from(
+        new Set(values),
+      ).sort(),
+    ];
+  }, [profiles]);
+
+  const maritalStatusOptions =
+    useMemo(() => {
+      const values = profiles
+        .map(
+          (profile) =>
+            profile.maritalStatus,
+        )
+        .filter(Boolean);
+
+      return [
+        "Any status",
+        ...Array.from(
+          new Set(values),
+        ).sort(),
+      ];
+    }, [profiles]);
+
+  /*
+   * Dynamic age options based on
+   * actual database profiles.
+   */
+  const ageOptions = useMemo(() => {
+    const ages = profiles
+      .map((profile) => profile.age)
+      .filter(
+        (age): age is number =>
+          typeof age === "number",
+      );
+
+    if (ages.length === 0) {
+      return ["Any age"];
+    }
+
+    const minAge = Math.min(...ages);
+    const maxAge = Math.max(...ages);
+
+    const options = [
+      "Any age",
+    ];
+
+    const start =
+      Math.floor(minAge / 5) * 5;
+
+    const end =
+      Math.ceil(maxAge / 5) * 5;
+
+    for (
+      let current = start;
+      current < end;
+      current += 5
+    ) {
+      options.push(
+        `${current} - ${current + 4}`,
+      );
+    }
+
+    return options;
+  }, [profiles]);
+
+  /*
+   * Filtering
+   */
+  const filteredProfiles = useMemo(() => {
+    let result = [...profiles];
+
+    /*
+     * Search
+     */
+    if (search.trim()) {
+      const query =
+        search.toLowerCase().trim();
+
+      result = result.filter(
+        (profile) => {
+          const searchableText = [
+            profile.name,
+            profile.profession,
+            profile.location,
+            profile.education,
+            profile.religion,
+            profile.motherTongue,
+            profile.company,
+            profile.college,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+          return searchableText.includes(
+            query,
+          );
+        },
+      );
+    }
+
+    /*
+     * Location
+     */
+    if (
+      location !== "Any location"
+    ) {
+      result = result.filter(
+        (profile) =>
+          profile.city === location,
+      );
+    }
+
+    /*
+     * Age
+     */
+    const selectedAgeRange =
+      getAgeRange(age);
+
+    if (selectedAgeRange) {
+      result = result.filter(
+        (profile) => {
+          if (profile.age === null) {
+            return false;
           }
-          placeholder="Search by name, profession or location..."
-          aria-label="Search profiles"
-        />
 
-        {search && (
-          <button
-            type="button"
-            className={styles.clearSearch}
-            onClick={() => setSearch("")}
-            aria-label="Clear search"
-          >
-            <FiX aria-hidden="true" />
-          </button>
-        )}
-      </div>
+          return (
+            profile.age >=
+              selectedAgeRange.min &&
+            profile.age <=
+              selectedAgeRange.max
+          );
+        },
+      );
+    }
 
-      <button
-        type="button"
-        className={styles.mobileFilterButton}
-        onClick={() => setShowFilters(true)}
-      >
-        <FiSliders aria-hidden="true" />
-        <span>Filters</span>
-      </button>
-    </section>
+    /*
+     * Education
+     */
+    if (
+      education !== "Any education"
+    ) {
+      result = result.filter(
+        (profile) =>
+          profile.education ===
+          education,
+      );
+    }
 
-    <div className={styles.contentLayout}>
-      <aside
-        className={`${styles.filtersSidebar} ${
-          showFilters ? styles.filtersOpen : ""
-        }`}
-      >
-        <div className={styles.filterMobileHeader}>
+    /*
+     * Profession
+     */
+    if (
+      profession !==
+      "Any profession"
+    ) {
+      result = result.filter(
+        (profile) =>
+          profile.profession ===
+          profession,
+      );
+    }
+
+    /*
+     * Marital status
+     */
+    if (
+      maritalStatus !== "Any status"
+    ) {
+      result = result.filter(
+        (profile) =>
+          profile.maritalStatus ===
+          maritalStatus,
+      );
+    }
+
+    /*
+     * Verified
+     */
+    if (verifiedOnly) {
+      result = result.filter(
+        (profile) =>
+          profile.verified,
+      );
+    }
+
+    /*
+     * Sorting
+     */
+    if (sort === "Newest") {
+      result.sort((a, b) => {
+        const dateA = a.createdAt
+          ? new Date(
+              a.createdAt,
+            ).getTime()
+          : 0;
+
+        const dateB = b.createdAt
+          ? new Date(
+              b.createdAt,
+            ).getTime()
+          : 0;
+
+        return dateB - dateA;
+      });
+    }
+
+    return result;
+  }, [
+    profiles,
+    search,
+    location,
+    age,
+    education,
+    profession,
+    maritalStatus,
+    verifiedOnly,
+    sort,
+  ]);
+
+  const toggleShortlist = (
+    id: string,
+  ) => {
+    setShortlisted((current) =>
+      current.includes(id)
+        ? current.filter(
+            (item) => item !== id,
+          )
+        : [...current, id],
+    );
+  };
+
+  const resetFilters = () => {
+    setSearch("");
+    setLocation("Any location");
+    setAge("Any age");
+    setEducation("Any education");
+    setProfession("Any profession");
+    setMaritalStatus("Any status");
+    setSort("Newest");
+    setVerifiedOnly(false);
+  };
+
+  return (
+    <div className={styles.page}>
+      <div
+        className={styles.backgroundGlow}
+      />
+
+      <div
+        className={
+          styles.backgroundGlowTwo
+        }
+      />
+
+      <div className="container">
+        <header
+          className={
+            styles.pageHeader
+          }
+        >
           <div>
-            <span>Refine results</span>
-            <strong>Filters</strong>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowFilters(false)}
-            aria-label="Close filters"
-          >
-            <FiX aria-hidden="true" />
-          </button>
-        </div>
-
-        <div className={styles.filterHeading}>
-          <div>
-            <FiFilter aria-hidden="true" />
-            <h2>Refine your search</h2>
-          </div>
-
-          <button
-            type="button"
-            onClick={resetFilters}
-          >
-            Reset
-          </button>
-        </div>
-
-        <div className={styles.filters}>
-          <FilterSelect
-            label="Location"
-            value={location}
-            options={[
-              "Any location",
-              "Toronto",
-              "Vancouver",
-              "Brampton",
-              "Mississauga",
-              "Ottawa",
-              "Calgary",
-            ]}
-            onChange={setLocation}
-          />
-
-          <FilterSelect
-            label="Age range"
-            value={age}
-            options={[
-              "25 - 32",
-              "21 - 25",
-              "26 - 30",
-              "31 - 35",
-              "36 - 40",
-            ]}
-            onChange={setAge}
-          />
-
-          <FilterSelect
-            label="Education"
-            value={education}
-            options={[
-              "Any education",
-              "Bachelor's Degree",
-              "Master's Degree",
-              "Doctorate",
-            ]}
-            onChange={setEducation}
-          />
-
-          <FilterSelect
-            label="Profession"
-            value={profession}
-            options={[
-              "Any profession",
-              "Product Designer",
-              "Software Engineer",
-              "Marketing Manager",
-              "Financial Analyst",
-              "HR Manager",
-              "Business Analyst",
-            ]}
-            onChange={setProfession}
-          />
-
-          <FilterSelect
-            label="Marital status"
-            value={maritalStatus}
-            options={[
-              "Never married",
-              "Any status",
-              "Divorced",
-              "Widowed",
-            ]}
-            onChange={setMaritalStatus}
-          />
-
-          <label className={styles.checkOption}>
-            <input
-              type="checkbox"
-              checked={verifiedOnly}
-              onChange={(event) =>
-                setVerifiedOnly(event.target.checked)
+            <span
+              className={
+                styles.eyebrow
               }
-            />
-
-            <span className={styles.customCheck}>
-              <FiCheck aria-hidden="true" />
+            >
+              Discover
             </span>
 
-            <span>
-              <strong>Verified profiles only</strong>
-              <small>
-                Show profiles with verification
-              </small>
-            </span>
-          </label>
-        </div>
-
-        <div className={styles.filterBottom}>
-          <div>
-            <FiShield aria-hidden="true" />
-            <span>
-              You control what information you share.
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowFilters(false)}
-          >
-            Show results
-          </button>
-        </div>
-      </aside>
-
-      {showFilters && (
-        <button
-          type="button"
-          className={styles.filterOverlay}
-          onClick={() => setShowFilters(false)}
-          aria-label="Close filter panel"
-        />
-      )}
-
-      <main className={styles.results}>
-        <div className={styles.resultsHeader}>
-          <div>
-            <strong>
-              {filteredProfiles.length} profiles
-            </strong>
-            <span> matching your preferences</span>
-          </div>
-
-          <div className={styles.sortWrapper}>
-            <span>Sort by</span>
-
-            <div>
-              <select
-                value={sort}
-                onChange={(event) =>
-                  setSort(event.target.value)
-                }
-                aria-label="Sort profiles"
-              >
-                <option>Best match</option>
-                <option>Highest match</option>
-                <option>Newest</option>
-              </select>
-
-              <FiChevronDown aria-hidden="true" />
-            </div>
-          </div>
-        </div>
-
-        {filteredProfiles.length > 0 ? (
-          <>
-            <div className={styles.profileGrid}>
-              {filteredProfiles.map((profile) => (
-                <ProfileCard
-                  key={profile.id}
-                  profile={profile}
-                  shortlisted={shortlisted.includes(
-                    profile.id,
-                  )}
-                  onShortlist={() =>
-                    toggleShortlist(profile.id)
-                  }
-                />
-              ))}
-            </div>
-
-            <div className={styles.loadMore}>
-              <button type="button">
-                Load more profiles
-              </button>
-
-              <span>
-                Showing {filteredProfiles.length} of{" "}
-                {profiles.length} profiles
-              </span>
-            </div>
-          </>
-        ) : (
-          <div className={styles.emptyState}>
-            <div className={styles.emptyIcon}>
-              <FiSearch aria-hidden="true" />
-            </div>
-
-            <h2>No profiles found</h2>
+            <h1>
+              Find meaningful
+              connections
+            </h1>
 
             <p>
-              Try changing your filters or search for
-              something different.
+              Explore profiles based
+              on your preferences,
+              compatibility, and
+              shared interests.
             </p>
+          </div>
 
+          <Link
+            href="/profile"
+            className={
+              styles.profileButton
+            }
+          >
+            <FiUser
+              aria-hidden="true"
+            />
+
+            <span>
+              My profile
+            </span>
+          </Link>
+        </header>
+
+        <section
+          className={
+            styles.searchPanel
+          }
+        >
+          <div
+            className={
+              styles.searchBox
+            }
+          >
+            <FiSearch
+              className={
+                styles.searchIcon
+              }
+              aria-hidden="true"
+            />
+
+            <input
+              type="search"
+              value={search}
+              onChange={(event) =>
+                setSearch(
+                  event.target.value,
+                )
+              }
+              placeholder="Search by name, profession or location..."
+              aria-label="Search profiles"
+            />
+
+            {search && (
+              <button
+                type="button"
+                className={
+                  styles.clearSearch
+                }
+                onClick={() =>
+                  setSearch("")
+                }
+                aria-label="Clear search"
+              >
+                <FiX
+                  aria-hidden="true"
+                />
+              </button>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className={
+              styles.mobileFilterButton
+            }
+            onClick={() =>
+              setShowFilters(true)
+            }
+          >
+            <FiSliders
+              aria-hidden="true"
+            />
+
+            <span>
+              Filters
+            </span>
+          </button>
+        </section>
+
+        <div
+          className={
+            styles.contentLayout
+          }
+        >
+          <aside
+            className={`${styles.filtersSidebar} ${
+              showFilters
+                ? styles.filtersOpen
+                : ""
+            }`}
+          >
+            <div
+              className={
+                styles.filterMobileHeader
+              }
+            >
+              <div>
+                <span>
+                  Refine results
+                </span>
+
+                <strong>
+                  Filters
+                </strong>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowFilters(
+                    false,
+                  )
+                }
+                aria-label="Close filters"
+              >
+                <FiX
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+
+            <div
+              className={
+                styles.filterHeading
+              }
+            >
+              <div>
+                <FiFilter
+                  aria-hidden="true"
+                />
+
+                <h2>
+                  Refine your
+                  search
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                onClick={
+                  resetFilters
+                }
+              >
+                Reset
+              </button>
+            </div>
+
+            <div
+              className={
+                styles.filters
+              }
+            >
+              <FilterSelect
+                label="Location"
+                value={location}
+                options={
+                  locationOptions
+                }
+                onChange={
+                  setLocation
+                }
+              />
+
+              <FilterSelect
+                label="Age range"
+                value={age}
+                options={ageOptions}
+                onChange={setAge}
+              />
+
+              <FilterSelect
+                label="Education"
+                value={education}
+                options={
+                  educationOptions
+                }
+                onChange={
+                  setEducation
+                }
+              />
+
+              <FilterSelect
+                label="Profession"
+                value={profession}
+                options={
+                  professionOptions
+                }
+                onChange={
+                  setProfession
+                }
+              />
+
+              <FilterSelect
+                label="Marital status"
+                value={
+                  maritalStatus
+                }
+                options={
+                  maritalStatusOptions
+                }
+                onChange={
+                  setMaritalStatus
+                }
+              />
+
+              <label
+                className={
+                  styles.checkOption
+                }
+              >
+                <input
+                  type="checkbox"
+                  checked={
+                    verifiedOnly
+                  }
+                  onChange={(
+                    event,
+                  ) =>
+                    setVerifiedOnly(
+                      event.target
+                        .checked,
+                    )
+                  }
+                />
+
+                <span
+                  className={
+                    styles.customCheck
+                  }
+                >
+                  <FiCheck
+                    aria-hidden="true"
+                  />
+                </span>
+
+                <span>
+                  <strong>
+                    Verified
+                    profiles only
+                  </strong>
+
+                  <small>
+                    Show profiles
+                    with
+                    verification
+                  </small>
+                </span>
+              </label>
+            </div>
+
+            <div
+              className={
+                styles.filterBottom
+              }
+            >
+              <div>
+                <FiShield
+                  aria-hidden="true"
+                />
+
+                <span>
+                  You control
+                  what
+                  information
+                  you share.
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowFilters(
+                    false,
+                  )
+                }
+              >
+                Show results
+              </button>
+            </div>
+          </aside>
+
+          {showFilters && (
             <button
               type="button"
-              onClick={resetFilters}
+              className={
+                styles.filterOverlay
+              }
+              onClick={() =>
+                setShowFilters(
+                  false,
+                )
+              }
+              aria-label="Close filter panel"
+            />
+          )}
+
+          <main
+            className={styles.results}
+          >
+            <div
+              className={
+                styles.resultsHeader
+              }
             >
-              Clear all filters
-            </button>
-          </div>
-        )}
-      </main>
+              <div>
+                <strong>
+                  {loading
+                    ? "Loading..."
+                    : filteredProfiles.length}
+                </strong>
+
+                {!loading && (
+                  <span>
+                    {" "}
+                    profiles matching
+                    your preferences
+                  </span>
+                )}
+              </div>
+
+              <div
+                className={
+                  styles.sortWrapper
+                }
+              >
+                <span>
+                  Sort by
+                </span>
+
+                <div>
+                  <select
+                    value={sort}
+                    onChange={(
+                      event,
+                    ) =>
+                      setSort(
+                        event.target
+                          .value,
+                      )
+                    }
+                    aria-label="Sort profiles"
+                  >
+                    <option>
+                      Newest
+                    </option>
+
+                    <option>
+                      Best match
+                    </option>
+                  </select>
+
+                  <FiChevronDown
+                    aria-hidden="true"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {loading ? (
+              <div
+                className={
+                  styles.emptyState
+                }
+              >
+                <div
+                  className={
+                    styles.emptyIcon
+                  }
+                >
+                  <FiSearch
+                    aria-hidden="true"
+                  />
+                </div>
+
+                <h2>
+                  Loading profiles...
+                </h2>
+
+                <p>
+                  Please wait while
+                  we find profiles
+                  for you.
+                </p>
+              </div>
+            ) : error ? (
+              <div
+                className={
+                  styles.emptyState
+                }
+              >
+                <div
+                  className={
+                    styles.emptyIcon
+                  }
+                >
+                  <FiX
+                    aria-hidden="true"
+                  />
+                </div>
+
+                <h2>
+                  Something went
+                  wrong
+                </h2>
+
+                <p>
+                  {error}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.location.reload()
+                  }
+                >
+                  Try again
+                </button>
+              </div>
+            ) : filteredProfiles.length >
+              0 ? (
+              <>
+                <div
+                  className={
+                    styles.profileGrid
+                  }
+                >
+                  {filteredProfiles.map(
+                    (profile) => (
+                      <ProfileCard
+                        key={
+                          profile.id
+                        }
+                        profile={
+                          profile
+                        }
+                        shortlisted={shortlisted.includes(
+                          profile.id,
+                        )}
+                        onShortlist={() =>
+                          toggleShortlist(
+                            profile.id,
+                          )
+                        }
+                      />
+                    ),
+                  )}
+                </div>
+
+                <div
+                  className={
+                    styles.loadMore
+                  }
+                >
+                  <button
+                    type="button"
+                    disabled
+                  >
+                    All profiles
+                    loaded
+                  </button>
+
+                  <span>
+                    Showing{" "}
+                    {
+                      filteredProfiles.length
+                    }{" "}
+                    of{" "}
+                    {
+                      profiles.length
+                    }{" "}
+                    profiles
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div
+                className={
+                  styles.emptyState
+                }
+              >
+                <div
+                  className={
+                    styles.emptyIcon
+                  }
+                >
+                  <FiSearch
+                    aria-hidden="true"
+                  />
+                </div>
+
+                <h2>
+                  No profiles found
+                </h2>
+
+                <p>
+                  Try changing your
+                  filters or search
+                  for something
+                  different.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={
+                    resetFilters
+                  }
+                >
+                  Clear all
+                  filters
+                </button>
+              </div>
+            )}
+          </main>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-);
+  );
 }

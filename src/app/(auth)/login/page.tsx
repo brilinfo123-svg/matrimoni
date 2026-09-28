@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { signIn } from "next-auth/react";
 import {
   FiArrowRight,
   FiEye,
@@ -14,6 +13,17 @@ import {
 } from "react-icons/fi";
 
 import styles from "./login.module.scss";
+
+type LoginResponse = {
+  success?: boolean;
+  message?: string;
+  user?: {
+    id?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+  };
+};
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -31,7 +41,7 @@ export default function LoginPage() {
   /**
    * Get a safe internal callback URL.
    *
-   * Examples:
+   * Allowed:
    * /search
    * /dashboard
    * /profile/123
@@ -45,8 +55,12 @@ export default function LoginPage() {
       return "/dashboard";
     }
 
-    const params = new URLSearchParams(window.location.search);
-    const rawCallbackUrl = params.get("callbackUrl");
+    const params = new URLSearchParams(
+      window.location.search,
+    );
+
+    const rawCallbackUrl =
+      params.get("callbackUrl");
 
     if (
       rawCallbackUrl &&
@@ -64,6 +78,7 @@ export default function LoginPage() {
   ) => {
     event.preventDefault();
 
+    // Prevent double submit
     if (isLoading) {
       return;
     }
@@ -76,7 +91,10 @@ export default function LoginPage() {
     setPasswordError("");
     setErrorMessage("");
 
-    const cleanEmail = email.trim().toLowerCase();
+    const cleanEmail = email
+      .trim()
+      .toLowerCase();
+
     const cleanPassword = password;
 
     let hasError = false;
@@ -86,12 +104,20 @@ export default function LoginPage() {
     // --------------------------------
 
     if (!cleanEmail) {
-      setEmailError("Please enter your email address.");
+      setEmailError(
+        "Please enter your email address.",
+      );
+
       hasError = true;
     } else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        cleanEmail,
+      )
     ) {
-      setEmailError("Please enter a valid email address.");
+      setEmailError(
+        "Please enter a valid email address.",
+      );
+
       hasError = true;
     }
 
@@ -100,11 +126,14 @@ export default function LoginPage() {
     // --------------------------------
 
     if (!cleanPassword) {
-      setPasswordError("Please enter your password.");
+      setPasswordError(
+        "Please enter your password.",
+      );
+
       hasError = true;
     }
 
-    // Stop if client-side validation failed
+    // Stop if validation failed
     if (hasError) {
       return;
     }
@@ -112,48 +141,186 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const callbackUrl = getCallbackUrl();
+      const callbackUrl =
+        getCallbackUrl();
 
       // --------------------------------
-      // Auth.js / NextAuth login
+      // Debug logs
       // --------------------------------
 
-      const result = await signIn("credentials", {
-        email: cleanEmail,
-        password: cleanPassword,
-        redirect: false,
-      });
+      console.log(
+        "=================================",
+      );
+
+      console.log(
+        "LOGIN: Starting login request",
+      );
+
+      console.log(
+        "LOGIN: Email:",
+        cleanEmail,
+      );
+
+      console.log(
+        "LOGIN: Remember me:",
+        rememberMe,
+      );
+
+      console.log(
+        "LOGIN: Callback URL:",
+        callbackUrl,
+      );
+
+      console.log(
+        "=================================",
+      );
 
       // --------------------------------
-      // Invalid credentials
+      // Custom JWT Login API
       // --------------------------------
 
-      if (!result || result.error) {
+      const response = await fetch(
+        "/api/auth/login",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          /*
+           * Important:
+           * This allows the browser to
+           * receive/store the HTTP-only
+           * matrimonial_session cookie.
+           */
+          credentials: "include",
+
+          body: JSON.stringify({
+            email: cleanEmail,
+            password: cleanPassword,
+          }),
+        },
+      );
+
+      console.log(
+        "LOGIN: API status:",
+        response.status,
+      );
+
+      // --------------------------------
+      // Safely parse response
+      // --------------------------------
+
+      let data: LoginResponse = {};
+
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error(
+          "LOGIN: Could not parse API response:",
+          jsonError,
+        );
+
+        throw new Error(
+          "Invalid response received from login server.",
+        );
+      }
+
+      console.log(
+        "LOGIN: API response:",
+        data,
+      );
+
+      // --------------------------------
+      // Login failed
+      // --------------------------------
+
+      if (
+        !response.ok ||
+        !data.success
+      ) {
+        console.error(
+          "LOGIN: Login failed:",
+          data.message,
+        );
+
         setPasswordError(
-          "The email or password you entered is incorrect.",
+          data.message ||
+            "The email or password you entered is incorrect.",
         );
 
         setIsLoading(false);
+
         return;
       }
 
       // --------------------------------
-      // Successful login
+      // Login successful
       // --------------------------------
-      //
-      // Use native browser navigation instead of
-      // router.push/router.replace here.
-      //
-      // This avoids the:
-      // "Router action dispatched before initialization"
-      // issue during the login/proxy transition.
-      //
-      window.location.assign(callbackUrl);
+
+      console.log(
+        "=================================",
+      );
+
+      console.log(
+        "LOGIN: Login successful!",
+      );
+
+      console.log(
+        "LOGIN: User ID:",
+        data.user?.id,
+      );
+
+      console.log(
+        "LOGIN: User:",
+        data.user?.firstName,
+        data.user?.lastName,
+      );
+
+      console.log(
+        "LOGIN: Session cookie created.",
+      );
+
+      console.log(
+        "LOGIN: Redirecting to:",
+        callbackUrl,
+      );
+
+      console.log(
+        "=================================",
+      );
+
+      /*
+       * Use full browser navigation.
+       *
+       * This ensures the newly-created
+       * HTTP-only cookie is available
+       * when the next protected page
+       * loads.
+       */
+      window.location.assign(
+        callbackUrl,
+      );
     } catch (error) {
-      console.error("LOGIN_ERROR:", error);
+      console.error(
+        "=================================",
+      );
+
+      console.error(
+        "LOGIN_ERROR:",
+        error,
+      );
+
+      console.error(
+        "=================================",
+      );
 
       setErrorMessage(
-        "Something went wrong. Please check your connection and try again.",
+        error instanceof Error
+          ? error.message
+          : "Something went wrong. Please check your connection and try again.",
       );
 
       setIsLoading(false);
@@ -171,94 +338,183 @@ export default function LoginPage() {
         ================================= */}
 
         <section className={styles.visualPanel}>
-          <div className={styles.visualBackground} />
+          <div
+            className={styles.visualBackground}
+          />
 
-          <div className={styles.visualContent}>
-            <Link href="/" className={styles.logo}>
-              <span className={styles.logoIcon}>
-                <FiHeart aria-hidden="true" />
+          <div
+            className={styles.visualContent}
+          >
+            <Link
+              href="/"
+              className={styles.logo}
+            >
+              <span
+                className={styles.logoIcon}
+              >
+                <FiHeart
+                  aria-hidden="true"
+                />
               </span>
 
               <span>
-                <strong>Matrimonial</strong>
-                <small>Meaningful connections</small>
+                <strong>
+                  Matrimonial
+                </strong>
+
+                <small>
+                  Meaningful connections
+                </small>
               </span>
             </Link>
 
-            <div className={styles.visualMessage}>
-              <span className={styles.visualEyebrow}>
+            <div
+              className={
+                styles.visualMessage
+              }
+            >
+              <span
+                className={
+                  styles.visualEyebrow
+                }
+              >
                 Welcome back
               </span>
 
               <h1>
                 Your next
-                <span> meaningful connection</span>
+                <span>
+                  {" "}
+                  meaningful connection
+                </span>
                 could be waiting.
               </h1>
 
               <p>
-                Sign in to continue discovering people who share
-                your values, interests, and vision for the future.
+                Sign in to continue
+                discovering people who
+                share your values,
+                interests, and vision for
+                the future.
               </p>
             </div>
 
-            <div className={styles.visualCard}>
-              <div className={styles.visualCardIcon}>
-                <FiShield aria-hidden="true" />
+            <div
+              className={
+                styles.visualCard
+              }
+            >
+              <div
+                className={
+                  styles.visualCardIcon
+                }
+              >
+                <FiShield
+                  aria-hidden="true"
+                />
               </div>
 
               <div>
-                <strong>Your privacy matters</strong>
+                <strong>
+                  Your privacy matters
+                </strong>
 
                 <span>
-                  You stay in control of your profile and
+                  You stay in control of
+                  your profile and
                   connections.
                 </span>
               </div>
             </div>
           </div>
 
-          <div className={styles.decorativeHeart}>
-            <FiHeart aria-hidden="true" />
+          <div
+            className={
+              styles.decorativeHeart
+            }
+          >
+            <FiHeart
+              aria-hidden="true"
+            />
           </div>
 
-          <div className={styles.orbitOne} />
-          <div className={styles.orbitTwo} />
+          <div
+            className={styles.orbitOne}
+          />
+
+          <div
+            className={styles.orbitTwo}
+          />
         </section>
 
         {/* ================================
             LOGIN PANEL
         ================================= */}
 
-        <section className={styles.formPanel}>
-          <div className={styles.formWrapper}>
+        <section
+          className={styles.formPanel}
+        >
+          <div
+            className={styles.formWrapper}
+          >
             {/* Mobile Logo */}
 
-            <div className={styles.mobileLogo}>
-              <Link href="/" className={styles.logo}>
-                <span className={styles.logoIcon}>
-                  <FiHeart aria-hidden="true" />
+            <div
+              className={
+                styles.mobileLogo
+              }
+            >
+              <Link
+                href="/"
+                className={styles.logo}
+              >
+                <span
+                  className={
+                    styles.logoIcon
+                  }
+                >
+                  <FiHeart
+                    aria-hidden="true"
+                  />
                 </span>
 
                 <span>
-                  <strong>Matrimonial</strong>
-                  <small>Meaningful connections</small>
+                  <strong>
+                    Matrimonial
+                  </strong>
+
+                  <small>
+                    Meaningful connections
+                  </small>
                 </span>
               </Link>
             </div>
 
             {/* Header */}
 
-            <div className={styles.formHeader}>
-              <span className={styles.formIcon}>
-                <FiLock aria-hidden="true" />
+            <div
+              className={
+                styles.formHeader
+              }
+            >
+              <span
+                className={
+                  styles.formIcon
+                }
+              >
+                <FiLock
+                  aria-hidden="true"
+                />
               </span>
 
               <div>
-                <h2>Welcome back</h2>
+                <h2>
+                  Welcome back
+                </h2>
 
                 <p>
-                  Sign in to your account to continue.
+                  Sign in to your
+                  account to continue.
                 </p>
               </div>
             </div>
@@ -276,11 +532,17 @@ export default function LoginPage() {
 
               {errorMessage && (
                 <div
-                  className={styles.errorMessage}
+                  className={
+                    styles.errorMessage
+                  }
                   role="alert"
                   aria-live="polite"
                 >
-                  <span className={styles.errorIcon}>
+                  <span
+                    className={
+                      styles.errorIcon
+                    }
+                  >
                     !
                   </span>
 
@@ -289,13 +551,21 @@ export default function LoginPage() {
                       Sign in unsuccessful
                     </strong>
 
-                    <p>{errorMessage}</p>
+                    <p>
+                      {errorMessage}
+                    </p>
                   </div>
 
                   <button
                     type="button"
-                    className={styles.errorClose}
-                    onClick={() => setErrorMessage("")}
+                    className={
+                      styles.errorClose
+                    }
+                    onClick={() =>
+                      setErrorMessage(
+                        "",
+                      )
+                    }
                     aria-label="Dismiss error"
                   >
                     ×
@@ -307,18 +577,26 @@ export default function LoginPage() {
                   EMAIL
               ================================= */}
 
-              <div className={styles.field}>
+              <div
+                className={styles.field}
+              >
                 <label htmlFor="email">
                   Email address
                 </label>
 
                 <div
-                  className={`${styles.inputWrapper} ${
-                    emailError ? styles.inputError : ""
+                  className={`${
+                    styles.inputWrapper
+                  } ${
+                    emailError
+                      ? styles.inputError
+                      : ""
                   }`}
                 >
                   <FiMail
-                    className={styles.inputIcon}
+                    className={
+                      styles.inputIcon
+                    }
                     aria-hidden="true"
                   />
 
@@ -328,7 +606,9 @@ export default function LoginPage() {
                     type="email"
                     value={email}
                     onChange={(event) => {
-                      setEmail(event.target.value);
+                      setEmail(
+                        event.target.value,
+                      );
 
                       if (emailError) {
                         setEmailError("");
@@ -340,7 +620,9 @@ export default function LoginPage() {
                     }}
                     placeholder="Enter your email"
                     autoComplete="email"
-                    aria-invalid={!!emailError}
+                    aria-invalid={
+                      !!emailError
+                    }
                     aria-describedby={
                       emailError
                         ? "email-error"
@@ -354,7 +636,9 @@ export default function LoginPage() {
                 {emailError && (
                   <span
                     id="email-error"
-                    className={styles.fieldError}
+                    className={
+                      styles.fieldError
+                    }
                     role="alert"
                   >
                     {emailError}
@@ -366,37 +650,57 @@ export default function LoginPage() {
                   PASSWORD
               ================================= */}
 
-              <div className={styles.field}>
-                <div className={styles.labelRow}>
+              <div
+                className={styles.field}
+              >
+                <div
+                  className={
+                    styles.labelRow
+                  }
+                >
                   <label htmlFor="password">
                     Password
                   </label>
 
                   <Link
                     href="/forgot-password"
-                    className={styles.forgotLink}
+                    className={
+                      styles.forgotLink
+                    }
                   >
                     Forgot password?
                   </Link>
                 </div>
 
                 <div
-                  className={`${styles.inputWrapper} ${
-                    passwordError ? styles.inputError : ""
+                  className={`${
+                    styles.inputWrapper
+                  } ${
+                    passwordError
+                      ? styles.inputError
+                      : ""
                   }`}
                 >
                   <FiLock
-                    className={styles.inputIcon}
+                    className={
+                      styles.inputIcon
+                    }
                     aria-hidden="true"
                   />
 
                   <input
                     id="password"
                     name="password"
-                    type={showPassword ? "text" : "password"}
+                    type={
+                      showPassword
+                        ? "text"
+                        : "password"
+                    }
                     value={password}
                     onChange={(event) => {
-                      setPassword(event.target.value);
+                      setPassword(
+                        event.target.value,
+                      );
 
                       if (passwordError) {
                         setPasswordError("");
@@ -408,7 +712,9 @@ export default function LoginPage() {
                     }}
                     placeholder="Enter your password"
                     autoComplete="current-password"
-                    aria-invalid={!!passwordError}
+                    aria-invalid={
+                      !!passwordError
+                    }
                     aria-describedby={
                       passwordError
                         ? "password-error"
@@ -420,9 +726,14 @@ export default function LoginPage() {
 
                   <button
                     type="button"
-                    className={styles.passwordToggle}
+                    className={
+                      styles.passwordToggle
+                    }
                     onClick={() =>
-                      setShowPassword((current) => !current)
+                      setShowPassword(
+                        (current) =>
+                          !current,
+                      )
                     }
                     aria-label={
                       showPassword
@@ -432,9 +743,13 @@ export default function LoginPage() {
                     disabled={isLoading}
                   >
                     {showPassword ? (
-                      <FiEyeOff aria-hidden="true" />
+                      <FiEyeOff
+                        aria-hidden="true"
+                      />
                     ) : (
-                      <FiEye aria-hidden="true" />
+                      <FiEye
+                        aria-hidden="true"
+                      />
                     )}
                   </button>
                 </div>
@@ -442,7 +757,9 @@ export default function LoginPage() {
                 {passwordError && (
                   <span
                     id="password-error"
-                    className={styles.fieldError}
+                    className={
+                      styles.fieldError
+                    }
                     role="alert"
                   >
                     {passwordError}
@@ -454,21 +771,33 @@ export default function LoginPage() {
                   REMEMBER ME
               ================================= */}
 
-              <label className={styles.remember}>
+              <label
+                className={styles.remember}
+              >
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(event) =>
-                    setRememberMe(event.target.checked)
+                    setRememberMe(
+                      event.target.checked,
+                    )
                   }
                   disabled={isLoading}
                 />
 
-                <span className={styles.checkbox}>
-                  <FiArrowRight aria-hidden="true" />
+                <span
+                  className={
+                    styles.checkbox
+                  }
+                >
+                  <FiArrowRight
+                    aria-hidden="true"
+                  />
                 </span>
 
-                <span>Remember me</span>
+                <span>
+                  Remember me
+                </span>
               </label>
 
               {/* ================================
@@ -477,20 +806,32 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                className={styles.submitButton}
+                className={
+                  styles.submitButton
+                }
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <span className={styles.spinner} />
+                    <span
+                      className={
+                        styles.spinner
+                      }
+                    />
 
-                    <span>Signing in...</span>
+                    <span>
+                      Signing in...
+                    </span>
                   </>
                 ) : (
                   <>
-                    <span>Sign in</span>
+                    <span>
+                      Sign in
+                    </span>
 
-                    <FiArrowRight aria-hidden="true" />
+                    <FiArrowRight
+                      aria-hidden="true"
+                    />
                   </>
                 )}
               </button>
@@ -498,7 +839,9 @@ export default function LoginPage() {
 
             {/* Divider */}
 
-            <div className={styles.divider}>
+            <div
+              className={styles.divider}
+            >
               <span />
               <p>New here?</p>
               <span />
@@ -508,28 +851,44 @@ export default function LoginPage() {
 
             <Link
               href="/register"
-              className={styles.createAccount}
+              className={
+                styles.createAccount
+              }
             >
-              <span>Create your profile</span>
+              <span>
+                Create your profile
+              </span>
 
-              <FiArrowRight aria-hidden="true" />
+              <FiArrowRight
+                aria-hidden="true"
+              />
             </Link>
 
             {/* Security */}
 
-            <div className={styles.securityNote}>
-              <FiShield aria-hidden="true" />
+            <div
+              className={
+                styles.securityNote
+              }
+            >
+              <FiShield
+                aria-hidden="true"
+              />
 
               <span>
-                Your account information is kept private.
+                Your account information
+                is kept private.
               </span>
             </div>
 
             {/* Terms */}
 
             <p className={styles.terms}>
-              By continuing, you agree to our{" "}
-              <Link href="/terms">Terms</Link>{" "}
+              By continuing, you agree
+              to our{" "}
+              <Link href="/terms">
+                Terms
+              </Link>{" "}
               and{" "}
               <Link href="/privacy">
                 Privacy Policy
