@@ -25,6 +25,7 @@ import {
 } from "react-icons/fi";
 
 import styles from "./dashboard.module.scss";
+import DashboardSkeleton from "@/components/DashboardSkeleton/DashboardSkeleton";
 
 type Profile = {
   id: string;
@@ -149,32 +150,7 @@ export default function DashboardPage() {
   }, []);
 
   if (loading) {
-    return (
-      <main className={styles.page}>
-        <div className={styles.backgroundGlow} />
-
-        <div className={styles.container}>
-          <div className={styles.dashboardHeader}>
-            <div>
-              <span
-                className={styles.eyebrow}
-              >
-                Your matrimonial journey
-              </span>
-
-              <h1>
-                Loading your dashboard...
-              </h1>
-
-              <p>
-                Please wait while we load
-                your profile.
-              </p>
-            </div>
-          </div>
-        </div>
-      </main>
-    );
+    if (loading) { return <DashboardSkeleton />; }
   }
 
   if (error || !dashboard) {
@@ -182,7 +158,7 @@ export default function DashboardPage() {
       <main className={styles.page}>
         <div className={styles.backgroundGlow} />
 
-        <div className={styles.container}>
+        <div className={"container"}>
           <section
             className={styles.privacyNote}
           >
@@ -233,7 +209,7 @@ export default function DashboardPage() {
     <main className={styles.page}>
       <div className={styles.backgroundGlow} />
 
-      <div className={styles.container}>
+      <div className={"container"}>
         {/* =========================================
             TOP HEADER
         ========================================= */}
@@ -251,7 +227,7 @@ export default function DashboardPage() {
             </span>
 
             <h1>
-              Good morning,
+              Hello,
               <span> {firstName}.</span>
             </h1>
 
@@ -365,7 +341,7 @@ export default function DashboardPage() {
           </div>
 
           <Link
-            href="/profile/edit"
+            href="/edit"
             className={
               styles.completionButton
             }
@@ -581,7 +557,7 @@ export default function DashboardPage() {
               />
 
               <QuickAction
-                href="/profile/edit"
+                href="/edit"
                 icon={
                   <FiUser aria-hidden="true" />
                 }
@@ -733,7 +709,7 @@ export default function DashboardPage() {
               </div>
 
               <Link
-                href="/profile/edit"
+                href="/edit"
               >
                 Update profile
                 <FiArrowRight
@@ -1115,7 +1091,7 @@ function MyProfileCard({
           </Link>
 
           <Link
-            href="/profile/edit"
+            href="/edit"
             className={
               styles.favoriteButton
             }

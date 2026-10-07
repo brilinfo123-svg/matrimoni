@@ -90,7 +90,7 @@ export default function ProfileActions({
       </button>
 
       <Link
-        href={`/dashboard/messages?profile=${profileId}`}
+        href={`/messages?profile=${profileId}`}
         className={styles.messageButton}
       >
         <FiMessageCircle

@@ -1,0 +1,477 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(20, 12, 18, 0.55);
+  backdrop-filter: blur(12px);
+  animation: overlayIn 0.25s ease;
+
+  .privacyText{
+    text-align: center;
+    background-color: #fffbf1;
+    padding: 5px;
+    font-size: 12px;
+  }
+}
+
+.modal {
+  position: relative;
+
+  width: min(100%, 460px);
+
+  padding: 34px 25px;
+
+  border: 1px solid rgba(168, 50, 104, 0.14);
+  border-radius: 26px;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 30px 80px rgba(38, 15, 29, 0.22),
+    0 10px 30px rgba(38, 15, 29, 0.1);
+
+  animation: modalIn 0.35s ease;
+}
+
+.closeButton {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 0;
+  border-radius: 50%;
+
+  background: #f8f3f6;
+  color: #6d5a65;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background: #f1e6ec;
+    transform: rotate(5deg);
+  }
+}
+
+
+.iconWrapper {
+  position: relative;
+
+  width: 88px;
+  height: 88px;
+
+  margin: 0 auto 22px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Soft animated glow */
+.iconPulse {
+  position: absolute;
+  inset: 3px;
+
+  border-radius: 50%;
+
+  background: rgba(168, 50, 104, 0.12);
+
+  animation: bellPulse 2.2s ease-out infinite;
+}
+
+/* Main bell container */
+.iconCircle {
+  position: relative;
+  z-index: 2;
+
+  width: 70px;
+  height: 70px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 22px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #a83268 0%,
+      #b94378 45%,
+      #d06a94 100%
+    );
+
+  color: #ffffff;
+
+  box-shadow:
+    0 16px 35px rgba(168, 50, 104, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+
+  animation: bellFloat 3s ease-in-out infinite;
+
+  svg {
+    width: 31px;
+    height: 31px;
+
+    stroke-width: 1.8;
+
+    filter:
+      drop-shadow(
+        0 2px 4px rgba(60, 20, 40, 0.18)
+      );
+  }
+}
+
+/* Small unread notification dot */
+.notificationDot {
+  position: absolute;
+
+  z-index: 4;
+
+  top: 7px;
+  right: 7px;
+
+  width: 15px;
+  height: 15px;
+
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+
+  background: #e94d72;
+
+  box-shadow:
+    0 4px 10px rgba(233, 77, 114, 0.35);
+
+  animation: notificationDotPulse 1.8s ease-in-out infinite;
+}
+
+/* Soft outer pulse */
+@keyframes bellPulse {
+  0% {
+    transform: scale(0.78);
+    opacity: 0.65;
+  }
+
+  60% {
+    transform: scale(1.12);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1.12);
+    opacity: 0;
+  }
+}
+
+/* Gentle floating effect */
+@keyframes bellFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Notification dot animation */
+@keyframes notificationDotPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 4px 10px rgba(233, 77, 114, 0.35);
+  }
+
+  50% {
+    transform: scale(1.12);
+    box-shadow:
+      0 4px 15px rgba(233, 77, 114, 0.55);
+  }
+}
+
+
+.content {
+  text-align: center;
+}
+
+.eyebrow {
+  display: inline-block;
+
+  margin-bottom: 8px;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  color: #a83268;
+}
+
+.content h2 {
+  margin: 0;
+
+  font-size: 28px;
+  line-height: 1.2;
+  margin-bottom: 12px;
+  color: #241720;
+  font-weight: 700;
+}
+
+.content p {
+  max-width: 370px;
+
+  font-size: 14px;
+  line-height: 1.65;
+
+  color: #756772;
+}
+
+.benefits {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.benefit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 14px;
+  text-align: left;
+  background: #faf7f9;
+}
+
+.benefit > span {
+  flex-shrink: 0;
+
+  width: 38px;
+  height: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 11px;
+
+  background: #f3e3eb;
+  color: #a83268;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.benefit div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.benefit strong {
+  font-size: 13px;
+  color: #2d2027;
+}
+
+.benefit small {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #81737c;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  margin-top: 24px;
+}
+
+.enableButton {
+  width: 100%;
+  min-height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  border: 0;
+  border-radius: 13px;
+
+  background: #a83268;
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 10px 24px rgba(168, 50, 104, 0.22);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+
+    box-shadow:
+      0 14px 30px rgba(168, 50, 104, 0.28);
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.laterButton {
+  min-height: 42px;
+
+  border: 0;
+  background: transparent;
+
+  color: #766671;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: #a83268;
+  }
+}
+
+.privacy {
+  margin: 16px 0 0;
+
+  text-align: center;
+
+  font-size: 11px;
+  line-height: 1.5;
+
+  color: #9a8d95;
+}
+
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+
+  50% {
+    transform: scale(1.15);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .overlay {
+    align-items: center;
+    padding: 12px;
+  }
+
+  .modal {
+    width: 100%;
+    padding: 28px 15px 22px;
+
+    border-radius: 24px;
+  }
+
+  .content h2 {
+    font-size: 22px;
+  }
+
+  .content p {
+    font-size: 12px;
+  }
+}
+@media (max-width: 414px) {
+    .benefit > span {
+        width: auto;
+         height: auto;
+        border-radius: 11px;
+      
+        background: transparent;
+      }
+      .benefit {
+        gap: 7px;
+        padding: 8px;
+        border-radius: 8px;
+      }
+      .benefits {
+        gap: 7px;
+      }
+      .overlay {
+      .privacyText{
+        font-size: 9px;
+      }
+    }
+    .iconWrapper{
+        width: 80px;
+    height: 80px;
+    margin: 0 auto 25px;
+    }
+    .iconCircle{
+        width: 60px;
+        height: 60px;
+    }
+}

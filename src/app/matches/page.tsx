@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -12,7 +13,6 @@ import {
   FiPhone,
   FiSearch,
   FiShield,
-  FiStar,
   FiUser,
   FiUsers,
 } from "react-icons/fi";
@@ -20,6 +20,7 @@ import {
 import styles from "./matches.module.scss";
 
 type MatchProfile = {
+  religionabout: string;
   id: string;
   name: string;
   age: number;
@@ -33,7 +34,7 @@ type MatchProfile = {
   online: boolean;
   height: string;
   maritalStatus: string;
-  phone: string;
+  mobile: string | null;
   newMatch: boolean;
   about: string;
 };
@@ -53,7 +54,6 @@ export default function MatchesPage() {
   const [sortBy, setSortBy] = useState("compatibility");
 
   const [shortlisted, setShortlisted] = useState<string[]>([]);
-  const [interestsSent, setInterestsSent] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -63,38 +63,33 @@ export default function MatchesPage() {
    */
   useEffect(() => {
     let mounted = true;
-  
+
     async function loadMatches() {
       try {
         setLoading(true);
         setError("");
-  
+
         const response = await fetch("/api/matches", {
           method: "GET",
           cache: "no-store",
         });
-  
+
         const data = (await response.json()) as ApiResponse;
-  
+
         if (!response.ok || !data.success) {
           throw new Error(
             data.message || "Failed to load matches",
           );
         }
-  
+
         if (mounted) {
           setProfiles(
-            Array.isArray(data.users)
-              ? data.users
-              : [],
+            Array.isArray(data.users) ? data.users : [],
           );
         }
       } catch (err) {
-        console.error(
-          "Failed to load matches:",
-          err,
-        );
-  
+        console.error("Failed to load matches:", err);
+
         if (mounted) {
           setError(
             err instanceof Error
@@ -108,9 +103,9 @@ export default function MatchesPage() {
         }
       }
     }
-  
+
     loadMatches();
-  
+
     return () => {
       mounted = false;
     };
@@ -195,15 +190,6 @@ export default function MatchesPage() {
       current.includes(id)
         ? current.filter((item) => item !== id)
         : [...current, id],
-    );
-  };
-
-  /*
-   * Interest
-   */
-  const sendInterest = (id: string) => {
-    setInterestsSent((current) =>
-      current.includes(id) ? current : [...current, id],
     );
   };
 
@@ -325,7 +311,9 @@ export default function MatchesPage() {
             <div>
               <select
                 value={sortBy}
-                onChange={(event) => setSortBy(event.target.value)}
+                onChange={(event) =>
+                  setSortBy(event.target.value)
+                }
                 aria-label="Sort matches"
               >
                 <option value="compatibility">
@@ -412,7 +400,9 @@ export default function MatchesPage() {
                       : "Recommended for you"}
                 </h2>
 
-                <span>{filteredProfiles.length} profiles</span>
+                <span>
+                  {filteredProfiles.length} profiles
+                </span>
               </div>
             </div>
 
@@ -422,9 +412,9 @@ export default function MatchesPage() {
                   profile.id,
                 );
 
-                const interestSent = interestsSent.includes(
-                  profile.id,
-                );
+                const cleanMobile = profile.mobile
+                  ? String(profile.mobile).replace(/\D/g, "")
+                  : "";
 
                 return (
                   <article
@@ -438,30 +428,6 @@ export default function MatchesPage() {
                           New match
                         </span>
                       )}
-
-                      <button
-                        type="button"
-                        className={`${styles.starButton} ${
-                          isShortlisted ? styles.starred : ""
-                        }`}
-                        onClick={() =>
-                          toggleShortlist(profile.id)
-                        }
-                        aria-label={
-                          isShortlisted
-                            ? "Remove from shortlist"
-                            : "Add to shortlist"
-                        }
-                      >
-                        <FiStar
-                          aria-hidden="true"
-                          fill={
-                            isShortlisted
-                              ? "currentColor"
-                              : "none"
-                          }
-                        />
-                      </button>
                     </div>
 
                     {/* Photo */}
@@ -502,8 +468,11 @@ export default function MatchesPage() {
 
                     {/* Content */}
                     <div className={styles.cardContent}>
+                      {/* Name */}
                       <div className={styles.nameRow}>
-                        <Link href={`/profile/${profile.id}`}>
+                        <Link
+                          href={`/profile/${profile.id}`}
+                        >
                           <h3>{profile.name}</h3>
                         </Link>
 
@@ -517,102 +486,111 @@ export default function MatchesPage() {
                         )}
                       </div>
 
+                      {/* Basic Information */}
                       <div className={styles.basicInfo}>
                         <span>{profile.age} years</span>
-                        <span>•</span>
-                        <span>{profile.height}</span>
-                        <span>•</span>
-                        <span>{profile.maritalStatus}</span>
+                        <span>/</span>
+                        {/* <span>{profile.height}</span> */}
+                        {/* <span>•</span> */}
+                        <span>
+                          {profile.maritalStatus}
+                        </span>
                       </div>
 
+                      {/* Location */}
                       <div className={styles.location}>
                         <FiMapPin aria-hidden="true" />
                         <span>{profile.location}</span>
                       </div>
 
+                      {/* Profession */}
                       <div className={styles.profession}>
                         <FiUser aria-hidden="true" />
                         <span>{profile.profession}</span>
                       </div>
 
-                      <div className={styles.education}>
+                      {/* Education */}
+                      <div className={styles.profileDetails}>
                         <span>{profile.education}</span>
+                        <span>{profile.religionabout}</span>
                       </div>
 
-                      <p className={styles.about}>
+                      {/* About */}
+                      {/* <p className={styles.about}>
                         {profile.about}
-                      </p>
+                      </p> */}
 
                       {/* Actions */}
                       <div className={styles.cardActions}>
+                        {/* Shortlist */}
+                       
+
+                        {/* View Profile */}
+                        <Link
+                          href={`/profile/${profile.id}`}
+                          className={styles.viewProfile}
+                        >
+                          View profile
+                        </Link>
+
+                        {/* Message */}
+
                         <button
                           type="button"
-                          className={`${styles.interestButton} ${
-                            interestSent
-                              ? styles.interestSent
+                          className={`${styles.shortlistButton} ${
+                            isShortlisted
+                              ? styles.shortlisted
                               : ""
                           }`}
                           onClick={() =>
-                            sendInterest(profile.id)
+                            toggleShortlist(profile.id)
+                          }
+                          aria-label={
+                            isShortlisted
+                              ? `Remove ${profile.name} from shortlist`
+                              : `Add ${profile.name} to shortlist`
+                          }
+                          title={
+                            isShortlisted
+                              ? "Remove from shortlist"
+                              : "Add to shortlist"
                           }
                         >
                           <FiHeart
                             aria-hidden="true"
                             fill={
-                              interestSent
+                              isShortlisted
                                 ? "currentColor"
                                 : "none"
                             }
                           />
-
-                          <span>
-                            {interestSent ? "Sent" : "Interest"}
-                          </span>
                         </button>
-
-                        <Link
-                          href={`/messages?profile=${profile.id}`}
-                          className={styles.messageButton}
-                          aria-label={`Message ${profile.name}`}
-                        >
-                          <FiMessageCircle aria-hidden="true" />
-                        </Link>
-
-                        {profile.phone && (
+                        {/* Call */}
+                        {cleanMobile && (
                           <a
-                            href={`tel:${profile.phone}`}
+                            href={`tel:${cleanMobile}`}
                             className={styles.callButton}
                             aria-label={`Call ${profile.name}`}
+                            title={`Call ${profile.name}`}
                           >
                             <FiPhone aria-hidden="true" />
                           </a>
                         )}
 
-                        {profile.phone && (
+                        {/* WhatsApp */}
+                        {cleanMobile && (
                           <a
-                            href={`https://wa.me/${profile.phone.replace(
-                              /\D/g,
-                              "",
-                            )}`}
+                            href={`https://wa.me/${cleanMobile}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className={styles.whatsappButton}
                             aria-label={`WhatsApp ${profile.name}`}
+                            title={`WhatsApp ${profile.name}`}
                           >
-                            <FiMessageCircle aria-hidden="true" />
+                            <Image src="/public/images/logo/whatsapp.png" alt="WhatsApp" width={20} height={20} />
                           </a>
                         )}
                       </div>
-
-                      {/* View Profile */}
-                      <Link
-                        href={`/profile/${profile.id}`}
-                        className={styles.viewProfile}
-                      >
-                        <span>View full profile</span>
-
-                        <FiChevronDown aria-hidden="true" />
-                      </Link>
                     </div>
                   </article>
                 );
@@ -657,8 +635,8 @@ export default function MatchesPage() {
 
             <p>
               Update your partner preferences to discover
-              profiles that better match what you&apos;re looking
-              for.
+              profiles that better match what you&apos;re
+              looking for.
             </p>
           </div>
 

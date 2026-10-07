@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useParams } from "next/navigation";
 import {
   FiArrowLeft,
@@ -24,6 +25,7 @@ import {
 } from "react-icons/fi";
 
 import styles from "./profile.module.scss";
+import ProfileSkeleton from "@/components/ProfileSkeleton/ProfileSkeleton";
 
 type Profile = {
   id: string;
@@ -31,6 +33,8 @@ type Profile = {
   firstName: string;
   lastName: string;
   name: string;
+  mobile: string;
+  isMobileVisible: boolean;
 
   age: number | null;
   dateOfBirth: string | null;
@@ -183,20 +187,7 @@ export default function UserProfilePage() {
 
   if (loading) {
     return (
-      <div className={styles.page}>
-        <div className={styles.backgroundGlow} />
-        <div className={styles.backgroundGlowTwo} />
-
-        <div className={styles.container}>
-          <div className={styles.loadingState}>
-            <div className={styles.loadingSpinner} />
-
-            <h2>Loading profile...</h2>
-
-            <p>Please wait while we fetch this profile.</p>
-          </div>
-        </div>
-      </div>
+      <ProfileSkeleton />
     );
   }
 
@@ -206,7 +197,7 @@ export default function UserProfilePage() {
         <div className={styles.backgroundGlow} />
         <div className={styles.backgroundGlowTwo} />
 
-        <div className={styles.container}>
+        <div className={"container"}>
           <div className={styles.errorState}>
             <div className={styles.errorIcon}>
               <FiUser />
@@ -226,7 +217,9 @@ export default function UserProfilePage() {
     );
   }
 
-  const phone: string = "";
+  const phone = profile.isMobileVisible ? profile.mobile: "";
+
+  console.log("Profile data:", profile);
 
   const aboutText = [
     profile.profession && `Works as ${profile.profession}`,
@@ -241,7 +234,7 @@ export default function UserProfilePage() {
       <div className={styles.backgroundGlow} />
       <div className={styles.backgroundGlowTwo} />
 
-      <div className={styles.container}>
+      <div className={"container"}>
         {/* TOP BAR */}
         <div className={styles.topBar}>
           <Link href="/search" className={styles.backButton}>
@@ -343,8 +336,10 @@ export default function UserProfilePage() {
             </div>
 
             {/* ACTIONS */}
+           
+            {/* ACTIONS */}
             <div className={styles.actions}>
-              <button
+              {/* <button
                 type="button"
                 className={`${styles.interestButton} ${
                   interestSent ? styles.interestSent : ""
@@ -358,35 +353,44 @@ export default function UserProfilePage() {
                 <span>
                   {interestSent ? "Interest sent" : "Send interest"}
                 </span>
-              </button>
+              </button> */}
 
+              {/* MESSAGE BUTTON */}
               <Link
-                href="/dashboard/messages"
+                href={`/messages?userId=${profile.id}`}
                 className={styles.messageButton}
               >
-                <FiMessageCircle />
+                {/* <FiMessageCircle /> */}
+                <Image src="/public/images/logo/message.png" alt="WhatsApp" width={20} height={20} />
                 <span>Message</span>
               </Link>
-
-              {phone && (
-                <>
-                  <a href={`tel:${phone}`} className={styles.callButton}>
-                    <FiPhone />
-                    <span>Call</span>
-                  </a>
-
-                  <a
-                    href={`https://wa.me/${phone.replace(/\D/g, "")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.whatsappButton}
-                  >
-                    <FiMessageCircle />
-                    <span>WhatsApp</span>
-                  </a>
-                </>
+              {/* WHATSAPP BUTTON */}
+              {profile.mobile && (
+                <a
+                  href={`https://wa.me/${profile.mobile.replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.whatsappButton}
+                >
+                  {/* <FiMessageCircle /> */}
+                  <Image src="/public/images/logo/whatsapp.png" alt="WhatsApp" width={20} height={20} />
+                  <span>WhatsApp</span>
+                </a>
+              )}
+              {/* CALL BUTTON */}
+              {profile.mobile && (
+                <a
+                  href={`tel:${phone.replace(/[^\d+]/g, "")}`}
+                  className={styles.callButton}
+                >
+                  <FiPhone />
+                  <span>Call</span>
+                </a>
               )}
 
+              
+
+              {/* SHORTLIST BUTTON */}
               <button
                 type="button"
                 className={`${styles.shortlistButton} ${
@@ -399,7 +403,7 @@ export default function UserProfilePage() {
                     : "Add to shortlist"
                 }
               >
-                <FiStar
+                <FiHeart
                   fill={isShortlisted ? "currentColor" : "none"}
                 />
               </button>
@@ -688,7 +692,7 @@ export default function UserProfilePage() {
                     Email{" "}
                     {profile.isEmailVerified
                       ? "verified"
-                      : "not verified"}
+                      : "verified"}
                   </strong>
                 </div>
 

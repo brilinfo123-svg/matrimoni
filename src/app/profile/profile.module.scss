@@ -137,6 +137,7 @@
     
     .profilePhoto {
     display: grid;
+    position: relative;
     width: 116px;
     height: 116px;
     place-items: center;
@@ -152,6 +153,14 @@
     box-shadow:
     0 14px 35px rgba(168, 50, 104, 0.18),
     inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+    img{
+        border-radius: 50%;
+        width: 116px;
+        height: 108px;
+        position: absolute;
+        object-fit: cover;
+        object-position: center;
+    }
     }
     
     .profilePhoto span {

@@ -1,0 +1,57 @@
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+%shimmer {
+  display: block;
+  background: linear-gradient(90deg, #f1edf0 25%, #faf6f8 50%, #f1edf0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.35s ease-in-out infinite;
+}
+
+.conversationList { display: flex; flex-direction: column; }
+.conversationItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 76px;
+  padding: 14px 17px;
+}
+.avatar {
+  @extend %shimmer;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 15px;
+}
+.conversationDetails { flex: 1; min-width: 0; }
+.conversationTop { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.nameLine { @extend %shimmer; width: 46%; height: 11px; border-radius: 6px; }
+.timeLine { @extend %shimmer; width: 30px; height: 8px; border-radius: 5px; }
+.previewLine { @extend %shimmer; width: 72%; height: 9px; border-radius: 5px; }
+
+.messageList { display: flex; flex-direction: column; gap: 22px; width: 100%; padding: 4px 0 12px; }
+.messageRow { display: flex; align-items: flex-end; gap: 9px; width: 100%; }
+.incoming { justify-content: flex-start; }
+.outgoing { justify-content: flex-end; }
+.messageAvatar { @extend %shimmer; width: 28px; height: 28px; flex: 0 0 28px; border-radius: 9px; }
+.messageContent { display: flex; flex-direction: column; gap: 6px; width: min(70%, 470px); }
+.bubble { @extend %shimmer; width: 100%; height: 48px; border-radius: 15px; }
+.incoming .bubble { border-bottom-left-radius: 5px; }
+.outgoing .bubble { border-bottom-right-radius: 5px; }
+.bubbleShort { max-width: 190px; height: 38px; }
+.bubbleMedium { max-width: 260px; height: 52px; }
+.bubbleLong { max-width: 310px; height: 62px; }
+.metaLine { @extend %shimmer; width: 42px; height: 7px; border-radius: 5px; opacity: .8; }
+.outgoing .metaLine { align-self: flex-end; }
+
+@media (max-width: 760px) {
+  .conversationItem { padding: 13px 12px; }
+  .avatar { width: 45px; height: 45px; flex-basis: 45px; }
+  .messageContent { width: min(82%, 470px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar, .nameLine, .timeLine, .previewLine, .messageAvatar, .bubble, .metaLine { animation: none; }
+}

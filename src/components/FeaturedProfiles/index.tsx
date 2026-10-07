@@ -3,13 +3,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+
 import {
   FiArrowRight,
   FiBriefcase,
   FiCheck,
   FiHeart,
   FiMapPin,
+  FiPhone,
+  FiMessageCircle,
 } from "react-icons/fi";
+
 
 import styles from "./index.module.scss";
 
@@ -23,11 +27,14 @@ interface Profile {
   initials: string;
   verified: boolean;
   education: string;
+  mobile: string | null;
 }
 
 export default function FeaturedProfiles() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+
+
 
   useEffect(() => {
     const fetchProfiles = async () => {

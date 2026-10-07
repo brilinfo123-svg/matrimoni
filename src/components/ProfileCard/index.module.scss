@@ -359,6 +359,130 @@
   outline-offset: 3px;
 }
 
+
+/* ================================
+   Call & WhatsApp Buttons
+================================ */
+
+.callButton,
+.whatsappButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  width: 42px;
+  height: 42px;
+
+  padding: 0;
+
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+
+  text-decoration: none;
+
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(168, 50, 104, 0.18);
+    outline-offset: 2px;
+  }
+}
+
+/* Call */
+
+.callButton {
+  background: #f8fafc;
+  color: #475569;
+
+  &:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  }
+}
+
+/* WhatsApp */
+
+.whatsappButton {
+  background: #f0fdf4;
+  color: #16a34a;
+  border-color: #bbf7d0;
+
+  &:hover {
+    background: #dcfce7;
+    border-color: #86efac;
+    box-shadow: 0 6px 16px rgba(22, 163, 74, 0.12);
+  }
+}
+
+
+/* ================================
+   Mobile
+================================ */
+
+@media (max-width: 700px) {
+  .callButton,
+  .whatsappButton {
+    width: 40px;
+    height: 40px;
+
+    border-radius: 11px;
+
+    svg {
+      width: 17px;
+      height: 17px;
+    }
+  }
+}
+
+
+/* Small Mobile */
+
+@media (max-width: 420px) {
+  .callButton,
+  .whatsappButton {
+    width: 38px;
+    height: 38px;
+
+    border-radius: 10px;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+}
+
+
+/* Reduced Motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .callButton,
+  .whatsappButton {
+    transition: none;
+
+    &:hover {
+      transform: none;
+    }
+  }
+}
+
 /* Tablet */
 
 @media (max-width: 950px) {

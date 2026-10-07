@@ -17,12 +17,12 @@
   background: rgba(168, 50, 104, 0.055);
 }
 
-.container {
-  position: relative;
-  z-index: 1;
-  width: min(100% - 40px, 1280px);
-  margin: 0 auto;
-}
+// .container {
+//   position: relative;
+//   z-index: 1;
+//   width: min(100% - 40px, 1280px);
+//   margin: 0 auto;
+// }
 
 /* =========================================
    HEADER
@@ -1119,9 +1119,9 @@
     padding: 32px 0 55px;
   }
 
-  .container {
-    width: min(100% - 28px, 700px);
-  }
+  // .container {
+  //   width: min(100% - 28px, 700px);
+  // }
 
   .completionCard {
     align-items: stretch;
@@ -1148,9 +1148,9 @@
     padding: 25px 0 45px;
   }
 
-  .container {
-    width: min(100% - 20px, 560px);
-  }
+  // .container {
+  //   width: min(100% - 20px, 560px);
+  // }
 
   .dashboardHeader {
     align-items: flex-start;
@@ -1275,9 +1275,9 @@
 }
 
 @media (max-width: 400px) {
-  .container {
-    width: calc(100% - 14px);
-  }
+  // .container {
+  //   width: calc(100% - 14px);
+  // }
 
   .dashboardHeader h1 {
     font-size: 28px;

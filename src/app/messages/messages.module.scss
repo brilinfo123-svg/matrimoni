@@ -45,7 +45,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 30px;
-  margin-bottom: 25px;
+  margin-bottom: 15px;
 }
 
 .eyebrow {
@@ -108,7 +108,9 @@
   display: grid;
   grid-template-columns: 350px minmax(0, 1fr);
 
+  height: 690px;
   min-height: 690px;
+  max-height: 690px;
 
   overflow: hidden;
 
@@ -128,6 +130,10 @@
   flex-direction: column;
 
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+
+  overflow: hidden;
 
   border-right: 1px solid #eee9eb;
   background: #fff;
@@ -466,7 +472,13 @@
 .chatPanel {
   display: flex;
   flex-direction: column;
+
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+
+  overflow: hidden;
+
   background: #fff;
 }
 
@@ -684,10 +696,12 @@
 /* Messages */
 
 .messagesArea {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
+  height: 0;
 
   overflow-y: auto;
+  overflow-x: hidden;
 
   padding: 25px 28px;
 
@@ -698,6 +712,8 @@
       transparent 30%
     ),
     #fff;
+
+  scroll-behavior: smooth;
 }
 
 .dateDivider {
@@ -1037,6 +1053,60 @@
   transform: rotate(180deg);
 }
 
+.chatMenuWrapper {
+  position: relative;
+}
+
+.chatMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 100;
+
+  min-width: 190px;
+  padding: 6px;
+
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.deleteChatButton {
+  width: 100%;
+  border: 0;
+  background: transparent;
+
+  padding: 10px 12px;
+
+  text-align: left;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  color: #dc2626;
+
+  border-radius: 8px;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.deleteChatButton:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.deleteChatButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Tablet */
 
 @media (max-width: 950px) {
@@ -1058,7 +1128,7 @@
 @media (max-width: 760px) {
   .page {
     min-height: calc(100vh - 70px);
-    padding: 30px 0 50px;
+    padding: 5px;
   }
 
   .container {
@@ -1069,6 +1139,7 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 15px;
+    display: none;
   }
 
   .messageCount {
@@ -1078,12 +1149,16 @@
   .messenger {
     position: relative;
 
-    display: block;
+  display: block;
 
-    min-height: 650px;
-    height: calc(100vh - 210px);
+  min-height: 650px;
+  height: calc(100vh - 210px);
+  max-height: calc(100vh - 210px);
 
-    border-radius: 18px;
+  overflow: hidden;
+
+  border-radius: 18px;
+    margin: 0 -10px;
   }
 
   .conversationPanel {
@@ -1096,14 +1171,17 @@
   .chatPanel {
     position: absolute;
     inset: 0;
-
+  
     z-index: 5;
-
+  
+    height: 100%;
+    min-height: 0;
+  
     visibility: hidden;
     opacity: 0;
-
-    transform: translateX(100%);
-
+  
+    // transform: translateX(100%);
+  
     transition:
       transform 220ms ease,
       opacity 220ms ease,

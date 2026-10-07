@@ -1,0 +1,589 @@
+.page {
+  position: relative;
+  min-height: 100vh;
+  padding: 30px 0 80px;
+  overflow: hidden;
+  background: #faf9fa;
+}
+
+.backgroundGlow,
+.backgroundGlowTwo {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  filter: blur(10px);
+}
+
+.backgroundGlow {
+  top: -180px;
+  left: -150px;
+  width: 420px;
+  height: 420px;
+  background: rgba(168, 50, 104, 0.06);
+}
+
+.backgroundGlowTwo {
+  right: -180px;
+  top: 300px;
+  width: 380px;
+  height: 380px;
+  background: rgba(168, 50, 104, 0.04);
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #eee9ec;
+  border-radius: 8px;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.65),
+    transparent
+  );
+  animation: skeletonShimmer 1.5s infinite;
+}
+
+@keyframes skeletonShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Top Bar */
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.backButton {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+.lineShort {
+  width: 120px;
+  height: 12px;
+  margin-right: auto;
+}
+
+.moreButton {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+/* Profile Hero */
+
+.profileHero {
+  display: grid;
+  grid-template-columns: minmax(320px, 0.95fr) minmax(360px, 3.05fr);
+  gap: 28px;
+  padding: 22px;
+  border: 1px solid #eee7eb;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 12px 40px rgba(40, 20, 30, 0.04);
+}
+
+.photoSection {
+  position: relative;
+}
+
+.profilePhoto {
+  width: 100%;
+  aspect-ratio: 4 / 4.4;
+  border-radius: 20px;
+//   max-width: 340px;
+}
+
+.photoCount {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.countNumber {
+  width: 24px;
+  height: 12px;
+}
+
+.countText {
+  width: 48px;
+  height: 10px;
+}
+
+/* Profile Info */
+
+.profileInfo {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 15px 8px;
+}
+
+.statusRow {
+  margin-bottom: 14px;
+}
+
+.badge {
+  width: 82px;
+  height: 26px;
+  border-radius: 20px;
+}
+
+.name {
+  width: 68%;
+  height: 34px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+}
+
+.subtitle {
+  width: 48%;
+  height: 15px;
+  margin-bottom: 20px;
+}
+
+.location {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 25px;
+}
+
+.locationIcon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+
+.locationText {
+  width: 160px;
+  height: 13px;
+}
+
+/* Compatibility */
+
+.compatibility {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px;
+  margin-bottom: 24px;
+  border: 1px solid #f0e8ed;
+  border-radius: 16px;
+}
+
+.matchCircle {
+  flex: 0 0 auto;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+}
+
+.compatibilityContent {
+  flex: 1;
+}
+
+.compatibilityTitle {
+  width: 120px;
+  height: 12px;
+  margin-bottom: 8px;
+}
+
+.compatibilityText {
+  width: 170px;
+  height: 11px;
+  margin-bottom: 6px;
+}
+
+.compatibilityTextShort {
+  width: 110px;
+  height: 10px;
+}
+
+.chevron {
+  width: 10px;
+  height: 18px;
+  border-radius: 5px;
+}
+
+/* Actions */
+
+.actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, 48px);
+  gap: 10px;
+}
+
+.actionLarge {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+}
+
+.actionSmall {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+}
+
+/* Content */
+
+.contentLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.card,
+.sideCard,
+.privacyCard {
+  padding: 24px;
+  border: 1px solid #eee7eb;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(40, 20, 30, 0.03);
+}
+
+.card + .card {
+  margin-top: 20px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.sectionIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+}
+
+.sectionTitle {
+  width: 140px;
+  height: 17px;
+}
+
+.textGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.text {
+  width: 100%;
+  height: 11px;
+}
+
+.textMedium {
+  width: 72%;
+  height: 11px;
+}
+
+/* Details */
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 22px;
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.detailLabel {
+  width: 80px;
+  height: 10px;
+}
+
+.detailValue {
+  width: 145px;
+  height: 13px;
+}
+
+/* Photos */
+
+.photos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.photo {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 14px;
+}
+
+/* Sidebar */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sideHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.sideIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+.sideEyebrow {
+  width: 80px;
+  height: 9px;
+  margin-bottom: 7px;
+}
+
+.sideTitle {
+  width: 130px;
+  height: 15px;
+}
+
+.sideDescription {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 22px;
+}
+
+.verificationList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.verificationItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.verificationIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.verificationText {
+  width: 120px;
+  height: 11px;
+}
+
+/* Privacy */
+
+.privacyCard {
+  display: flex;
+  gap: 12px;
+}
+
+.privacyIcon {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.privacyContent {
+  flex: 1;
+}
+
+.privacyTitle {
+  width: 110px;
+  height: 13px;
+  margin-bottom: 10px;
+}
+
+.privacyText {
+  width: 100%;
+  height: 9px;
+  margin-bottom: 6px;
+}
+
+/* Bottom CTA */
+
+.bottomCta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 24px;
+  padding: 20px 24px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid #eee7eb;
+}
+
+.ctaContent {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+}
+
+.ctaIcon {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+}
+
+.ctaTitle {
+  width: 180px;
+  height: 14px;
+  margin-bottom: 9px;
+}
+
+.ctaText {
+  width: 260px;
+  height: 10px;
+}
+
+.ctaButton {
+  width: 130px;
+  height: 44px;
+  border-radius: 11px;
+}
+
+/* Responsive */
+
+@media (max-width: 1000px) {
+  .profileHero {
+    grid-template-columns: 1fr;
+  }
+
+  .profilePhoto {
+    aspect-ratio: 16 / 10;
+  }
+
+  .contentLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 20px 0 50px;
+  }
+
+  .profileHero {
+    padding: 15px;
+    border-radius: 18px;
+  }
+
+  .card,
+  .sideCard,
+  .privacyCard {
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .detailsGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .photos {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .bottomCta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ctaButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .profilePhoto {
+    aspect-ratio: 1 / 1.1;
+  }
+
+  .name {
+    width: 85%;
+  }
+
+  .subtitle {
+    width: 65%;
+  }
+
+  .actions {
+    grid-template-columns: 1fr 44px 44px 44px;
+    gap: 7px;
+  }
+
+  .actionSmall {
+    width: 44px;
+    height: 44px;
+  }
+
+  .actionLarge {
+    height: 44px;
+  }
+
+  .detailsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .photos {
+    gap: 8px;
+  }
+
+  .bottomCta {
+    padding: 18px;
+  }
+
+  .ctaText {
+    width: 190px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+  }
+}

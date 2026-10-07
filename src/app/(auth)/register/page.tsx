@@ -172,6 +172,94 @@ const initialFormData: FormData = {
   photos: [],
 };
 
+
+type CloudinarySignature = {
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  folder: string;
+  signature: string;
+};
+
+async function uploadPhotosToCloudinary(
+  files: File[]
+): Promise<string[]> {
+  if (files.length === 0) {
+    return [];
+  }
+
+  // Step A: Backend se secure signature lo
+  const signatureResponse = await fetch(
+    "/api/cloudinary/sign",
+    {
+      method: "POST",
+    }
+  );
+
+  const signatureData: CloudinarySignature & {
+    message?: string;
+  } = await signatureResponse.json();
+
+  if (!signatureResponse.ok) {
+    throw new Error(
+      signatureData.message ||
+        "Unable to prepare image upload."
+    );
+  }
+
+  // Step B: Images Cloudinary par upload karo
+  const uploadedUrls = await Promise.all(
+    files.map(async (file) => {
+      const uploadFormData = new FormData();
+
+      uploadFormData.append("file", file);
+      uploadFormData.append(
+        "api_key",
+        signatureData.apiKey
+      );
+      uploadFormData.append(
+        "timestamp",
+        String(signatureData.timestamp)
+      );
+      uploadFormData.append(
+        "folder",
+        signatureData.folder
+      );
+      uploadFormData.append(
+        "signature",
+        signatureData.signature
+      );
+
+      const uploadResponse = await fetch(
+        `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/image/upload`,
+        {
+          method: "POST",
+          body: uploadFormData,
+        }
+      );
+
+      const uploadResult = await uploadResponse.json();
+
+      if (!uploadResponse.ok) {
+        throw new Error(
+          uploadResult.error?.message ||
+            "Image upload failed."
+        );
+      }
+
+      // Automatic format and quality optimization
+      const optimizedUrl = uploadResult.secure_url.replace(
+        "/upload/",
+        "/upload/f_auto,q_auto,c_limit,w_1600/"
+      );
+
+      return optimizedUrl;
+    })
+  );
+
+  return uploadedUrls;
+}
+
 export default function RegisterPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] =
@@ -188,6 +276,7 @@ export default function RegisterPage() {
   const [emailError, setEmailError] = useState("");
   const [mobileError, setMobileError] = useState("");
   const [isCheckingAccount, setIsCheckingAccount] = useState(false);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
 
 
   const currentStepData = steps[currentStep - 1];
@@ -430,38 +519,77 @@ const handleNext = async () => {
     }
   };
 
+
   const handlePhotoChange = (
-    event: ChangeEvent<HTMLInputElement>,
+    event: ChangeEvent<HTMLInputElement>
   ) => {
     const files = Array.from(event.target.files || []);
-
-    if (!files.length) {
-      return;
+  
+    if (!files.length) return;
+  
+    const remainingSlots = 6 - formData.photos.length;
+  
+    const validFiles = files.filter((file) => {
+      const isValidType = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+      ].includes(file.type);
+  
+      const isValidSize = file.size <= 5 * 1024 * 1024;
+  
+      return isValidType && isValidSize;
+    });
+  
+    if (validFiles.length !== files.length) {
+      setErrorMessage(
+        "Only JPG, PNG or WebP images up to 5 MB are allowed."
+      );
     }
-
-    const previews = files.map((file) =>
-      URL.createObjectURL(file),
+  
+    const filesToAdd = validFiles.slice(0, remainingSlots);
+  
+    if (filesToAdd.length === 0) return;
+  
+    const previews = filesToAdd.map((file) =>
+      URL.createObjectURL(file)
     );
-
+  
+    setPhotoFiles((previous) => [
+      ...previous,
+      ...filesToAdd,
+    ]);
+  
     setFormData((previous) => ({
       ...previous,
-      photos: [...previous.photos, ...previews].slice(0, 6),
+      photos: [
+        ...previous.photos,
+        ...previews,
+      ],
     }));
-
-    setErrorMessage("");
   };
 
   const removePhoto = (index: number) => {
+    const previewUrl = formData.photos[index];
+  
+    if (previewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(previewUrl);
+    }
+  
+    setPhotoFiles((previous) =>
+      previous.filter((_, photoIndex) => photoIndex !== index)
+    );
+  
     setFormData((previous) => ({
       ...previous,
       photos: previous.photos.filter(
-        (_, photoIndex) => photoIndex !== index,
+        (_, photoIndex) => photoIndex !== index
       ),
     }));
   };
 
   const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>,
+    event: FormEvent<HTMLFormElement>
   ) => {
     event.preventDefault();
   
@@ -476,19 +604,29 @@ const handleNext = async () => {
     setErrorMessage("");
   
     try {
+      // Upload photos to Cloudinary
+      const uploadedPhotoUrls =
+        await uploadPhotosToCloudinary(photoFiles);
+  
+      // Send permanent image URLs to backend
+      const registrationPayload = {
+        ...formData,
+        photos: uploadedPhotoUrls,
+      };
+  
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(registrationPayload),
       });
   
       const result = await response.json();
   
       if (!response.ok) {
         setErrorMessage(
-          result.message || "Unable to create your account.",
+          result.message || "Unable to create your account."
         );
         return;
       }
@@ -498,7 +636,9 @@ const handleNext = async () => {
       console.error("Registration error:", error);
   
       setErrorMessage(
-        "Unable to connect to the server. Please try again.",
+        error instanceof Error
+          ? error.message
+          : "Unable to upload photos or create your account."
       );
     } finally {
       setIsSubmitting(false);

@@ -10,11 +10,21 @@ import {
   FiSearch,
   FiUser,
   FiX,
+  FiBell,
 } from "react-icons/fi";
+
+import {
+  useMessageNotifications,
+} from "@/components/MessageNotificationProvider/MessageNotificationProvider";
 
 import styles from "./index.module.scss";
 
 const navigation = [
+  {
+    label: "Notification",
+    href: "/settings",
+    icon: FiBell,
+  },
   {
     label: "Discover",
     href: "/search",
@@ -37,6 +47,14 @@ type CurrentUser = {
   firstName?: string;
   lastName?: string;
   email?: string;
+
+  /*
+   * Profile photo
+   *
+   * Your API should return the first
+   * profile photo here.
+   */
+  photos?: string;
 };
 
 type MeResponse = {
@@ -45,8 +63,7 @@ type MeResponse = {
 };
 
 export default function Header() {
-  const [isMenuOpen, setIsMenuOpen] =
-    useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const [isLoggingOut, setIsLoggingOut] =
     useState(false);
@@ -59,18 +76,19 @@ export default function Header() {
 
   /*
    * -----------------------------------------
+   * Message notifications
+   * -----------------------------------------
+   */
+
+  const { unreadCount } =
+    useMessageNotifications();
+
+  /*
+   * -----------------------------------------
    * Get currently logged-in user
    * -----------------------------------------
-   *
-   * The API reads:
-   *
-   * matrimonial_session
-   *
-   * HTTP-only cookie.
-   *
-   * We do NOT read the cookie from
-   * JavaScript because it is HTTP-only.
    */
+
   const loadCurrentUser = async () => {
     try {
       setIsLoadingUser(true);
@@ -113,8 +131,11 @@ export default function Header() {
   };
 
   /*
-   * Load user when Header mounts.
+   * -----------------------------------------
+   * Load user when Header mounts
+   * -----------------------------------------
    */
+
   useEffect(() => {
     loadCurrentUser();
   }, []);
@@ -124,6 +145,7 @@ export default function Header() {
    * Close mobile menu
    * -----------------------------------------
    */
+
   const closeMenu = () => {
     setIsMenuOpen(false);
   };
@@ -133,6 +155,7 @@ export default function Header() {
    * Logout
    * -----------------------------------------
    */
+
   const handleLogout = async () => {
     if (isLoggingOut) {
       return;
@@ -161,14 +184,8 @@ export default function Header() {
         data,
       );
 
-      /*
-       * Immediately update Header UI.
-       */
       setUser(null);
 
-      /*
-       * Go to homepage.
-       */
       window.location.assign("/");
     } catch (error) {
       console.error(
@@ -176,12 +193,8 @@ export default function Header() {
         error,
       );
 
-      /*
-       * Even if API has an issue,
-       * refresh the page so the server
-       * can determine the actual session.
-       */
       setUser(null);
+
       window.location.assign("/");
     } finally {
       setIsLoggingOut(false);
@@ -193,21 +206,46 @@ export default function Header() {
    * User state
    * -----------------------------------------
    */
+
   const isLoggedIn =
     !isLoadingUser && !!user;
 
   /*
-   * Build user name.
+   * -----------------------------------------
+   * Build user name
+   * -----------------------------------------
    */
+
   const userName =
     `${user?.firstName || ""} ${
       user?.lastName || ""
     }`.trim() || "My Account";
 
+  /*
+   * -----------------------------------------
+   * Profile photo
+   * -----------------------------------------
+   */
+
+  const profilePhoto = user?.photos || "";
+  /*
+   * -----------------------------------------
+   * Unread message count
+   * -----------------------------------------
+   */
+
+  const formattedUnreadCount =
+    unreadCount > 99
+      ? "99+"
+      : unreadCount;
+
   return (
     <header className={styles.header}>
       <div className={styles.container}>
-        {/* Logo */}
+
+        {/* =====================================
+            LOGO
+        ====================================== */}
 
         <Link
           href="/"
@@ -229,13 +267,11 @@ export default function Header() {
             <span
               className={styles.logoMain}
             >
-              Matrimonialaksh
+              Logo
             </span>
 
             <span
-              className={
-                styles.logoTagline
-              }
+              className={styles.logoTagline}
             >
               Find your meaningful
               connection
@@ -243,7 +279,9 @@ export default function Header() {
           </span>
         </Link>
 
-        {/* Desktop Navigation */}
+        {/* =====================================
+            DESKTOP NAVIGATION
+        ====================================== */}
 
         <nav
           className={styles.desktopNav}
@@ -252,15 +290,41 @@ export default function Header() {
           {navigation.map((item) => {
             const Icon = item.icon;
 
+            const isMessages =
+              item.href === "/messages";
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={styles.navLink}
               >
-                <Icon
-                  aria-hidden="true"
-                />
+                {isMessages ? (
+                  <span
+                    className={
+                      styles.messageNavIcon
+                    }
+                  >
+                    <Icon
+                      aria-hidden="true"
+                    />
+
+                    {unreadCount > 0 && (
+                      <span
+                        className={
+                          styles.messageBadge
+                        }
+                        aria-label={`${unreadCount} unread messages`}
+                      >
+                        {formattedUnreadCount}
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <Icon
+                    aria-hidden="true"
+                  />
+                )}
 
                 <span>
                   {item.label}
@@ -270,7 +334,9 @@ export default function Header() {
           })}
         </nav>
 
-        {/* Desktop Actions */}
+        {/* =====================================
+            DESKTOP ACTIONS
+        ====================================== */}
 
         <div
           className={
@@ -278,14 +344,6 @@ export default function Header() {
           }
         >
           {isLoadingUser ? (
-            /*
-             * Keep this area empty while
-             * checking authentication.
-             *
-             * This prevents Login/Register
-             * buttons from briefly appearing
-             * before the session is checked.
-             */
             <div
               className={
                 styles.authLoading
@@ -305,12 +363,22 @@ export default function Header() {
               >
                 <span
                   className={
-                    styles.userIcon
+                    styles.userAvatar
                   }
                 >
-                  <FiUser
-                    aria-hidden="true"
-                  />
+                  {profilePhoto ? (
+                    <img
+                      src={profilePhoto}
+                      alt={userName}
+                      className={
+                        styles.userAvatarImage
+                      }
+                    />
+                  ) : (
+                    <FiUser
+                      aria-hidden="true"
+                    />
+                  )}
                 </span>
 
                 <span
@@ -380,7 +448,9 @@ export default function Header() {
           )}
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* =====================================
+            MOBILE MENU BUTTON
+        ====================================== */}
 
         <button
           type="button"
@@ -410,13 +480,13 @@ export default function Header() {
         </button>
       </div>
 
-      {/* Mobile Navigation */}
+      {/* =======================================
+          MOBILE NAVIGATION
+      ======================================== */}
 
       <div
         id="mobile-navigation"
-        className={`${
-          styles.mobileMenu
-        } ${
+        className={`${styles.mobileMenu} ${
           isMenuOpen
             ? styles.mobileMenuOpen
             : ""
@@ -430,6 +500,9 @@ export default function Header() {
         >
           {navigation.map((item) => {
             const Icon = item.icon;
+
+            const isMessages =
+              item.href === "/messages";
 
             return (
               <Link
@@ -450,6 +523,20 @@ export default function Header() {
                   <Icon
                     aria-hidden="true"
                   />
+
+                  {isMessages &&
+                    unreadCount > 0 && (
+                      <span
+                        className={
+                          styles.mobileMessageBadge
+                        }
+                        aria-label={`${unreadCount} unread messages`}
+                      >
+                        {
+                          formattedUnreadCount
+                        }
+                      </span>
+                    )}
                 </span>
 
                 <span>
@@ -465,9 +552,9 @@ export default function Header() {
             }
           />
 
-          {/* --------------------------------
+          {/* =================================
               MOBILE AUTH
-          -------------------------------- */}
+          ================================== */}
 
           {isLoadingUser ? (
             <div
@@ -492,12 +579,22 @@ export default function Header() {
               >
                 <span
                   className={
-                    styles.mobileAccountIcon
+                    styles.mobileAccountAvatar
                   }
                 >
-                  <FiUser
-                    aria-hidden="true"
-                  />
+                  {profilePhoto ? (
+                    <img
+                      src={profilePhoto}
+                      alt={userName}
+                      className={
+                        styles.mobileAccountAvatarImage
+                      }
+                    />
+                  ) : (
+                    <FiUser
+                      aria-hidden="true"
+                    />
+                  )}
                 </span>
 
                 <span>

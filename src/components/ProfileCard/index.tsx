@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import {
   FiCheck,
   FiHeart,
   FiMapPin,
   FiMessageCircle,
+  FiPhone,
   FiStar,
 } from "react-icons/fi";
 
@@ -32,6 +34,9 @@ export type Profile = {
   profileFor?: string;
   gender?: string;
 
+  // Mobile number
+  mobile?: string | number | null;
+
   photo: string | null;
   initials: string;
 
@@ -56,8 +61,19 @@ export default function ProfileCard({
   shortlisted,
   onShortlist,
 }: ProfileCardProps) {
+  /*
+   * Clean mobile number
+   *
+   * Example:
+   * "765-280-0999" -> "7652800999"
+   */
+  const cleanMobile = profile.mobile
+    ? String(profile.mobile).replace(/\D/g, "")
+    : "";
+
   return (
     <article className={styles.profileCard}>
+      {/* Profile Image */}
       <Link
         href={`/profile/${profile.id}`}
         className={styles.profileImageLink}
@@ -81,7 +97,9 @@ export default function ProfileCard({
         </div>
       </Link>
 
+      {/* Profile Content */}
       <div className={styles.profileContent}>
+        {/* Name */}
         <div className={styles.profileNameRow}>
           <Link
             href={`/profile/${profile.id}`}
@@ -100,6 +118,7 @@ export default function ProfileCard({
           )}
         </div>
 
+        {/* Age + Profession */}
         <p className={styles.profileMeta}>
           {profile.age !== null
             ? `${profile.age} years`
@@ -113,14 +132,15 @@ export default function ProfileCard({
           )}
         </p>
 
+        {/* Location */}
         {profile.location && (
           <div className={styles.profileLocation}>
             <FiMapPin aria-hidden="true" />
-
             <span>{profile.location}</span>
           </div>
         )}
 
+        {/* Details */}
         <div className={styles.profileDetails}>
           {profile.education && (
             <span>{profile.education}</span>
@@ -135,13 +155,33 @@ export default function ProfileCard({
           )}
         </div>
 
+        {/* Actions */}
         <div className={styles.cardActions}>
+          {/* Shortlist */}
+         
+
+          {/* View Profile */}
+          <Link
+            href={`/profile/${profile.id}`}
+            className={styles.viewButton}
+          >
+            View profile
+          </Link>
+
+          {/* Message */}
+          {/* <Link
+            href={`/messages?userId=${profile.id}`}
+            className={styles.messageButton}
+            aria-label={`Message ${profile.name}`}
+          >
+            <FiMessageCircle aria-hidden="true" />
+          </Link> */}
+
+          {/* Call */}
           <button
             type="button"
             className={`${styles.shortlistButton} ${
-              shortlisted
-                ? styles.shortlisted
-                : ""
+              shortlisted ? styles.shortlisted : ""
             }`}
             onClick={onShortlist}
             aria-label={
@@ -152,28 +192,31 @@ export default function ProfileCard({
           >
             <FiHeart
               aria-hidden="true"
-              fill={
-                shortlisted
-                  ? "currentColor"
-                  : "none"
-              }
+              fill={shortlisted ? "currentColor" : "none"}
             />
           </button>
+          {cleanMobile && (
+            <a
+              href={`tel:${cleanMobile}`}
+              className={styles.callButton}
+              aria-label={`Call ${profile.name}`}
+            >
+              <FiPhone aria-hidden="true" />
+            </a>
+          )}
 
-          <Link
-            href={`/profile/${profile.id}`}
-            className={styles.viewButton}
-          >
-            View profile
-          </Link>
-
-          <Link
-            href={`/dashboard/messages?profile=${profile.id}`}
-            className={styles.messageButton}
-            aria-label={`Message ${profile.name}`}
-          >
-            <FiMessageCircle aria-hidden="true" />
-          </Link>
+          {/* WhatsApp */}
+          {cleanMobile && (
+            <a
+              href={`https://wa.me/${cleanMobile}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.whatsappButton}
+              aria-label={`WhatsApp ${profile.name}`}
+            >
+             <Image src="/public/images/logo/whatsapp.png" alt="WhatsApp" width={20} height={20} />
+            </a>
+          )}
         </div>
       </div>
     </article>

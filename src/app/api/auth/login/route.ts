@@ -38,8 +38,17 @@ export async function POST(
 
     const user = await User.findOne({
       email,
-    }).select("+password");
+    }).select("+password") .lean();
 
+    console.log("LOGIN_API: Raw user:", user);
+    console.log(
+      "LOGIN_API: Email:",
+      user?.email,
+    );
+    console.log(
+      "LOGIN_API: Password exists:",
+      !!user?.password,
+    );
     if (!user) {
       return NextResponse.json(
         {

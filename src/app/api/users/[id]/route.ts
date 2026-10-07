@@ -177,6 +177,9 @@ export async function GET(
 
       profileFor:
         user.profileFor || "",
+      
+      mobile:
+        user.mobile || "",
 
       city:
         user.city || "",

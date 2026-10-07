@@ -480,7 +480,7 @@ export async function GET() {
             projection: {
               password: 0,
               email: 0,
-              mobile: 0,
+              // mobile: 0,
             },
           },
         )
@@ -660,6 +660,7 @@ export async function GET() {
           return {
             id:
               user._id.toString(),
+              mobile: user.mobile || "",
 
             name:
               `${firstName} ${lastName}`.trim() ||

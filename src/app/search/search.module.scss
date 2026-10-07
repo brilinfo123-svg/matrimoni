@@ -470,7 +470,52 @@
     content: "";
     pointer-events: none;
     }
-    
+    .callButton,
+.whatsappButton {
+  width: 42px;
+  height: 42px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+
+  text-decoration: none;
+
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.callButton {
+  background: #f8fafc;
+
+  &:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+  }
+}
+
+.whatsappButton {
+  background: #f0fdf4;
+
+  &:hover {
+    background: #dcfce7;
+    border-color: #86efac;
+  }
+}
     .profileImage::before {
     width: 210px;
     height: 210px;
@@ -626,7 +671,7 @@
     
     .cardActions {
     display: grid;
-    grid-template-columns: 42px minmax(0, 1fr) 42px;
+    grid-template-columns: minmax(0, 1fr) 42px 42px 42px;
     gap: 8px;
     margin-top: 16px;
     }

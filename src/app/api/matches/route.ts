@@ -6,6 +6,7 @@ import { connectDB } from "@/lib/mongodb";
 import { verifyAuthToken } from "@/lib/auth";
 
 type UserDocument = {
+  mobile: string;
   _id: mongoose.Types.ObjectId;
 
   firstName?: string;
@@ -1076,7 +1077,7 @@ export async function GET() {
               user.maritalStatus ||
               "Not specified",
 
-            phone: "",
+              mobile: user.mobile || "",
 
             newMatch:
               user.createdAt
@@ -1092,7 +1093,10 @@ export async function GET() {
                 : false,
 
             about:
-              user.about ||
+              user.education ||
+              "Profile information has not been added yet.",
+              religionabout:
+              user.religion ||
               "Profile information has not been added yet.",
 
             createdAt:

@@ -229,7 +229,7 @@ return ( <div className={styles.page}> <div className={styles.backgroundGlow} />
         </button>
 
         <Link
-            href="/dashboard/messages"
+            href="/messages"
             className={styles.messageButton}
         >
             <FiMessageCircle aria-hidden="true" />

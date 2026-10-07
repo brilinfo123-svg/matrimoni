@@ -10,8 +10,10 @@ const protectedRoutes = [
   "/search",
   "/messages",
   "/matches",
-  "/profile/edit",
-  "/profile/preview",
+
+  // Protect all profile pages
+  "/profile",
+
   "/settings",
 ];
 
@@ -20,6 +22,9 @@ export async function proxy(
 ) {
   const pathname = req.nextUrl.pathname;
 
+  /*
+   * Check if current route is protected.
+   */
   const isProtectedRoute =
     protectedRoutes.some(
       (route) =>
@@ -55,6 +60,10 @@ export async function proxy(
       req.url,
     );
 
+    /*
+     * Login ke baad original page par
+     * redirect karne ke liye callbackUrl.
+     */
     loginUrl.searchParams.set(
       "callbackUrl",
       pathname + req.nextUrl.search,
@@ -122,8 +131,16 @@ export const config = {
     "/search/:path*",
     "/messages/:path*",
     "/matches/:path*",
-    "/profile/edit/:path*",
-    "/profile/preview/:path*",
+
+    /*
+     * Protect:
+     * /profile/[id]
+     * /profile/edit
+     * /profile/preview
+     * and any future /profile/* routes
+     */
+    "/profile/:path*",
+
     "/settings/:path*",
   ],
 };

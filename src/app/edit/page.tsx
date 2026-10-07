@@ -893,7 +893,7 @@ export default function EditProfilePage() {
             )}
 
             <Link
-              href="/dashboard/profile/preview"
+              href="/preview"
               className={
                 styles.previewButton
               }
