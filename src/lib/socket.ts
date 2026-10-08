@@ -1,16 +1,11 @@
 import { io, Socket } from "socket.io-client";
 
 let socket: Socket | null = null;
+let tokenPromise: Promise<string | null> | null = null;
 
-export async function getSocket(): Promise<Socket | null> {
-  // Already connected/created
-  if (socket) {
-    return socket;
-  }
-
+async function getSocketToken(): Promise<string | null> {
   try {
-    // Get short-lived socket JWT from your Next.js server
-    const tokenResponse = await fetch("/api/auth/socket-token", {
+    const response = await fetch("/api/auth/socket-token", {
       method: "GET",
       credentials: "include",
       cache: "no-store",
@@ -19,21 +14,34 @@ export async function getSocket(): Promise<Socket | null> {
       },
     });
 
-    const tokenData = await tokenResponse.json();
+    const data = await response.json();
 
-    if (
-      !tokenResponse.ok ||
-      !tokenData?.success ||
-      !tokenData?.token
-    ) {
+    if (!response.ok || !data?.success || !data?.token) {
       console.error(
         "SOCKET TOKEN ERROR:",
-        tokenData?.message || "Socket token not received",
+        data?.message || "Socket token not received",
       );
 
       return null;
     }
 
+    return data.token;
+  } catch (error) {
+    console.error("SOCKET TOKEN FETCH ERROR:", error);
+    return null;
+  }
+}
+
+function loadSocketToken(): Promise<string | null> {
+  if (!tokenPromise) {
+    tokenPromise = getSocketToken();
+  }
+
+  return tokenPromise;
+}
+
+export function getSocket(): Socket {
+  if (!socket) {
     const socketUrl =
       process.env.NEXT_PUBLIC_SOCKET_URL ||
       "http://localhost:10000";
@@ -41,15 +49,11 @@ export async function getSocket(): Promise<Socket | null> {
     socket = io(socketUrl, {
       path: "/socket.io",
 
-      auth: {
-        token: tokenData.token,
-      },
-
       transports: ["websocket", "polling"],
 
       withCredentials: true,
 
-      autoConnect: true,
+      autoConnect: false,
 
       timeout: 10000,
     });
@@ -66,21 +70,54 @@ export async function getSocket(): Promise<Socket | null> {
       console.log("Socket disconnected:", reason);
     });
 
-    return socket;
-  } catch (error) {
-    console.error("SOCKET INITIALIZATION ERROR:", error);
+    // Get JWT and then connect
+    loadSocketToken().then((token) => {
+      if (!socket || !token) {
+        return;
+      }
 
-    socket = null;
+      socket.auth = {
+        token,
+      };
 
-    return null;
+      socket.connect();
+    });
   }
+
+  return socket;
 }
 
-export function disconnectSocket() {
+export function refreshSocketToken(): void {
+  tokenPromise = null;
+
+  if (!socket) {
+    return;
+  }
+
+  getSocketToken().then((token) => {
+    if (!socket || !token) {
+      return;
+    }
+
+    socket.auth = {
+      token,
+    };
+
+    if (socket.connected) {
+      socket.disconnect();
+    }
+
+    socket.connect();
+  });
+}
+
+export function disconnectSocket(): void {
   if (socket) {
     socket.disconnect();
     socket = null;
   }
+
+  tokenPromise = null;
 }
 
 
