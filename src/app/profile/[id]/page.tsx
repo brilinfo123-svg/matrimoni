@@ -692,7 +692,7 @@ export default function UserProfilePage() {
                     Email{" "}
                     {profile.isEmailVerified
                       ? "verified"
-                      : "verified"}
+                      : "not verified"}
                   </strong>
                 </div>
 

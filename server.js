@@ -70,10 +70,19 @@ if (
 const dev =
   process.env.NODE_ENV !== "production";
 
-const hostname = "localhost";
+/*
+ * IMPORTANT:
+ *
+ * localhost works locally.
+ * 0.0.0.0 is required when running on Render.
+ */
+
+const hostname =
+  process.env.HOST || "0.0.0.0";
 
 const port =
   Number(process.env.PORT) || 3000;
+
 
 const app = next({
   dev,
@@ -146,6 +155,7 @@ const UserSchema =
       collection: "users",
     },
   );
+
 
 const User =
   mongoose.models.User ||
@@ -283,12 +293,14 @@ const Conversation =
     ConversationSchema,
   );
 
+
 const Message =
   mongoose.models.Message ||
   mongoose.model(
     "Message",
     MessageSchema,
   );
+
 
 const PushSubscription =
   mongoose.models.PushSubscription ||
@@ -314,6 +326,10 @@ function createConversationKey(
     .join("_");
 }
 
+
+/* =======================================================
+   PARSE COOKIES
+======================================================= */
 
 function parseCookies(
   cookieHeader = "",
@@ -351,6 +367,10 @@ function parseCookies(
   return cookies;
 }
 
+
+/* =======================================================
+   VERIFY AUTH TOKEN
+======================================================= */
 
 async function verifyAuthToken(
   token,
@@ -408,6 +428,10 @@ async function verifyAuthToken(
 }
 
 
+/* =======================================================
+   OBJECT ID VALIDATION
+======================================================= */
+
 function isValidObjectId(id) {
   return mongoose.isValidObjectId(
     id,
@@ -417,12 +441,6 @@ function isValidObjectId(id) {
 
 /* =======================================================
    GET SENDER NAME
-=======================================================
-
-   Server gets the sender name directly from
-   MongoDB.
-
-   We DO NOT trust senderName from the client.
 ======================================================= */
 
 async function getSenderName(
@@ -607,6 +625,7 @@ async function sendPushNotificationToUser(
 
 await app.prepare();
 
+
 const httpServer =
   createServer(
     async (req, res) => {
@@ -639,6 +658,34 @@ const httpServer =
 
 
 /* =======================================================
+   SOCKET CORS
+=======================================================
+
+   Local:
+   http://localhost:3000
+
+   Production:
+   CLIENT_URL from Render environment variables
+
+   Example:
+
+   CLIENT_URL=https://your-app.vercel.app
+======================================================= */
+
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  process.env.CLIENT_URL,
+].filter(Boolean);
+
+
+console.log(
+  "Socket allowed origins:",
+  allowedOrigins,
+);
+
+
+/* =======================================================
    SOCKET.IO
 ======================================================= */
 
@@ -649,10 +696,8 @@ const io =
       path: "/socket.io",
 
       cors: {
-        origin: [
-          "http://localhost:3000",
-          "http://127.0.0.1:3000",
-        ],
+        origin:
+          allowedOrigins,
 
         credentials: true,
       },
@@ -670,27 +715,68 @@ const io =
 
 
 /* =======================================================
-   SOCKET AUTH
+   SOCKET AUTHENTICATION
+=======================================================
+
+   PRODUCTION:
+
+   Client sends:
+
+   io(SOCKET_URL, {
+     auth: {
+       token: socketToken,
+     }
+   });
+
+   LOCAL DEVELOPMENT:
+
+   matrimonial_session cookie can still
+   be used as a fallback.
+
 ======================================================= */
 
 io.use(
   async (socket, next) => {
     try {
-      const cookieHeader =
-        socket.handshake.headers
-          .cookie || "";
 
-      const cookies =
-        parseCookies(
-          cookieHeader,
-        );
+      /* ===================================================
+         1. FIRST: SOCKET AUTH TOKEN
+      =================================================== */
 
-      const token =
-        cookies.matrimonial_session;
+      let token =
+        socket.handshake.auth?.token;
+
+
+      /* ===================================================
+         2. FALLBACK: AUTH COOKIE
+      ===================================================
+
+         This keeps local development compatible
+         with your existing authentication.
+      =================================================== */
+
+      if (!token) {
+        const cookieHeader =
+          socket.handshake.headers
+            .cookie || "";
+
+        const cookies =
+          parseCookies(
+            cookieHeader,
+          );
+
+        token =
+          cookies.matrimonial_session;
+      }
+
+
+      /* ===================================================
+         3. TOKEN REQUIRED
+      =================================================== */
 
       if (!token) {
         console.error(
-          "Socket: matrimonial_session cookie missing",
+          "Socket: authentication token missing",
         );
 
         return next(
@@ -699,13 +785,23 @@ io.use(
           ),
         );
       }
+
+
+      /* ===================================================
+         4. VERIFY JWT
+      =================================================== */
 
       const session =
         await verifyAuthToken(
           token,
         );
 
+
       if (!session) {
+        console.error(
+          "Socket: invalid authentication token",
+        );
+
         return next(
           new Error(
             "Unauthorized",
@@ -713,10 +809,33 @@ io.use(
         );
       }
 
+
+      /* ===================================================
+         5. STORE USER ID
+      =================================================== */
+
       socket.userId =
         String(
           session.userId,
         );
+
+
+      console.log(
+        "Socket authentication successful:",
+        {
+          socketId:
+            socket.id,
+
+          userId:
+            socket.userId,
+
+          authMethod:
+            socket.handshake.auth?.token
+              ? "socket-token"
+              : "cookie",
+        },
+      );
+
 
       next();
     } catch (error) {
@@ -750,10 +869,12 @@ const onlineUsers =
 io.on(
   "connection",
   (socket) => {
+
     const userId =
       String(
         socket.userId,
       );
+
 
     console.log(
       "Socket connected:",
@@ -763,9 +884,9 @@ io.on(
     );
 
 
-    /* -----------------------------------------------------
+    /* ===================================================
        ADD USER SOCKET
-    ----------------------------------------------------- */
+    =================================================== */
 
     if (
       !onlineUsers.has(userId)
@@ -776,23 +897,24 @@ io.on(
       );
     }
 
+
     onlineUsers
       .get(userId)
       .add(socket.id);
 
 
-    /* -----------------------------------------------------
+    /* ===================================================
        PERSONAL USER ROOM
-    ----------------------------------------------------- */
+    =================================================== */
 
     socket.join(
       `user:${userId}`,
     );
 
 
-    /* -----------------------------------------------------
+    /* ===================================================
        PRESENCE
-    ----------------------------------------------------- */
+    =================================================== */
 
     io.emit(
       "presence:update",
@@ -811,8 +933,10 @@ io.on(
       "conversation:join",
       async (payload) => {
         try {
+
           const conversationId =
             payload?.conversationId;
+
 
           if (
             !conversationId ||
@@ -822,6 +946,7 @@ io.on(
           ) {
             return;
           }
+
 
           const conversation =
             await Conversation.findOne(
@@ -834,6 +959,7 @@ io.on(
               },
             ).lean();
 
+
           if (!conversation) {
             console.warn(
               "Unauthorized conversation join:",
@@ -844,9 +970,11 @@ io.on(
             return;
           }
 
+
           socket.join(
             `conversation:${conversationId}`,
           );
+
 
           console.log(
             `User ${userId} joined conversation ${conversationId}`,
@@ -868,16 +996,20 @@ io.on(
     socket.on(
       "conversation:leave",
       (payload) => {
+
         const conversationId =
           payload?.conversationId;
+
 
         if (!conversationId) {
           return;
         }
 
+
         socket.leave(
           `conversation:${conversationId}`,
         );
+
 
         console.log(
           `User ${userId} left conversation ${conversationId}`,
@@ -897,8 +1029,10 @@ io.on(
         callback,
       ) => {
         try {
+
           const conversationId =
             payload?.conversationId;
+
 
           const text =
             typeof payload?.text ===
@@ -907,9 +1041,9 @@ io.on(
               : "";
 
 
-          /* -----------------------------------------------
-             Validate conversation
-          ------------------------------------------------ */
+          /* ===============================================
+             VALIDATE CONVERSATION
+          =============================================== */
 
           if (!conversationId) {
             callback?.({
@@ -920,6 +1054,7 @@ io.on(
 
             return;
           }
+
 
           if (
             !isValidObjectId(
@@ -936,9 +1071,9 @@ io.on(
           }
 
 
-          /* -----------------------------------------------
-             Validate message
-          ------------------------------------------------ */
+          /* ===============================================
+             VALIDATE MESSAGE
+          =============================================== */
 
           if (!text) {
             callback?.({
@@ -949,6 +1084,7 @@ io.on(
 
             return;
           }
+
 
           if (
             text.length > 2000
@@ -963,9 +1099,9 @@ io.on(
           }
 
 
-          /* -----------------------------------------------
-             Find conversation
-          ------------------------------------------------ */
+          /* ===============================================
+             FIND CONVERSATION
+          =============================================== */
 
           const conversation =
             await Conversation.findOne(
@@ -978,6 +1114,7 @@ io.on(
               },
             );
 
+
           if (!conversation) {
             callback?.({
               success: false,
@@ -989,9 +1126,9 @@ io.on(
           }
 
 
-          /* -----------------------------------------------
-             Find receiver
-          ------------------------------------------------ */
+          /* ===============================================
+             FIND RECEIVER
+          =============================================== */
 
           const receiverId =
             conversation.participants.find(
@@ -1000,6 +1137,7 @@ io.on(
                   participantId,
                 ) !== userId,
             );
+
 
           if (!receiverId) {
             callback?.({
@@ -1011,15 +1149,16 @@ io.on(
             return;
           }
 
+
           const receiverUserId =
             String(
               receiverId,
             );
 
 
-          /* -----------------------------------------------
-             Get sender name
-          ------------------------------------------------ */
+          /* ===============================================
+             GET SENDER NAME
+          =============================================== */
 
           const senderName =
             await getSenderName(
@@ -1027,9 +1166,9 @@ io.on(
             );
 
 
-          /* -----------------------------------------------
-             Save message
-          ------------------------------------------------ */
+          /* ===============================================
+             SAVE MESSAGE
+          =============================================== */
 
           const message =
             await Message.create(
@@ -1051,9 +1190,9 @@ io.on(
             );
 
 
-          /* -----------------------------------------------
-             Update conversation
-          ------------------------------------------------ */
+          /* ===============================================
+             UPDATE CONVERSATION
+          =============================================== */
 
           await Conversation.findByIdAndUpdate(
             conversation._id,
@@ -1069,9 +1208,9 @@ io.on(
           );
 
 
-          /* -----------------------------------------------
-             Message payload
-          ------------------------------------------------ */
+          /* ===============================================
+             MESSAGE PAYLOAD
+          =============================================== */
 
           const messagePayload =
             {
@@ -1081,13 +1220,15 @@ io.on(
                 ),
 
               message: {
-                id: String(
-                  message._id,
-                ),
+                id:
+                  String(
+                    message._id,
+                  ),
 
-                _id: String(
-                  message._id,
-                ),
+                _id:
+                  String(
+                    message._id,
+                  ),
 
                 conversationId:
                   String(
@@ -1119,9 +1260,9 @@ io.on(
             };
 
 
-          /* -----------------------------------------------
-             Sender
-          ------------------------------------------------ */
+          /* ===============================================
+             SEND TO SENDER
+          =============================================== */
 
           io.to(
             `user:${userId}`,
@@ -1131,9 +1272,9 @@ io.on(
           );
 
 
-          /* -----------------------------------------------
-             Receiver
-          ------------------------------------------------ */
+          /* ===============================================
+             SEND TO RECEIVER
+          =============================================== */
 
           io.to(
             `user:${receiverUserId}`,
@@ -1144,16 +1285,17 @@ io.on(
 
 
           /* =================================================
-             WEB PUSH NOTIFICATION
+             WEB PUSH
 
-             Only send push when receiver currently
-             has NO active Socket.IO connection.
+             Only send when receiver does NOT
+             currently have an active socket.
           ================================================= */
 
           const receiverSockets =
             onlineUsers.get(
               receiverUserId,
             );
+
 
           const receiverIsOnline =
             receiverSockets &&
@@ -1166,9 +1308,6 @@ io.on(
             await sendPushNotificationToUser(
               receiverUserId,
               {
-                /*
-                 * Sender name is now included.
-                 */
                 title:
                   `${senderName} sent you a message`,
 
@@ -1199,10 +1338,6 @@ io.on(
                 senderId:
                   userId,
 
-                /*
-                 * Every message gets
-                 * a unique notification.
-                 */
                 tag:
                   `message-${String(
                     message._id,
@@ -1212,9 +1347,9 @@ io.on(
           }
 
 
-          /* -----------------------------------------------
+          /* ===============================================
              ACK
-          ------------------------------------------------ */
+          =============================================== */
 
           callback?.({
             success: true,
@@ -1246,11 +1381,14 @@ io.on(
                 webPushEnabled,
             },
           );
+
         } catch (error) {
+
           console.error(
             "message:send error:",
             error,
           );
+
 
           callback?.({
             success: false,
@@ -1273,13 +1411,14 @@ io.on(
         callback,
       ) => {
         try {
+
           const conversationId =
             payload?.conversationId;
 
 
-          /* -----------------------------------------------
-             Validate conversation
-          ------------------------------------------------ */
+          /* ===============================================
+             VALIDATE CONVERSATION
+          =============================================== */
 
           if (
             !conversationId ||
@@ -1297,10 +1436,9 @@ io.on(
           }
 
 
-          /* -----------------------------------------------
-             Verify current user belongs
-             to conversation
-          ------------------------------------------------ */
+          /* ===============================================
+             VERIFY PARTICIPANT
+          =============================================== */
 
           const conversation =
             await Conversation.findOne(
@@ -1313,6 +1451,7 @@ io.on(
               },
             ).lean();
 
+
           if (!conversation) {
             callback?.({
               success: false,
@@ -1324,9 +1463,9 @@ io.on(
           }
 
 
-          /* -----------------------------------------------
-             Find unread messages
-          ------------------------------------------------ */
+          /* ===============================================
+             FIND UNREAD MESSAGES
+          =============================================== */
 
           const unreadMessages =
             await Message.find(
@@ -1345,9 +1484,9 @@ io.on(
               .lean();
 
 
-          /* -----------------------------------------------
-             Nothing to update
-          ------------------------------------------------ */
+          /* ===============================================
+             NOTHING TO UPDATE
+          =============================================== */
 
           if (
             unreadMessages.length ===
@@ -1362,9 +1501,9 @@ io.on(
           }
 
 
-          /* -----------------------------------------------
-             IDs
-          ------------------------------------------------ */
+          /* ===============================================
+             MESSAGE IDS
+          =============================================== */
 
           const messageIds =
             unreadMessages.map(
@@ -1375,9 +1514,9 @@ io.on(
             );
 
 
-          /* -----------------------------------------------
-             Update MongoDB
-          ------------------------------------------------ */
+          /* ===============================================
+             UPDATE MONGODB
+          =============================================== */
 
           await Message.updateMany(
             {
@@ -1402,14 +1541,15 @@ io.on(
           );
 
 
-          /* -----------------------------------------------
-             Notify original sender(s)
-          ------------------------------------------------ */
+          /* ===============================================
+             NOTIFY ORIGINAL SENDERS
+          =============================================== */
 
           for (
             const message of
             unreadMessages
           ) {
+
             io.to(
               `user:${String(
                 message.senderId,
@@ -1433,9 +1573,9 @@ io.on(
           }
 
 
-          /* -----------------------------------------------
+          /* ===============================================
              ACK
-          ------------------------------------------------ */
+          =============================================== */
 
           callback?.({
             success: true,
@@ -1457,11 +1597,14 @@ io.on(
               messageIds,
             },
           );
+
         } catch (error) {
+
           console.error(
             "message:read error:",
             error,
           );
+
 
           callback?.({
             success: false,
@@ -1480,6 +1623,7 @@ io.on(
     socket.on(
       "disconnect",
       (reason) => {
+
         console.log(
           "Socket disconnected:",
           socket.id,
@@ -1489,28 +1633,33 @@ io.on(
           reason,
         );
 
+
         const userSockets =
           onlineUsers.get(
             userId,
           );
 
+
         if (userSockets) {
+
           userSockets.delete(
             socket.id,
           );
 
 
-          /* ---------------------------------------------
-             Only offline when all tabs
-             / devices are disconnected
-          ---------------------------------------------- */
+          /* ===============================================
+             ONLY OFFLINE WHEN ALL
+             TABS / DEVICES DISCONNECT
+          =============================================== */
 
           if (
             userSockets.size === 0
           ) {
+
             onlineUsers.delete(
               userId,
             );
+
 
             io.emit(
               "presence:update",
@@ -1528,15 +1677,18 @@ io.on(
 
 
 /* =======================================================
-   START
+   START SERVER
 ======================================================= */
 
 httpServer.listen(
   port,
   hostname,
   async () => {
+
     try {
+
       await connectDB();
+
 
       console.log("");
 
@@ -1544,28 +1696,41 @@ httpServer.listen(
         "========================================",
       );
 
-      console.log(
-        `Next.js:    http://${hostname}:${port}`,
-      );
 
       console.log(
-        `Socket.IO:  http://${hostname}:${port}/socket.io`,
+        `Server listening on port: ${port}`,
       );
 
+
       console.log(
-        `Web Push:   ${
+        `Socket.IO path: /socket.io`,
+      );
+
+
+      console.log(
+        `Web Push: ${
           webPushEnabled
             ? "Enabled"
             : "Disabled"
         }`,
       );
 
+
+      console.log(
+        "Allowed Socket Origins:",
+        allowedOrigins,
+      );
+
+
       console.log(
         "========================================",
       );
 
+
       console.log("");
+
     } catch (error) {
+
       console.error(
         "MongoDB connection failed:",
         error,
