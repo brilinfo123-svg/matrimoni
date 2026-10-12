@@ -138,28 +138,50 @@ export default function EnableNotifications() {
     };
   }, []);
 
+
   const handleEnable = async () => {
-    if (loading) {
+    if (loading) return;
+  
+    if (
+      !("Notification" in window) ||
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window)
+    ) {
+      alert("Push notifications are not supported by this browser.");
       return;
     }
-
+  
+    // Permission was previously blocked by the browser.
+    if (Notification.permission === "denied") {
+      alert(
+        "Notifications are blocked for this website. " +
+        "Open browser Site Settings, allow Notifications, " +
+        "then reload this page."
+      );
+      return;
+    }
+  
     setLoading(true);
-
+  
     try {
       const success = await registerPushNotifications();
-
+  
       setEnabled(success);
+  
+      if (!success) {
+        console.error(
+          "Push registration failed. Check the browser console " +
+          "and the subscription API response."
+        );
+      }
     } catch (error) {
-      console.error(
-        "ENABLE_NOTIFICATION_ERROR:",
-        error,
-      );
-
+      console.error("ENABLE_NOTIFICATION_ERROR:", error);
       setEnabled(false);
     } finally {
       setLoading(false);
     }
   };
+  
 
   const handleDisable = async () => {
     if (loading) {
