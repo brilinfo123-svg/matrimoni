@@ -807,7 +807,7 @@ export default function MessagesPage() {
               throw new Error(
                 data?.message || "Socket token unavailable",
               );
-            }
+            } 
     
             callback({ token: data.token });
           })
