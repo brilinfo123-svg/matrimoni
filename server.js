@@ -673,66 +673,52 @@ const io =
    SOCKET AUTH
 ======================================================= */
 
-io.use(
-  async (socket, next) => {
-    try {
-      const cookieHeader =
-        socket.handshake.headers
-          .cookie || "";
+io.use(async (socket, next) => {
+  try {
+    // Prefer the short-lived token sent by the browser.
+    const socketToken = socket.handshake.auth?.token;
 
-      const cookies =
-        parseCookies(
-          cookieHeader,
-        );
+    // Optional cookie fallback for local development.
+    const cookieHeader =
+      socket.handshake.headers.cookie || "";
 
-      const token =
-        cookies.matrimonial_session;
+    const cookies = parseCookies(cookieHeader);
 
-      if (!token) {
-        console.error(
-          "Socket: matrimonial_session cookie missing",
-        );
+    const cookieToken = cookies.matrimonial_session;
 
-        return next(
-          new Error(
-            "Unauthorized",
-          ),
-        );
-      }
+    const token = socketToken || cookieToken;
 
-      const session =
-        await verifyAuthToken(
-          token,
-        );
-
-      if (!session) {
-        return next(
-          new Error(
-            "Unauthorized",
-          ),
-        );
-      }
-
-      socket.userId =
-        String(
-          session.userId,
-        );
-
-      next();
-    } catch (error) {
-      console.error(
-        "Socket middleware error:",
-        error,
-      );
-
-      next(
-        new Error(
-          "Socket authentication failed",
-        ),
-      );
+    if (!token) {
+      console.error("Socket: authentication token missing");
+      return next(new Error("Unauthorized"));
     }
-  },
-);
+
+    const session = await verifyAuthToken(token);
+
+    if (!session?.userId) {
+      return next(new Error("Unauthorized"));
+    }
+
+    // If a socket token was supplied, require its intended type.
+    if (
+      socketToken &&
+      socket.handshake.auth?.token !== socketToken
+    ) {
+      return next(new Error("Unauthorized"));
+    }
+
+    socket.userId = String(session.userId);
+
+    next();
+  } catch (error) {
+    console.error(
+      "Socket authentication failed:",
+      error?.message || error,
+    );
+
+    next(new Error("Socket authentication failed"));
+  }
+});
 
 
 /* =======================================================

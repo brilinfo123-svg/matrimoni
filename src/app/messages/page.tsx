@@ -791,18 +791,36 @@ export default function MessagesPage() {
       SOCKET_URL,
     );
 
-    const socket = io(
-      SOCKET_URL,
-      {
-        path: "/socket.io",
-        withCredentials: true,
-        transports: [
-          "websocket",
-          "polling",
-        ],
-        timeout: 10000,
+    const socket = io(SOCKET_URL, {
+      path: "/socket.io",
+    
+      auth: (callback) => {
+        fetch("/api/auth/socket-token", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        })
+          .then(async (response) => {
+            const data = await response.json();
+    
+            if (!response.ok || !data?.token) {
+              throw new Error(
+                data?.message || "Socket token unavailable",
+              );
+            }
+    
+            callback({ token: data.token });
+          })
+          .catch((error) => {
+            console.error("Socket token error:", error);
+            callback({});
+          });
       },
-    );
+    
+      withCredentials: true,
+      transports: ["websocket", "polling"],
+      timeout: 10000,
+    });
 
     socketRef.current =
       socket;
