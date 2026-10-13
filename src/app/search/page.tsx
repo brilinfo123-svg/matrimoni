@@ -364,9 +364,9 @@ export default function SearchPage() {
       <div className="container">
         <header className={styles.pageHeader}>
           <div>
-            <span className={styles.eyebrow}>
+            {/* <span className={styles.eyebrow}>
               Discover
-            </span>
+            </span> */}
 
             <h1>Find meaningful connections</h1>
 
@@ -376,14 +376,14 @@ export default function SearchPage() {
             </p>
           </div>
 
-          <Link
+          {/* <Link
             href="/profile"
             className={styles.profileButton}
           >
             <FiUser aria-hidden="true" />
 
             <span>My profile</span>
-          </Link>
+          </Link> */}
         </header>
 
         <section className={styles.searchPanel}>

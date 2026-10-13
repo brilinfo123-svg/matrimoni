@@ -145,8 +145,51 @@
   justify-content: space-between;
 
   padding: 21px 20px 15px;
+  @media screen and (max-width: 767px) {
+    // padding: 15px 15px 12px;
+    
+  }
+}
+.conversationAvatarImage,
+.chatAvatarImage,
+.messageAvatarImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
+.conversationAvatar,
+.chatAvatar,
+.messageAvatar {
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.backHomeButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #8b3158;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  display: none;
+  span{
+    color: #8b3158;
+  }
+  @media screen and (max-width: 767px) {
+    display: flex;  
+  }
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    color: #64213e;
+  }
+}
 .conversationHeader h2 {
   color: #292929;
   font-size: 16px;
@@ -155,10 +198,6 @@
 
 .conversationHeader span {
   display: block;
-  margin-top: 4px;
-
-  color: #999;
-  font-size: 11px;
 }
 
 .infoButton {
@@ -536,8 +575,8 @@
 .chatAvatar i {
   position: absolute;
 
-  right: -1px;
-  bottom: -1px;
+  bottom: 2px;
+  right: 1px;
 
   width: 11px;
   height: 11px;
@@ -756,6 +795,11 @@
 
   font-size: 9px;
   line-height: 1.5;
+  span{
+    @media screen and (max-width: 767px) {
+        font-size: 10px;  
+    }
+  }
 }
 
 .safetyMessage svg {
@@ -1043,8 +1087,8 @@
 
   color: #a83268;
 
-  font-size: 10px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .safetyCard > a svg {
@@ -1107,6 +1151,23 @@
   cursor: not-allowed;
 }
 
+.safetyMessage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #fff8ed;
+  border-bottom: 1px solid #f4e5cf;
+  color: #805b2b;
+  font-size: 12px;
+  line-height: 1.5;
+
+  svg {
+    flex-shrink: 0;
+    font-size: 15px;
+  }
+}
+
 /* Tablet */
 
 @media (max-width: 950px) {
@@ -1151,7 +1212,8 @@
 
   display: block;
 
-  min-height: 650px;
+  // min-height: 650px;
+  min-height: 100vh;
   height: calc(100vh - 210px);
   max-height: calc(100vh - 210px);
 
@@ -1260,10 +1322,6 @@
   .safetyCard > a {
     width: 100%;
     justify-content: center;
-
-    padding-top: 8px;
-
-    border-top: 1px solid #eee9eb;
   }
 }
 

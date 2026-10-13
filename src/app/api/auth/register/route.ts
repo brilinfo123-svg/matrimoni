@@ -112,7 +112,20 @@ export async function POST(request: Request) {
 
     await connectDB();
 
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail =
+        typeof email === "string"
+          ? email.trim().toLowerCase()
+          : "";
+
+      if (!normalizedEmail || !password || !mobile) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Email, mobile and password are required.",
+          },
+          { status: 400 },
+        );
+      }
 
     const existingUser = await User.findOne({
       $or: [

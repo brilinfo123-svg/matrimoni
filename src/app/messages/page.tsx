@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import {
   useEffect,
   useMemo,
@@ -14,6 +15,7 @@ import {
 import { io, Socket } from "socket.io-client";
 
 import {
+  FiArrowLeft,
   FiCheck,
   FiChevronLeft,
   FiHeart,
@@ -58,6 +60,7 @@ type Conversation = {
   participantId: string;
   name: string;
   initials: string;
+  photo?: string | null;
   location: string;
   profession: string;
   compatibility: number;
@@ -116,6 +119,64 @@ function getInitials(name: string) {
       .join("")
       .slice(0, 2)
       .toUpperCase() || "U"
+  );
+}
+
+type ProfileAvatarProps = {
+  photo?: string | null;
+  name: string;
+  initials?: string;
+  className: string;
+  imageClassName: string;
+  size: number;
+  online?: boolean;
+  onlineClassName?: string;
+};
+
+function ProfileAvatar({
+  photo,
+  name,
+  initials,
+  className,
+  imageClassName,
+  size,
+  online = false,
+  onlineClassName,
+}: ProfileAvatarProps) {
+  const [imageFailed, setImageFailed] = useState(false);
+
+  const imageUrl =
+    typeof photo === "string" && photo.trim()
+      ? photo.trim()
+      : null;
+
+  useEffect(() => {
+    setImageFailed(false);
+  }, [imageUrl]);
+
+  return (
+    <div className={className}>
+      {imageUrl && !imageFailed ? (
+        <Image
+          src={imageUrl}
+          alt={`${name}'s profile photo`}
+          width={size}
+          height={size}
+          className={imageClassName}
+          onError={() => setImageFailed(true)}
+          unoptimized
+        />
+      ) : (
+        <span>{initials || getInitials(name)}</span>
+      )}
+
+      {online && (
+        <i
+          className={onlineClassName}
+          aria-label="Online"
+        />
+      )}
+    </div>
   );
 }
 
@@ -641,6 +702,63 @@ export default function MessagesPage() {
               }),
             );
 
+            const participantIds = [
+              ...new Set(
+                normalizedConversations
+                  .map((conversation) => conversation.participantId)
+                  .filter(Boolean)
+              ),
+            ];
+            
+            if (participantIds.length > 0) {
+              const usersResponse = await fetch(
+                `/api/users?ids=${encodeURIComponent(participantIds.join(","))}`,
+                {
+                  method: "GET",
+                  credentials: "include",
+                  cache: "no-store",
+                }
+              );
+            
+              const usersData = await usersResponse.json();
+            
+              if (usersResponse.ok && usersData.success) {
+                const photoByUserId = new Map<
+                  string,
+                  { photo: string | null; name: string }
+                >(
+                  (usersData.users || []).map(
+                    (user: {
+                      id: string;
+                      photo: string | null;
+                      name: string;
+                    }) => [
+                      String(user.id),
+                      {
+                        photo: user.photo,
+                        name: user.name,
+                      },
+                    ]
+                  )
+                );
+            
+                normalizedConversations.forEach((conversation) => {
+                  const profile = photoByUserId.get(
+                    String(conversation.participantId)
+                  );
+            
+                  if (profile) {
+                    conversation.photo = profile.photo;
+            
+                    if (profile.name) {
+                      conversation.name = profile.name;
+                      conversation.initials = getInitials(profile.name);
+                    }
+                  }
+                });
+              }
+            }
+            
           /*
            * Store message IDs.
            */
@@ -2094,36 +2212,36 @@ export default function MessagesPage() {
               styles.conversationPanel
             }
           >
-            <div
-              className={
-                styles.conversationHeader
-              }
-            >
-              <div>
-                <h2>
-                  Conversations
-                </h2>
+<div className={styles.conversationHeader}>
+  <div>
+    <Link
+      href="/search"
+      className={styles.backHomeButton}
+      aria-label="Back to home"
+      title="Back to Home"
+    >
+      <FiArrowLeft aria-hidden="true" />
+      <span>Back</span>
+    </Link>
 
-                <span>
-                  {loadingConversations
-                    ? "Loading..."
-                    : `${conversations.length} connections`}
-                </span>
-              </div>
+    {/* <h2>Conversations</h2>
 
-              <button
-                type="button"
-                aria-label="Message information"
-                className={
-                  styles.infoButton
-                }
-                title="Your conversations are private"
-              >
-                <FiInfo
-                  aria-hidden="true"
-                />
-              </button>
-            </div>
+    <span>
+      {loadingConversations
+        ? "Loading..."
+        : `${conversations.length} connections`}
+    </span> */}
+  </div>
+
+  {/* <button
+    type="button"
+    aria-label="Message information"
+    className={styles.infoButton}
+    title="Your conversations are private"
+  >
+    <FiInfo aria-hidden="true" />
+  </button> */}
+</div>
 
             {/* Search */}
             <div
@@ -2182,26 +2300,16 @@ export default function MessagesPage() {
                         )
                       }
                     >
-                      <div
-                        className={
-                          styles.conversationAvatar
-                        }
-                      >
-                        <span>
-                          {conversation.initials ||
-                            getInitials(
-                              conversation.name,
-                            )}
-                        </span>
-
-                        {conversation.online && (
-                          <i
-                            className={
-                              styles.avatarOnline
-                            }
-                          />
-                        )}
-                      </div>
+                      <ProfileAvatar
+  photo={conversation.photo}
+  name={conversation.name}
+  initials={conversation.initials}
+  className={styles.conversationAvatar}
+  imageClassName={styles.conversationAvatarImage}
+  size={48}
+  online={conversation.online}
+  onlineClassName={styles.avatarOnline}
+/>
 
                       <div
                         className={
@@ -2369,21 +2477,15 @@ export default function MessagesPage() {
                       styles.chatUser
                     }
                   >
-                    <div
-                      className={
-                        styles.chatAvatar
-                      }
-                    >
-                      <span>
-                        {
-                          selectedConversation.initials
-                        }
-                      </span>
-
-                      {selectedConversation.online && (
-                        <i />
-                      )}
-                    </div>
+                    <ProfileAvatar
+  photo={selectedConversation.photo}
+  name={selectedConversation.name}
+  initials={selectedConversation.initials}
+  className={styles.chatAvatar}
+  imageClassName={styles.chatAvatarImage}
+  size={48}
+  online={selectedConversation.online}
+/>
 
                     <div>
                       <div
@@ -2542,30 +2644,10 @@ export default function MessagesPage() {
                 {/* ===================================
                     Messages
                 ==================================== */}
-                <div
-                  className={
-                    styles.messagesArea
-                  }
-                >
-                  <div
-                    className={
-                      styles.dateDivider
-                    }
-                  >
-                    <span>
-                      Today
-                    </span>
-                  </div>
-
-                  {/* Safety message */}
-                  <div
-                    className={
-                      styles.safetyMessage
-                    }
-                  >
-                    <FiShield
-                      aria-hidden="true"
-                    />
+                <div className={styles.messagesArea}>
+                   {/* Safety message */}
+                   <div className={styles.safetyMessage}>
+                    <FiShield aria-hidden="true"/>
 
                     <span>
                       Take your time getting to
@@ -2574,6 +2656,13 @@ export default function MessagesPage() {
                       unless you feel comfortable.
                     </span>
                   </div>
+                  <div className={styles.dateDivider}>
+                    <span>
+                      Today
+                    </span>
+                  </div>
+
+                 
 
                   {/* Message skeleton */}
                   {loadingMessages ? (
@@ -2599,16 +2688,15 @@ export default function MessagesPage() {
                           }`}
                         >
                           {!message.mine && (
-                            <div
-                              className={
-                                styles.messageAvatar
-                              }
-                            >
-                              {
-                                selectedConversation.initials
-                              }
-                            </div>
-                          )}
+                              <ProfileAvatar
+                                photo={selectedConversation.photo}
+                                name={selectedConversation.name}
+                                initials={selectedConversation.initials}
+                                className={styles.messageAvatar}
+                                imageClassName={styles.messageAvatarImage}
+                                size={36}
+                              />
+                            )}
 
                           <div
                             className={
@@ -2781,30 +2869,14 @@ export default function MessagesPage() {
             styles.safetyCard
           }
         >
-          <div
-            className={
-              styles.safetyIcon
-            }
-          >
-            <FiShield
-              aria-hidden="true"
-            />
-          </div>
+         
 
-          <div>
-            <strong>
-              Stay safe while chatting
-            </strong>
-
-            <p>
-              Never share passwords, financial
-              details, verification codes or other
-              sensitive information with anyone.
-            </p>
-          </div>
+         
 
           <Link href="/safety">
-            Safety tips
+          <FiShield
+              aria-hidden="true"
+            />Safety tips
 
             <FiChevronLeft
               aria-hidden="true"

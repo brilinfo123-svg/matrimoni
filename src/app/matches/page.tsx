@@ -262,7 +262,7 @@ export default function MatchesPage() {
           <div>
             <span className={styles.eyebrow}>
               <FiHeart aria-hidden="true" />
-              Your recommendations
+              Matches made for you
             </span>
 
             <h1>Matches made for you</h1>
