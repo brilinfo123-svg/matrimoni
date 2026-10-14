@@ -1,0 +1,73 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <meta name="theme-color" content="#a83268" />
+    <title>You're Offline | Matrimonial</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        color: #29212a;
+        background: #faf7f9;
+      }
+
+      main {
+        max-width: 420px;
+      }
+
+      .heart {
+        color: #a83268;
+        font-size: 58px;
+      }
+
+      h1 {
+        margin-bottom: 12px;
+      }
+
+      p {
+        color: #716772;
+        line-height: 1.7;
+      }
+
+      button {
+        margin-top: 16px;
+        padding: 13px 24px;
+        border: 0;
+        border-radius: 8px;
+        background: #a83268;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="heart" aria-hidden="true">♥</div>
+      <h1>You're offline</h1>
+      <p>
+        Your connection seems to be unavailable.
+        Please reconnect to the internet to continue
+        discovering meaningful connections.
+      </p>
+      <button onclick="window.location.reload()">
+        Try Again
+      </button>
+    </main>
+  </body>
+</html>
