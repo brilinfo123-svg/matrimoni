@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import Image from "next/image";
+
+import { useFavorites } from "@/components/FavoritesProvider/FavoritesProvider";
+
 import {
   FiCheck,
   FiHeart,
@@ -52,15 +55,16 @@ export type Profile = {
 
 type ProfileCardProps = {
   profile: Profile;
-  shortlisted: boolean;
-  onShortlist: () => void;
+  shortlisted?: boolean;
+  onShortlist?: () => void;
 };
 
 export default function ProfileCard({
   profile,
-  shortlisted,
-  onShortlist,
 }: ProfileCardProps) {
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const favorite = isFavorite(profile.id);
+  const shortlisted = isFavorite(profile.id);
   /*
    * Clean mobile number
    *
@@ -178,23 +182,37 @@ export default function ProfileCard({
           </Link> */}
 
           {/* Call */}
+          
           <button
             type="button"
             className={`${styles.shortlistButton} ${
-              shortlisted ? styles.shortlisted : ""
+              favorite ? styles.shortlisted : ""
             }`}
-            onClick={onShortlist}
+            onClick={async () => {
+              try {
+                await toggleFavorite(profile.id);
+              } catch (error) {
+                console.error("FAVORITE_ERROR:", error);
+
+                alert(
+                  error instanceof Error
+                    ? error.message
+                    : "Could not update favorite. Please try again."
+                );
+              }
+            }}
             aria-label={
-              shortlisted
-                ? `Remove ${profile.name} from shortlist`
-                : `Add ${profile.name} to shortlist`
+              favorite
+                ? `Remove ${profile.name} from favorites`
+                : `Add ${profile.name} to favorites`
             }
           >
             <FiHeart
               aria-hidden="true"
-              fill={shortlisted ? "currentColor" : "none"}
+              fill={favorite ? "currentColor" : "none"}
             />
           </button>
+
           {cleanMobile && (
             <a
               href={`tel:${cleanMobile}`}

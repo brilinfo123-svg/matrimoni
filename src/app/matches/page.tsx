@@ -202,7 +202,7 @@ export default function MatchesPage() {
         <div className={styles.backgroundGlow} />
         <div className={styles.backgroundGlowTwo} />
 
-        <div className="container">
+        <div className={styles.container}>
           <section className={styles.emptyState}>
             <div className={styles.emptyIcon}>
               <FiHeart aria-hidden="true" />
@@ -229,7 +229,7 @@ export default function MatchesPage() {
         <div className={styles.backgroundGlow} />
         <div className={styles.backgroundGlowTwo} />
 
-        <div className="container">
+        <div className={styles.container}>
           <section className={styles.emptyState}>
             <div className={styles.emptyIcon}>
               <FiUsers aria-hidden="true" />
@@ -273,7 +273,7 @@ export default function MatchesPage() {
             </p>
           </div>
 
-          <div className={styles.headerStats}>
+          {/* <div className={styles.headerStats}>
             <div>
               <strong>{totalMatches}</strong>
               <span>Total matches</span>
@@ -288,7 +288,7 @@ export default function MatchesPage() {
               <strong>{highMatches}</strong>
               <span>90%+ compatible</span>
             </div>
-          </div>
+          </div> */}
         </section>
 
         {/* Search & Sort */}
@@ -625,7 +625,7 @@ export default function MatchesPage() {
         )}
 
         {/* Bottom CTA */}
-        <section className={styles.preferenceCard}>
+        {/* <section className={styles.preferenceCard}>
           <div className={styles.preferenceIcon}>
             <FiHeart aria-hidden="true" />
           </div>
@@ -644,7 +644,7 @@ export default function MatchesPage() {
             Update preferences
             <FiChevronDown aria-hidden="true" />
           </Link>
-        </section>
+        </section> */}
       </div>
     </main>
   );

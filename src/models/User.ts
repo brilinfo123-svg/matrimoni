@@ -49,7 +49,7 @@ export interface IUser extends Document {
   partnerLifestyle: string;
 
   photos: string[];
-
+  favorites: mongoose.Types.ObjectId[];
   isEmailVerified: boolean;
   isMobileVerified: boolean;
   isProfileComplete: boolean;
@@ -261,7 +261,11 @@ const UserSchema = new Schema<IUser>(
       type: [String],
       default: [],
     },
-
+    favorites: {
+      type: [Schema.Types.ObjectId],
+      ref: "User",
+      default: [],
+    },
     isEmailVerified: {
       type: Boolean,
       default: false,

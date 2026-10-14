@@ -1,6 +1,8 @@
+
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import {
   FiBell,
@@ -12,6 +14,10 @@ import {
   FiUser,
   FiX,
 } from "react-icons/fi";
+
+import {
+  useFavorites,
+} from "@/components/FavoritesProvider/FavoritesProvider";
 
 import {
   useMessageNotifications,
@@ -33,6 +39,11 @@ const navigation = [
   {
     label: "Matches",
     href: "/matches",
+    icon: FiHeart,
+  },
+  {
+    label: "Favorites",
+    href: "/favorites",
     icon: FiHeart,
   },
   {
@@ -63,11 +74,19 @@ export default function Header() {
   const [imageError, setImageError] = useState(false);
 
   const { unreadCount } = useMessageNotifications();
+  const { favoriteIds } = useFavorites();
+
+  const favoriteCount = favoriteIds.length;
+
+  const formattedFavoriteCount =
+    favoriteCount > 99 ? "99+" : favoriteCount;
+
+  const formattedUnreadCount =
+    unreadCount > 99 ? "99+" : unreadCount;
 
   /*
    * Get currently logged-in user
    */
-
   const loadCurrentUser = async () => {
     try {
       setIsLoadingUser(true);
@@ -98,10 +117,6 @@ export default function Header() {
     }
   };
 
-  /*
-   * Load user when Header mounts
-   */
-
   useEffect(() => {
     loadCurrentUser();
   }, []);
@@ -109,7 +124,6 @@ export default function Header() {
   /*
    * Build user name and initials
    */
-
   const firstName = user?.firstName?.trim() || "";
   const lastName = user?.lastName?.trim() || "";
 
@@ -121,38 +135,17 @@ export default function Header() {
       .toUpperCase() || "U";
 
   /*
-   * Get profile photo.
-   * Supports either a single URL or an array of URLs.
+   * Get profile photo
    */
-
   const profilePhoto = Array.isArray(user?.photos)
     ? user.photos[0] || ""
     : user?.photos || "";
-
-  /*
-   * Reset image error when the photo URL changes
-   */
 
   useEffect(() => {
     setImageError(false);
   }, [profilePhoto]);
 
-  /*
-   * User state
-   */
-
   const isLoggedIn = !isLoadingUser && !!user;
-
-  /*
-   * Unread message count
-   */
-
-  const formattedUnreadCount =
-    unreadCount > 99 ? "99+" : unreadCount;
-
-  /*
-   * Close mobile menu
-   */
 
   const closeMenu = () => {
     setIsMenuOpen(false);
@@ -161,7 +154,6 @@ export default function Header() {
   /*
    * Logout
    */
-
   const handleLogout = async () => {
     if (isLoggingOut) return;
 
@@ -193,7 +185,6 @@ export default function Header() {
   /*
    * Shared avatar content
    */
-
   const renderAvatar = (mobile = false) => {
     const avatarClass = mobile
       ? styles.mobileAccountAvatar
@@ -229,73 +220,93 @@ export default function Header() {
     );
   };
 
+  /*
+   * Navigation item with message/favorite badge
+   */
+  const renderNavigationItems = (mobile = false) => {
+    return navigation.map((item) => {
+      const Icon = item.icon;
+      const isMessages = item.href === "/messages";
+      const isFavorites = item.href === "/favorites";
+
+      const showBadge =
+        (isMessages && unreadCount > 0) ||
+        (isFavorites && favoriteCount > 0);
+
+      const badgeCount = isMessages
+        ? formattedUnreadCount
+        : formattedFavoriteCount;
+
+      return (
+        <Link
+          key={item.href}
+          href={item.href}
+          className={
+            mobile ? styles.mobileNavLink : styles.navLink
+          }
+          onClick={mobile ? closeMenu : undefined}
+        >
+          <span
+            className={
+              mobile
+                ? styles.mobileNavIcon
+                : styles.messageNavIcon
+            }
+          >
+            <Icon aria-hidden="true" />
+
+            {showBadge && (
+              <span
+                className={
+                  mobile
+                    ? styles.mobileMessageBadge
+                    : styles.messageBadge
+                }
+                aria-label={
+                  isMessages
+                    ? `${unreadCount} unread messages`
+                    : `${favoriteCount} favorite profiles`
+                }
+              >
+                {badgeCount}
+              </span>
+            )}
+          </span>
+
+          <span>{item.label}</span>
+        </Link>
+      );
+    });
+  };
+
   return (
     <header className={styles.header}>
       <div className={styles.container}>
         {/* Logo */}
-
         <Link
           href="/"
           className={styles.logo}
           onClick={closeMenu}
           aria-label="Matrimonial home"
         >
-          <span className={styles.logoIcon}>
-            <FiHeart aria-hidden="true" />
-          </span>
-
-          <span className={styles.logoText}>
-            <span className={styles.logoMain}>
-              Logo
-            </span>
-
-            <span className={styles.logoTagline}>
-              Find your meaningful connection
-            </span>
-          </span>
+          <Image
+            src="/images/logo/EverMilan.png"
+            alt="Matrimonial Logo"
+            width={200}
+            height={100}
+            priority
+          />
         </Link>
 
         {/* Desktop navigation */}
-
         <nav
           className={styles.desktopNav}
           aria-label="Main navigation"
         >
-          {navigation.map((item) => {
-            const Icon = item.icon;
-            const isMessages = item.href === "/messages";
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={styles.navLink}
-              >
-                {isMessages ? (
-                  <span className={styles.messageNavIcon}>
-                    <Icon aria-hidden="true" />
-
-                    {unreadCount > 0 && (
-                      <span
-                        className={styles.messageBadge}
-                        aria-label={`${unreadCount} unread messages`}
-                      >
-                        {formattedUnreadCount}
-                      </span>
-                    )}
-                  </span>
-                ) : (
-                  <Icon aria-hidden="true" />
-                )}
-
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+          {renderNavigationItems()}
         </nav>
 
         {/* Desktop actions */}
-
         <div className={styles.desktopActions}>
           {isLoadingUser ? (
             <div
@@ -350,7 +361,6 @@ export default function Header() {
         </div>
 
         {/* Mobile menu button */}
-
         <button
           type="button"
           className={styles.menuButton}
@@ -364,7 +374,6 @@ export default function Header() {
       </div>
 
       {/* Mobile navigation */}
-
       <div
         id="mobile-navigation"
         className={`${styles.mobileMenu} ${
@@ -375,39 +384,11 @@ export default function Header() {
           className={styles.mobileNav}
           aria-label="Mobile navigation"
         >
-          {navigation.map((item) => {
-            const Icon = item.icon;
-            const isMessages = item.href === "/messages";
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={styles.mobileNavLink}
-                onClick={closeMenu}
-              >
-                <span className={styles.mobileNavIcon}>
-                  <Icon aria-hidden="true" />
-
-                  {isMessages && unreadCount > 0 && (
-                    <span
-                      className={styles.mobileMessageBadge}
-                      aria-label={`${unreadCount} unread messages`}
-                    >
-                      {formattedUnreadCount}
-                    </span>
-                  )}
-                </span>
-
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
+          {renderNavigationItems(true)}
 
           <div className={styles.mobileDivider} />
 
           {/* Mobile authentication */}
-
           {isLoadingUser ? (
             <div className={styles.mobileAuthLoading}>
               Loading...

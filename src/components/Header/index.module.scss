@@ -34,6 +34,45 @@
   flex-shrink: 0;
   color: #222222;
   text-decoration: none;
+  @media screen and (max-width: 400px) {
+    img{
+      width: 110px;
+    }
+  }
+}
+
+.messageNavIcon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.messageBadge,
+.mobileMessageBadge {
+  position: absolute;
+  top: -9px;
+  right: -11px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #a83268;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.mobileNavIcon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .logoIcon {

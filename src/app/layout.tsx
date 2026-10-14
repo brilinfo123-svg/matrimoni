@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Providers from "@/components/Providers";
 import LayoutShell from "@/components//LayoutShell/LayoutShell";
 import NotificationPrompt from "@/components/NotificationPrompt/NotificationPrompt";
+import { FavoritesProvider } from "@/components/FavoritesProvider/FavoritesProvider";
 import {
   MessageNotificationProvider,
 } from "@/components/MessageNotificationProvider/MessageNotificationProvider";
@@ -23,6 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body>
+      <FavoritesProvider>
         <Providers>
           <MessageNotificationProvider>
             <LayoutShell>
@@ -32,6 +34,7 @@ export default function RootLayout({
 
           <NotificationPrompt />
         </Providers>
+        </FavoritesProvider>
       </body>
     </html>
   );

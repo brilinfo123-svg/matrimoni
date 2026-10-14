@@ -10,13 +10,11 @@ import webpush from "web-push";
 
 const { loadEnvConfig } = nextEnv;
 
-
 /* =======================================================
    LOAD ENV
 ======================================================= */
 
 loadEnvConfig(process.cwd());
-
 
 /* =======================================================
    WEB PUSH
@@ -24,20 +22,11 @@ loadEnvConfig(process.cwd());
 
 let webPushEnabled = false;
 
-const vapidSubject =
-  process.env.VAPID_SUBJECT;
+const vapidSubject = process.env.VAPID_SUBJECT;
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
 
-const vapidPublicKey =
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-
-const vapidPrivateKey =
-  process.env.VAPID_PRIVATE_KEY;
-
-if (
-  vapidSubject &&
-  vapidPublicKey &&
-  vapidPrivateKey
-) {
+if (vapidSubject && vapidPublicKey && vapidPrivateKey) {
   try {
     webpush.setVapidDetails(
       vapidSubject,
@@ -46,15 +35,9 @@ if (
     );
 
     webPushEnabled = true;
-
-    console.log(
-      "Web Push: enabled",
-    );
+    console.log("Web Push: enabled");
   } catch (error) {
-    console.error(
-      "Web Push configuration error:",
-      error,
-    );
+    console.error("Web Push configuration error:", error);
   }
 } else {
   console.warn(
@@ -62,18 +45,13 @@ if (
   );
 }
 
-
 /* =======================================================
    NEXT CONFIG
 ======================================================= */
 
-const dev =
-  process.env.NODE_ENV !== "production";
-
+const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
-
-const port =
-  Number(process.env.PORT) || 3000;
+const port = Number(process.env.PORT) || 3000;
 
 const app = next({
   dev,
@@ -81,196 +59,177 @@ const app = next({
   port,
 });
 
-const handle =
-  app.getRequestHandler();
-
+const handle = app.getRequestHandler();
 
 /* =======================================================
    MONGODB
 ======================================================= */
 
 async function connectDB() {
-  const uri =
-    process.env.MONGODB_URI;
+  const uri = process.env.MONGODB_URI;
 
   if (!uri) {
-    throw new Error(
-      "MONGODB_URI is not defined",
-    );
+    throw new Error("MONGODB_URI is not defined");
   }
 
-  if (
-    mongoose.connection.readyState === 1
-  ) {
+  if (mongoose.connection.readyState === 1) {
     return;
   }
 
   await mongoose.connect(uri);
 
-  console.log(
-    "MongoDB connected",
-  );
+  console.log("MongoDB connected");
 }
 
-
 /* =======================================================
-   SCHEMAS
+   NOTIFICATION USER MODEL
 ======================================================= */
 
+/*
+  IMPORTANT:
+  This model is only for reading sender names.
 
-/* =======================================================
-   USER SCHEMA
-=======================================================
+  It uses the existing "users" collection.
+  It does not create a separate users collection.
 
-   We only need firstName and lastName for
-   push notification sender name.
+  A separate model name avoids reusing the full
+  registration User model with a limited schema.
+*/
 
-   IMPORTANT:
-   This uses the existing "users" collection.
-
-   It does NOT create a new collection.
-======================================================= */
-
-const UserSchema =
-  new mongoose.Schema(
-    {
-      firstName: {
-        type: String,
-      },
-
-      lastName: {
-        type: String,
-      },
+const NotificationUserSchema = new mongoose.Schema(
+  {
+    firstName: {
+      type: String,
     },
-    {
-      collection: "users",
-    },
-  );
 
-const User =
-  mongoose.models.User ||
+    lastName: {
+      type: String,
+    },
+  },
+  {
+    collection: "users",
+    strict: true,
+  },
+);
+
+const NotificationUser =
+  mongoose.models.NotificationUser ||
   mongoose.model(
-    "User",
-    UserSchema,
+    "NotificationUser",
+    NotificationUserSchema,
+    "users",
   );
-
 
 /* =======================================================
    CONVERSATION SCHEMA
 ======================================================= */
 
-const ConversationSchema =
-  new mongoose.Schema(
-    {
-      participants: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-          required: true,
-        },
-      ],
-
-      conversationKey: {
-        type: String,
-        index: true,
+const ConversationSchema = new mongoose.Schema(
+  {
+    participants: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
       },
+    ],
 
-      lastMessage: {
-        type: String,
-        default: "",
-      },
-
-      lastMessageAt: {
-        type: Date,
-        default: Date.now,
-      },
+    conversationKey: {
+      type: String,
+      index: true,
     },
-    {
-      timestamps: true,
-    },
-  );
 
+    lastMessage: {
+      type: String,
+      default: "",
+    },
+
+    lastMessageAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
 
 /* =======================================================
    MESSAGE SCHEMA
 ======================================================= */
 
-const MessageSchema =
-  new mongoose.Schema(
-    {
-      conversationId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Conversation",
-        required: true,
-        index: true,
-      },
-
-      senderId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-      },
-
-      receiverId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-      },
-
-      text: {
-        type: String,
-        required: true,
-        trim: true,
-        maxlength: 2000,
-      },
-
-      read: {
-        type: Boolean,
-        default: false,
-      },
+const MessageSchema = new mongoose.Schema(
+  {
+    conversationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Conversation",
+      required: true,
+      index: true,
     },
-    {
-      timestamps: true,
-    },
-  );
 
+    senderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    receiverId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    text: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 2000,
+    },
+
+    read: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
 
 /* =======================================================
    PUSH SUBSCRIPTION SCHEMA
 ======================================================= */
 
-const PushSubscriptionSchema =
-  new mongoose.Schema(
-    {
-      userId: {
+const PushSubscriptionSchema = new mongoose.Schema(
+  {
+    userId: {
+      type: String,
+      required: true,
+      index: true,
+    },
+
+    endpoint: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+
+    keys: {
+      p256dh: {
         type: String,
         required: true,
-        index: true,
       },
 
-      endpoint: {
+      auth: {
         type: String,
         required: true,
-        unique: true,
-      },
-
-      keys: {
-        p256dh: {
-          type: String,
-          required: true,
-        },
-
-        auth: {
-          type: String,
-          required: true,
-        },
       },
     },
-    {
-      timestamps: true,
-    },
-  );
-
+  },
+  {
+    timestamps: true,
+  },
+);
 
 /* =======================================================
    MODELS
@@ -278,124 +237,71 @@ const PushSubscriptionSchema =
 
 const Conversation =
   mongoose.models.Conversation ||
-  mongoose.model(
-    "Conversation",
-    ConversationSchema,
-  );
+  mongoose.model("Conversation", ConversationSchema);
 
 const Message =
   mongoose.models.Message ||
-  mongoose.model(
-    "Message",
-    MessageSchema,
-  );
+  mongoose.model("Message", MessageSchema);
 
 const PushSubscription =
   mongoose.models.PushSubscription ||
-  mongoose.model(
-    "PushSubscription",
-    PushSubscriptionSchema,
-  );
-
+  mongoose.model("PushSubscription", PushSubscriptionSchema);
 
 /* =======================================================
    HELPERS
 ======================================================= */
 
-function createConversationKey(
-  userA,
-  userB,
-) {
-  return [
-    String(userA),
-    String(userB),
-  ]
-    .sort()
-    .join("_");
-}
-
-
-function parseCookies(
-  cookieHeader = "",
-) {
+function parseCookies(cookieHeader = "") {
   const cookies = {};
 
-  cookieHeader
-    .split(";")
-    .forEach((part) => {
-      const index =
-        part.indexOf("=");
+  cookieHeader.split(";").forEach((part) => {
+    const index = part.indexOf("=");
 
-      if (index === -1) {
-        return;
-      }
+    if (index === -1) {
+      return;
+    }
 
-      const key =
-        part
-          .slice(0, index)
-          .trim();
+    const key = part.slice(0, index).trim();
+    const value = part.slice(index + 1).trim();
 
-      const value =
-        part
-          .slice(index + 1)
-          .trim();
-
-      try {
-        cookies[key] =
-          decodeURIComponent(value);
-      } catch {
-        cookies[key] = value;
-      }
-    });
+    try {
+      cookies[key] = decodeURIComponent(value);
+    } catch {
+      cookies[key] = value;
+    }
+  });
 
   return cookies;
 }
 
-
-async function verifyAuthToken(
-  token,
-) {
+async function verifyAuthToken(token) {
   try {
     if (!token) {
       return null;
     }
 
-    const secret =
-      process.env.AUTH_SECRET;
+    const secret = process.env.AUTH_SECRET;
 
     if (!secret) {
-      console.error(
-        "AUTH_SECRET missing",
-      );
-
+      console.error("AUTH_SECRET missing");
       return null;
     }
 
-    const secretKey =
-      new TextEncoder().encode(
-        secret,
-      );
+    const secretKey = new TextEncoder().encode(secret);
 
-    const { payload } =
-      await jwtVerify(
-        token,
-        secretKey,
-        {
-          algorithms: ["HS256"],
-        },
-      );
+    const { payload } = await jwtVerify(token, secretKey, {
+      algorithms: ["HS256"],
+    });
 
     if (
-      typeof payload.userId !==
-        "string" ||
+      typeof payload.userId !== "string" ||
       !payload.userId
     ) {
       return null;
     }
 
     return {
-      userId:
-        payload.userId,
+      userId: payload.userId,
     };
   } catch (error) {
     console.error(
@@ -407,199 +313,110 @@ async function verifyAuthToken(
   }
 }
 
-
 function isValidObjectId(id) {
-  return mongoose.isValidObjectId(
-    id,
-  );
+  return mongoose.isValidObjectId(id);
 }
-
 
 /* =======================================================
    GET SENDER NAME
-=======================================================
-
-   Server gets the sender name directly from
-   MongoDB.
-
-   We DO NOT trust senderName from the client.
 ======================================================= */
 
-async function getSenderName(
-  userId,
-) {
+async function getSenderName(userId) {
   try {
-    const user =
-      await User.findById(
-        userId,
-      )
-        .select(
-          "firstName lastName",
-        )
-        .lean();
+    if (!mongoose.isValidObjectId(userId)) {
+      return "Someone";
+    }
+
+    const user = await NotificationUser.findById(userId)
+      .select("firstName lastName")
+      .lean();
 
     if (!user) {
       return "Someone";
     }
 
     const firstName =
-      typeof user.firstName ===
-      "string"
+      typeof user.firstName === "string"
         ? user.firstName.trim()
         : "";
 
     const lastName =
-      typeof user.lastName ===
-      "string"
+      typeof user.lastName === "string"
         ? user.lastName.trim()
         : "";
 
-    const fullName =
-      `${firstName} ${lastName}`.trim();
-
-    return (
-      fullName ||
-      "Someone"
-    );
+    return `${firstName} ${lastName}`.trim() || "Someone";
   } catch (error) {
-    console.error(
-      "GET_SENDER_NAME_ERROR:",
-      error,
-    );
-
+    console.error("GET_SENDER_NAME_ERROR:", error);
     return "Someone";
   }
 }
-
 
 /* =======================================================
    WEB PUSH HELPER
 ======================================================= */
 
-async function sendPushNotificationToUser(
-  userId,
-  payload,
-) {
+async function sendPushNotificationToUser(userId, payload) {
   if (!webPushEnabled) {
     return;
   }
 
   try {
-    const subscriptions =
-      await PushSubscription.find({
-        userId: String(userId),
-      }).lean();
+    const subscriptions = await PushSubscription.find({
+      userId: String(userId),
+    }).lean();
 
-    if (
-      !subscriptions.length
-    ) {
+    if (!subscriptions.length) {
       return;
     }
 
-    const results =
-      await Promise.allSettled(
-        subscriptions.map(
-          async (subscription) => {
-            const pushSubscription =
-              {
-                endpoint:
-                  subscription.endpoint,
-
-                keys: {
-                  p256dh:
-                    subscription
-                      .keys
-                      .p256dh,
-
-                  auth:
-                    subscription
-                      .keys
-                      .auth,
-                },
-              };
-
-            try {
-              await webpush.sendNotification(
-                pushSubscription,
-                JSON.stringify(
-                  payload,
-                ),
-                {
-                  TTL: 60 * 60,
-                  urgency: "high",
-                },
-              );
-
-              console.log(
-                "Push notification sent:",
-                {
-                  userId:
-                    String(
-                      userId,
-                    ),
-
-                  endpoint:
-                    subscription.endpoint,
-                },
-              );
-            } catch (error) {
-              const statusCode =
-                error?.statusCode;
-
-              /*
-               * 404 / 410 means subscription
-               * is no longer valid.
-               */
-
-              if (
-                statusCode === 404 ||
-                statusCode === 410
-              ) {
-                await PushSubscription.deleteOne(
-                  {
-                    _id:
-                      subscription._id,
-                  },
-                );
-
-                console.log(
-                  "Removed expired push subscription:",
-                  subscription.endpoint,
-                );
-              }
-
-              throw error;
-            }
+    const results = await Promise.allSettled(
+      subscriptions.map(async (subscription) => {
+        const pushSubscription = {
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: subscription.keys.p256dh,
+            auth: subscription.keys.auth,
           },
-        ),
-      );
+        };
 
-    for (
-      const result of results
-    ) {
-      if (
-        result.status ===
-        "rejected"
-      ) {
-        console.error(
-          "Push send failed:",
-          result.reason,
-        );
+        try {
+          await webpush.sendNotification(
+            pushSubscription,
+            JSON.stringify(payload),
+            {
+              TTL: 60 * 60,
+              urgency: "high",
+            },
+          );
+        } catch (error) {
+          const statusCode = error?.statusCode;
+
+          if (statusCode === 404 || statusCode === 410) {
+            await PushSubscription.deleteOne({
+              _id: subscription._id,
+            });
+
+            console.log(
+              "Removed expired push subscription:",
+              subscription.endpoint,
+            );
+          }
+
+          throw error;
+        }
+      }),
+    );
+
+    for (const result of results) {
+      if (result.status === "rejected") {
+        console.error("Push send failed:", result.reason);
       }
     }
   } catch (error) {
-    /*
-     * Push failure must NEVER break
-     * normal messaging.
-     */
-
-    console.error(
-      "WEB_PUSH_SEND_ERROR:",
-      error,
-    );
+    console.error("WEB_PUSH_SEND_ERROR:", error);
   }
 }
-
 
 /* =======================================================
    NEXT SERVER
@@ -607,67 +424,39 @@ async function sendPushNotificationToUser(
 
 await app.prepare();
 
-const httpServer =
-  createServer(
-    async (req, res) => {
-      try {
-        const parsedUrl =
-          parse(
-            req.url,
-            true,
-          );
+const httpServer = createServer(async (req, res) => {
+  try {
+    const parsedUrl = parse(req.url, true);
 
-        await handle(
-          req,
-          res,
-          parsedUrl,
-        );
-      } catch (error) {
-        console.error(
-          "Next request error:",
-          error,
-        );
+    await handle(req, res, parsedUrl);
+  } catch (error) {
+    console.error("Next request error:", error);
 
-        res.statusCode = 500;
-
-        res.end(
-          "Internal server error",
-        );
-      }
-    },
-  );
-
+    res.statusCode = 500;
+    res.end("Internal server error");
+  }
+});
 
 /* =======================================================
    SOCKET.IO
 ======================================================= */
 
-const io =
-  new Server(
-    httpServer,
-    {
-      path: "/socket.io",
+const io = new Server(httpServer, {
+  path: "/socket.io",
 
-      cors: {
-        origin: [
-          "http://localhost:3000",
-          "http://127.0.0.1:3000",
-        ],
+  cors: {
+    origin: [
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+    ],
+    credentials: true,
+  },
 
-        credentials: true,
-      },
+  transports: ["websocket", "polling"],
 
-      transports: [
-        "websocket",
-        "polling",
-      ],
-
-      pingTimeout: 20000,
-
-      pingInterval: 25000,
-    },
-  );
-
+  pingTimeout: 20000,
+  pingInterval: 25000,
+});
 
 /* =======================================================
    SOCKET AUTH
@@ -675,15 +464,10 @@ const io =
 
 io.use(async (socket, next) => {
   try {
-    // Prefer the short-lived token sent by the browser.
     const socketToken = socket.handshake.auth?.token;
 
-    // Optional cookie fallback for local development.
-    const cookieHeader =
-      socket.handshake.headers.cookie || "";
-
+    const cookieHeader = socket.handshake.headers.cookie || "";
     const cookies = parseCookies(cookieHeader);
-
     const cookieToken = cookies.matrimonial_session;
 
     const token = socketToken || cookieToken;
@@ -696,14 +480,6 @@ io.use(async (socket, next) => {
     const session = await verifyAuthToken(token);
 
     if (!session?.userId) {
-      return next(new Error("Unauthorized"));
-    }
-
-    // If a socket token was supplied, require its intended type.
-    if (
-      socketToken &&
-      socket.handshake.auth?.token !== socketToken
-    ) {
       return next(new Error("Unauthorized"));
     }
 
@@ -720,842 +496,375 @@ io.use(async (socket, next) => {
   }
 });
 
-
 /* =======================================================
    ONLINE USERS
 ======================================================= */
 
-const onlineUsers =
-  new Map();
-
+const onlineUsers = new Map();
 
 /* =======================================================
    SOCKET CONNECTION
 ======================================================= */
 
-io.on(
-  "connection",
-  (socket) => {
-    const userId =
-      String(
-        socket.userId,
+io.on("connection", (socket) => {
+  const userId = String(socket.userId);
+
+  console.log("Socket connected:", socket.id, "user:", userId);
+
+  if (!onlineUsers.has(userId)) {
+    onlineUsers.set(userId, new Set());
+  }
+
+  onlineUsers.get(userId).add(socket.id);
+
+  socket.join(`user:${userId}`);
+
+  io.emit("presence:update", {
+    userId,
+    online: true,
+  });
+
+  /* =====================================================
+     JOIN CONVERSATION
+  ===================================================== */
+
+  socket.on("conversation:join", async (payload) => {
+    try {
+      const conversationId = payload?.conversationId;
+
+      if (
+        !conversationId ||
+        !isValidObjectId(conversationId)
+      ) {
+        return;
+      }
+
+      const conversation = await Conversation.findOne({
+        _id: conversationId,
+        participants: userId,
+      }).lean();
+
+      if (!conversation) {
+        console.warn(
+          "Unauthorized conversation join:",
+          userId,
+          conversationId,
+        );
+
+        return;
+      }
+
+      socket.join(`conversation:${conversationId}`);
+
+      console.log(
+        `User ${userId} joined conversation ${conversationId}`,
+      );
+    } catch (error) {
+      console.error("conversation:join error:", error);
+    }
+  });
+
+  /* =====================================================
+     LEAVE CONVERSATION
+  ===================================================== */
+
+  socket.on("conversation:leave", (payload) => {
+    const conversationId = payload?.conversationId;
+
+    if (!conversationId) {
+      return;
+    }
+
+    socket.leave(`conversation:${conversationId}`);
+  });
+
+  /* =====================================================
+     SEND MESSAGE
+  ===================================================== */
+
+  socket.on("message:send", async (payload, callback) => {
+    try {
+      const conversationId = payload?.conversationId;
+
+      const text =
+        typeof payload?.text === "string"
+          ? payload.text.trim()
+          : "";
+
+      if (!conversationId || !isValidObjectId(conversationId)) {
+        callback?.({
+          success: false,
+          message: "Invalid conversation ID",
+        });
+        return;
+      }
+
+      if (!text) {
+        callback?.({
+          success: false,
+          message: "Message text is required",
+        });
+        return;
+      }
+
+      if (text.length > 2000) {
+        callback?.({
+          success: false,
+          message: "Message cannot exceed 2000 characters",
+        });
+        return;
+      }
+
+      const conversation = await Conversation.findOne({
+        _id: conversationId,
+        participants: userId,
+      });
+
+      if (!conversation) {
+        callback?.({
+          success: false,
+          message: "Conversation not found",
+        });
+        return;
+      }
+
+      const receiverId = conversation.participants.find(
+        (participantId) => String(participantId) !== userId,
       );
 
+      if (!receiverId) {
+        callback?.({
+          success: false,
+          message: "Receiver not found",
+        });
+        return;
+      }
+
+      const receiverUserId = String(receiverId);
+      const senderName = await getSenderName(userId);
+
+      const message = await Message.create({
+        conversationId: conversation._id,
+        senderId: new mongoose.Types.ObjectId(userId),
+        receiverId,
+        text,
+        read: false,
+      });
+
+      await Conversation.findByIdAndUpdate(conversation._id, {
+        $set: {
+          lastMessage: text,
+          lastMessageAt: message.createdAt,
+        },
+      });
+
+      const messagePayload = {
+        conversationId: String(conversation._id),
+
+        message: {
+          id: String(message._id),
+          _id: String(message._id),
+          conversationId: String(message.conversationId),
+          senderId: String(message.senderId),
+          receiverId: String(message.receiverId),
+          text: message.text,
+          read: message.read,
+          createdAt: message.createdAt?.toISOString(),
+          updatedAt: message.updatedAt?.toISOString(),
+        },
+      };
+
+      io.to(`user:${userId}`).emit("message:new", messagePayload);
+      io.to(`user:${receiverUserId}`).emit("message:new", messagePayload);
+
+      const receiverSockets = onlineUsers.get(receiverUserId);
+      const receiverIsOnline = Boolean(
+        receiverSockets && receiverSockets.size > 0,
+      );
+
+      if (!receiverIsOnline) {
+        await sendPushNotificationToUser(receiverUserId, {
+          title: `${senderName} sent you a message`,
+
+          body:
+            text.length > 100
+              ? `${text.substring(0, 100)}...`
+              : text,
+
+          senderName,
+          icon: "/icons/icon-192.png",
+          badge: "/icons/icon-192.png",
+          url: `/messages?profile=${userId}`,
+          conversationId: String(conversation._id),
+          senderId: userId,
+          tag: `message-${String(message._id)}`,
+        });
+      }
+
+      callback?.({
+        success: true,
+        message: "Message sent",
+      });
+
+      console.log("Message sent:", {
+        conversationId: String(conversation._id),
+        senderId: userId,
+        senderName,
+        receiverId: receiverUserId,
+        pushSent: !receiverIsOnline && webPushEnabled,
+      });
+    } catch (error) {
+      console.error("message:send error:", error);
+
+      callback?.({
+        success: false,
+        message: "Unable to send message",
+      });
+    }
+  });
+
+  /* =====================================================
+     MESSAGE READ
+  ===================================================== */
+
+  socket.on("message:read", async (payload, callback) => {
+    try {
+      const conversationId = payload?.conversationId;
+
+      if (!conversationId || !isValidObjectId(conversationId)) {
+        callback?.({
+          success: false,
+          message: "Invalid conversation ID",
+        });
+        return;
+      }
+
+      const conversation = await Conversation.findOne({
+        _id: conversationId,
+        participants: userId,
+      }).lean();
+
+      if (!conversation) {
+        callback?.({
+          success: false,
+          message: "Conversation not found",
+        });
+        return;
+      }
+
+      const unreadMessages = await Message.find({
+        conversationId,
+        receiverId: userId,
+        read: false,
+      })
+        .select("_id senderId")
+        .lean();
+
+      if (!unreadMessages.length) {
+        callback?.({
+          success: true,
+          messageIds: [],
+        });
+        return;
+      }
+
+      const messageIds = unreadMessages.map((message) =>
+        String(message._id),
+      );
+
+      await Message.updateMany(
+        {
+          _id: {
+            $in: unreadMessages.map((message) => message._id),
+          },
+          receiverId: userId,
+          read: false,
+        },
+        {
+          $set: {
+            read: true,
+          },
+        },
+      );
+
+      for (const message of unreadMessages) {
+        io.to(`user:${String(message.senderId)}`).emit(
+          "message:read",
+          {
+            conversationId: String(conversationId),
+            messageId: String(message._id),
+            read: true,
+          },
+        );
+      }
+
+      callback?.({
+        success: true,
+        messageIds,
+      });
+
+      console.log("Messages marked as read:", {
+        conversationId: String(conversationId),
+        readerId: userId,
+        messageIds,
+      });
+    } catch (error) {
+      console.error("message:read error:", error);
+
+      callback?.({
+        success: false,
+        message: "Unable to mark messages as read",
+      });
+    }
+  });
+
+  /* =====================================================
+     DISCONNECT
+  ===================================================== */
+
+  socket.on("disconnect", (reason) => {
     console.log(
-      "Socket connected:",
+      "Socket disconnected:",
       socket.id,
       "user:",
       userId,
+      "reason:",
+      reason,
     );
 
+    const userSockets = onlineUsers.get(userId);
 
-    /* -----------------------------------------------------
-       ADD USER SOCKET
-    ----------------------------------------------------- */
+    if (userSockets) {
+      userSockets.delete(socket.id);
 
-    if (
-      !onlineUsers.has(userId)
-    ) {
-      onlineUsers.set(
-        userId,
-        new Set(),
-      );
-    }
+      if (userSockets.size === 0) {
+        onlineUsers.delete(userId);
 
-    onlineUsers
-      .get(userId)
-      .add(socket.id);
-
-
-    /* -----------------------------------------------------
-       PERSONAL USER ROOM
-    ----------------------------------------------------- */
-
-    socket.join(
-      `user:${userId}`,
-    );
-
-
-    /* -----------------------------------------------------
-       PRESENCE
-    ----------------------------------------------------- */
-
-    io.emit(
-      "presence:update",
-      {
-        userId,
-        online: true,
-      },
-    );
-
-
-    /* =====================================================
-       JOIN CONVERSATION
-    ===================================================== */
-
-    socket.on(
-      "conversation:join",
-      async (payload) => {
-        try {
-          const conversationId =
-            payload?.conversationId;
-
-          if (
-            !conversationId ||
-            !isValidObjectId(
-              conversationId,
-            )
-          ) {
-            return;
-          }
-
-          const conversation =
-            await Conversation.findOne(
-              {
-                _id:
-                  conversationId,
-
-                participants:
-                  userId,
-              },
-            ).lean();
-
-          if (!conversation) {
-            console.warn(
-              "Unauthorized conversation join:",
-              userId,
-              conversationId,
-            );
-
-            return;
-          }
-
-          socket.join(
-            `conversation:${conversationId}`,
-          );
-
-          console.log(
-            `User ${userId} joined conversation ${conversationId}`,
-          );
-        } catch (error) {
-          console.error(
-            "conversation:join error:",
-            error,
-          );
-        }
-      },
-    );
-
-
-    /* =====================================================
-       LEAVE CONVERSATION
-    ===================================================== */
-
-    socket.on(
-      "conversation:leave",
-      (payload) => {
-        const conversationId =
-          payload?.conversationId;
-
-        if (!conversationId) {
-          return;
-        }
-
-        socket.leave(
-          `conversation:${conversationId}`,
-        );
-
-        console.log(
-          `User ${userId} left conversation ${conversationId}`,
-        );
-      },
-    );
-
-
-    /* =====================================================
-       SEND MESSAGE
-    ===================================================== */
-
-    socket.on(
-      "message:send",
-      async (
-        payload,
-        callback,
-      ) => {
-        try {
-          const conversationId =
-            payload?.conversationId;
-
-          const text =
-            typeof payload?.text ===
-            "string"
-              ? payload.text.trim()
-              : "";
-
-
-          /* -----------------------------------------------
-             Validate conversation
-          ------------------------------------------------ */
-
-          if (!conversationId) {
-            callback?.({
-              success: false,
-              message:
-                "Conversation ID is required",
-            });
-
-            return;
-          }
-
-          if (
-            !isValidObjectId(
-              conversationId,
-            )
-          ) {
-            callback?.({
-              success: false,
-              message:
-                "Invalid conversation ID",
-            });
-
-            return;
-          }
-
-
-          /* -----------------------------------------------
-             Validate message
-          ------------------------------------------------ */
-
-          if (!text) {
-            callback?.({
-              success: false,
-              message:
-                "Message text is required",
-            });
-
-            return;
-          }
-
-          if (
-            text.length > 2000
-          ) {
-            callback?.({
-              success: false,
-              message:
-                "Message cannot exceed 2000 characters",
-            });
-
-            return;
-          }
-
-
-          /* -----------------------------------------------
-             Find conversation
-          ------------------------------------------------ */
-
-          const conversation =
-            await Conversation.findOne(
-              {
-                _id:
-                  conversationId,
-
-                participants:
-                  userId,
-              },
-            );
-
-          if (!conversation) {
-            callback?.({
-              success: false,
-              message:
-                "Conversation not found",
-            });
-
-            return;
-          }
-
-
-          /* -----------------------------------------------
-             Find receiver
-          ------------------------------------------------ */
-
-          const receiverId =
-            conversation.participants.find(
-              (participantId) =>
-                String(
-                  participantId,
-                ) !== userId,
-            );
-
-          if (!receiverId) {
-            callback?.({
-              success: false,
-              message:
-                "Receiver not found",
-            });
-
-            return;
-          }
-
-          const receiverUserId =
-            String(
-              receiverId,
-            );
-
-
-          /* -----------------------------------------------
-             Get sender name
-          ------------------------------------------------ */
-
-          const senderName =
-            await getSenderName(
-              userId,
-            );
-
-
-          /* -----------------------------------------------
-             Save message
-          ------------------------------------------------ */
-
-          const message =
-            await Message.create(
-              {
-                conversationId:
-                  conversation._id,
-
-                senderId:
-                  new mongoose.Types.ObjectId(
-                    userId,
-                  ),
-
-                receiverId,
-
-                text,
-
-                read: false,
-              },
-            );
-
-
-          /* -----------------------------------------------
-             Update conversation
-          ------------------------------------------------ */
-
-          await Conversation.findByIdAndUpdate(
-            conversation._id,
-            {
-              $set: {
-                lastMessage:
-                  text,
-
-                lastMessageAt:
-                  message.createdAt,
-              },
-            },
-          );
-
-
-          /* -----------------------------------------------
-             Message payload
-          ------------------------------------------------ */
-
-          const messagePayload =
-            {
-              conversationId:
-                String(
-                  conversation._id,
-                ),
-
-              message: {
-                id: String(
-                  message._id,
-                ),
-
-                _id: String(
-                  message._id,
-                ),
-
-                conversationId:
-                  String(
-                    message.conversationId,
-                  ),
-
-                senderId:
-                  String(
-                    message.senderId,
-                  ),
-
-                receiverId:
-                  String(
-                    message.receiverId,
-                  ),
-
-                text:
-                  message.text,
-
-                read:
-                  message.read,
-
-                createdAt:
-                  message.createdAt?.toISOString(),
-
-                updatedAt:
-                  message.updatedAt?.toISOString(),
-              },
-            };
-
-
-          /* -----------------------------------------------
-             Sender
-          ------------------------------------------------ */
-
-          io.to(
-            `user:${userId}`,
-          ).emit(
-            "message:new",
-            messagePayload,
-          );
-
-
-          /* -----------------------------------------------
-             Receiver
-          ------------------------------------------------ */
-
-          io.to(
-            `user:${receiverUserId}`,
-          ).emit(
-            "message:new",
-            messagePayload,
-          );
-
-
-          /* =================================================
-             WEB PUSH NOTIFICATION
-
-             Only send push when receiver currently
-             has NO active Socket.IO connection.
-          ================================================= */
-
-          const receiverSockets =
-            onlineUsers.get(
-              receiverUserId,
-            );
-
-          const receiverIsOnline =
-            receiverSockets &&
-            receiverSockets.size > 0;
-
-
-          if (
-            !receiverIsOnline
-          ) {
-            await sendPushNotificationToUser(
-              receiverUserId,
-              {
-                /*
-                 * Sender name is now included.
-                 */
-                title:
-                  `${senderName} sent you a message`,
-
-                body:
-                  text.length > 100
-                    ? `${text.substring(
-                        0,
-                        100,
-                      )}...`
-                    : text,
-
-                senderName,
-
-                icon:
-                  "/icons/icon-192.png",
-
-                badge:
-                  "/icons/icon-192.png",
-
-                url:
-                  `/messages?profile=${userId}`,
-
-                conversationId:
-                  String(
-                    conversation._id,
-                  ),
-
-                senderId:
-                  userId,
-
-                /*
-                 * Every message gets
-                 * a unique notification.
-                 */
-                tag:
-                  `message-${String(
-                    message._id,
-                  )}`,
-              },
-            );
-          }
-
-
-          /* -----------------------------------------------
-             ACK
-          ------------------------------------------------ */
-
-          callback?.({
-            success: true,
-            message:
-              "Message sent",
-          });
-
-
-          console.log(
-            "Message sent:",
-            {
-              conversationId:
-                String(
-                  conversation._id,
-                ),
-
-              senderId:
-                userId,
-
-              senderName,
-
-              receiverId:
-                receiverUserId,
-
-              text,
-
-              pushSent:
-                !receiverIsOnline &&
-                webPushEnabled,
-            },
-          );
-        } catch (error) {
-          console.error(
-            "message:send error:",
-            error,
-          );
-
-          callback?.({
-            success: false,
-            message:
-              "Unable to send message",
-          });
-        }
-      },
-    );
-
-
-    /* =====================================================
-       MESSAGE READ
-    ===================================================== */
-
-    socket.on(
-      "message:read",
-      async (
-        payload,
-        callback,
-      ) => {
-        try {
-          const conversationId =
-            payload?.conversationId;
-
-
-          /* -----------------------------------------------
-             Validate conversation
-          ------------------------------------------------ */
-
-          if (
-            !conversationId ||
-            !isValidObjectId(
-              conversationId,
-            )
-          ) {
-            callback?.({
-              success: false,
-              message:
-                "Invalid conversation ID",
-            });
-
-            return;
-          }
-
-
-          /* -----------------------------------------------
-             Verify current user belongs
-             to conversation
-          ------------------------------------------------ */
-
-          const conversation =
-            await Conversation.findOne(
-              {
-                _id:
-                  conversationId,
-
-                participants:
-                  userId,
-              },
-            ).lean();
-
-          if (!conversation) {
-            callback?.({
-              success: false,
-              message:
-                "Conversation not found",
-            });
-
-            return;
-          }
-
-
-          /* -----------------------------------------------
-             Find unread messages
-          ------------------------------------------------ */
-
-          const unreadMessages =
-            await Message.find(
-              {
-                conversationId,
-
-                receiverId:
-                  userId,
-
-                read: false,
-              },
-            )
-              .select(
-                "_id senderId",
-              )
-              .lean();
-
-
-          /* -----------------------------------------------
-             Nothing to update
-          ------------------------------------------------ */
-
-          if (
-            unreadMessages.length ===
-            0
-          ) {
-            callback?.({
-              success: true,
-              messageIds: [],
-            });
-
-            return;
-          }
-
-
-          /* -----------------------------------------------
-             IDs
-          ------------------------------------------------ */
-
-          const messageIds =
-            unreadMessages.map(
-              (message) =>
-                String(
-                  message._id,
-                ),
-            );
-
-
-          /* -----------------------------------------------
-             Update MongoDB
-          ------------------------------------------------ */
-
-          await Message.updateMany(
-            {
-              _id: {
-                $in:
-                  unreadMessages.map(
-                    (message) =>
-                      message._id,
-                  ),
-              },
-
-              receiverId:
-                userId,
-
-              read: false,
-            },
-            {
-              $set: {
-                read: true,
-              },
-            },
-          );
-
-
-          /* -----------------------------------------------
-             Notify original sender(s)
-          ------------------------------------------------ */
-
-          for (
-            const message of
-            unreadMessages
-          ) {
-            io.to(
-              `user:${String(
-                message.senderId,
-              )}`,
-            ).emit(
-              "message:read",
-              {
-                conversationId:
-                  String(
-                    conversationId,
-                  ),
-
-                messageId:
-                  String(
-                    message._id,
-                  ),
-
-                read: true,
-              },
-            );
-          }
-
-
-          /* -----------------------------------------------
-             ACK
-          ------------------------------------------------ */
-
-          callback?.({
-            success: true,
-            messageIds,
-          });
-
-
-          console.log(
-            "Messages marked as read:",
-            {
-              conversationId:
-                String(
-                  conversationId,
-                ),
-
-              readerId:
-                userId,
-
-              messageIds,
-            },
-          );
-        } catch (error) {
-          console.error(
-            "message:read error:",
-            error,
-          );
-
-          callback?.({
-            success: false,
-            message:
-              "Unable to mark messages as read",
-          });
-        }
-      },
-    );
-
-
-    /* =====================================================
-       DISCONNECT
-    ===================================================== */
-
-    socket.on(
-      "disconnect",
-      (reason) => {
-        console.log(
-          "Socket disconnected:",
-          socket.id,
-          "user:",
+        io.emit("presence:update", {
           userId,
-          "reason:",
-          reason,
-        );
-
-        const userSockets =
-          onlineUsers.get(
-            userId,
-          );
-
-        if (userSockets) {
-          userSockets.delete(
-            socket.id,
-          );
-
-
-          /* ---------------------------------------------
-             Only offline when all tabs
-             / devices are disconnected
-          ---------------------------------------------- */
-
-          if (
-            userSockets.size === 0
-          ) {
-            onlineUsers.delete(
-              userId,
-            );
-
-            io.emit(
-              "presence:update",
-              {
-                userId,
-                online: false,
-              },
-            );
-          }
-        }
-      },
-    );
-  },
-);
-
+          online: false,
+        });
+      }
+    }
+  });
+});
 
 /* =======================================================
    START
 ======================================================= */
 
-httpServer.listen(
-  port,
-  hostname,
-  async () => {
-    try {
-      await connectDB();
+httpServer.listen(port, hostname, async () => {
+  try {
+    await connectDB();
 
-      console.log("");
-
-      console.log(
-        "========================================",
-      );
-
-      console.log(
-        `Next.js:    http://${hostname}:${port}`,
-      );
-
-      console.log(
-        `Socket.IO:  http://${hostname}:${port}/socket.io`,
-      );
-
-      console.log(
-        `Web Push:   ${
-          webPushEnabled
-            ? "Enabled"
-            : "Disabled"
-        }`,
-      );
-
-      console.log(
-        "========================================",
-      );
-
-      console.log("");
-    } catch (error) {
-      console.error(
-        "MongoDB connection failed:",
-        error,
-      );
-    }
-  },
-);
+    console.log("");
+    console.log("========================================");
+    console.log(`Next.js:    http://${hostname}:${port}`);
+    console.log(`Socket.IO:  http://${hostname}:${port}/socket.io`);
+    console.log(`Web Push:   ${webPushEnabled ? "Enabled" : "Disabled"}`);
+    console.log("========================================");
+    console.log("");
+  } catch (error) {
+    console.error("MongoDB connection failed:", error);
+  }
+});

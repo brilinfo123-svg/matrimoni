@@ -180,6 +180,10 @@
     background: #a83268;
     font-size: 13px;
     font-weight: 800;
+    @media screen and (max-width: 767px) {
+       font-weight: 500;
+       gap: 5px;
+    }
     }
     
     .contentLayout {
@@ -944,7 +948,7 @@
     }
     
     .searchPanel {
-    padding: 10px;
+    padding: 5px;
     }
     
     .searchBox input {
@@ -998,7 +1002,6 @@
     }
     
     .mobileFilterButton {
-    min-width: 72px;
     font-size: 11px;
     }
     
@@ -1010,9 +1013,7 @@
     height: 235px;
     }
     
-    .cardActions {
-    grid-template-columns: 40px minmax(0, 1fr) 40px;
-    }
+  
     
     .shortlistButton,
     .messageButton {
