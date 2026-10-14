@@ -19,9 +19,8 @@ import {
   FiCheck,
   FiChevronLeft,
   FiHeart,
-  FiInfo,
-  FiLock,
   FiMessageCircle,
+  FiLock,
   FiMoreHorizontal,
   FiPhone,
   FiSearch,
@@ -106,10 +105,40 @@ const SOCKET_URL =
   "http://localhost:3000";
 
 /*
- * -----------------------------------------
- * Get initials
- * -----------------------------------------
+ * =====================================================
+ * CLIENT-SIDE CACHE
+ * =====================================================
+ *
+ * This cache survives client-side navigation while
+ * the application remains in the same browser runtime.
+ *
+ * It does not persist through a full page refresh.
  */
+
+let cachedMessagesUserId = "";
+
+let cachedSelectedConversationId = "";
+
+let conversationsCache: {
+  userId: string;
+  conversations: Conversation[];
+} | null = null;
+
+const messagesCache = new Map<string, Message[]>();
+
+function getMessageCacheKey(
+  userId: string,
+  conversationId: string,
+) {
+  return `${userId}:${conversationId}`;
+}
+
+/*
+ * =====================================================
+ * HELPERS
+ * =====================================================
+ */
+
 function getInitials(name: string) {
   return (
     name
@@ -180,21 +209,12 @@ function ProfileAvatar({
   );
 }
 
-/*
- * -----------------------------------------
- * Format message time
- * -----------------------------------------
- */
 function formatMessageTime(date?: string) {
-  if (!date) {
-    return "";
-  }
+  if (!date) return "";
 
   const value = new Date(date);
 
-  if (Number.isNaN(value.getTime())) {
-    return "";
-  }
+  if (Number.isNaN(value.getTime())) return "";
 
   return value.toLocaleTimeString([], {
     hour: "numeric",
@@ -202,28 +222,16 @@ function formatMessageTime(date?: string) {
   });
 }
 
-/*
- * -----------------------------------------
- * Format conversation time
- * -----------------------------------------
- */
 function formatConversationTime(date?: string) {
-  if (!date) {
-    return "";
-  }
+  if (!date) return "";
 
   const value = new Date(date);
 
-  if (Number.isNaN(value.getTime())) {
-    return "";
-  }
+  if (Number.isNaN(value.getTime())) return "";
 
   const now = new Date();
 
-  const sameDay =
-    value.toDateString() === now.toDateString();
-
-  if (sameDay) {
+  if (value.toDateString() === now.toDateString()) {
     return value.toLocaleTimeString([], {
       hour: "numeric",
       minute: "2-digit",
@@ -231,15 +239,9 @@ function formatConversationTime(date?: string) {
   }
 
   const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
 
-  yesterday.setDate(
-    yesterday.getDate() - 1,
-  );
-
-  if (
-    value.toDateString() ===
-    yesterday.toDateString()
-  ) {
+  if (value.toDateString() === yesterday.toDateString()) {
     return "Yesterday";
   }
 
@@ -249,11 +251,6 @@ function formatConversationTime(date?: string) {
   });
 }
 
-/*
- * -----------------------------------------
- * Normalize API message
- * -----------------------------------------
- */
 function normalizeMessage(
   message: ApiMessage,
   currentUserId: string,
@@ -265,193 +262,208 @@ function normalizeMessage(
 
   return {
     id: String(messageId),
-
-    conversationId: String(
-      message.conversationId,
-    ),
-
-    senderId: String(
-      message.senderId,
-    ),
-
-    receiverId: String(
-      message.receiverId,
-    ),
-
+    conversationId: String(message.conversationId),
+    senderId: String(message.senderId),
+    receiverId: String(message.receiverId),
     text: message.text,
-
-    time: formatMessageTime(
-      message.createdAt,
-    ),
-
+    time: formatMessageTime(message.createdAt),
     mine:
-      String(message.senderId) ===
-      String(currentUserId),
-
+      String(message.senderId) === String(currentUserId),
     read: Boolean(message.read),
   };
 }
 
+/*
+ * =====================================================
+ * MESSAGES PAGE
+ * =====================================================
+ */
+
 export default function MessagesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const searchParams =
-    useSearchParams();
-
-  /*
-   * -----------------------------------------
-   * Profile ID from URL
-   * -----------------------------------------
-   */
   const profileIdFromUrl =
     searchParams.get("userId") ||
     searchParams.get("profile");
 
   /*
-   * -----------------------------------------
-   * State
-   * -----------------------------------------
+   * -----------------------------------------------------
+   * INITIAL CACHED DATA
+   * -----------------------------------------------------
    */
-  const [currentUserId, setCurrentUserId] =
-    useState("");
 
-  const [
-    conversations,
-    setConversations,
-  ] = useState<Conversation[]>([]);
+  const [currentUserId, setCurrentUserId] = useState(
+    () => cachedMessagesUserId,
+  );
 
-  const [selectedId, setSelectedId] =
-    useState("");
+  const [conversations, setConversations] = useState<
+    Conversation[]
+  >(() => {
+    if (
+      conversationsCache &&
+      conversationsCache.userId === cachedMessagesUserId
+    ) {
+      return conversationsCache.conversations;
+    }
 
-  const [search, setSearch] =
-    useState("");
+    return [];
+  });
 
-  const [messageText, setMessageText] =
-    useState("");
+  const [selectedId, setSelectedId] = useState(() => {
+    if (
+      conversationsCache &&
+      conversationsCache.userId === cachedMessagesUserId
+    ) {
+      const cachedConversationExists =
+        conversationsCache.conversations.some(
+          (conversation) =>
+            conversation.id === cachedSelectedConversationId,
+        );
 
-  const [
-    showMobileChat,
-    setShowMobileChat,
-  ] = useState(false);
+      if (
+        cachedConversationExists &&
+        cachedSelectedConversationId
+      ) {
+        return cachedSelectedConversationId;
+      }
 
-  const [
-    loadingConversations,
-    setLoadingConversations,
-  ] = useState(true);
+      return conversationsCache.conversations[0]?.id || "";
+    }
 
-  const [
-    loadingMessages,
-    setLoadingMessages,
-  ] = useState(false);
+    return "";
+  });
 
-  const [sending, setSending] =
+  const [search, setSearch] = useState("");
+  const [messageText, setMessageText] = useState("");
+  const [showMobileChat, setShowMobileChat] = useState(false);
+
+  const [loadingConversations, setLoadingConversations] =
+    useState(() => {
+      return !(
+        conversationsCache &&
+        conversationsCache.userId === cachedMessagesUserId
+      );
+    });
+
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const [showChatMenu, setShowChatMenu] = useState(false);
+  const [deletingConversation, setDeletingConversation] =
     useState(false);
 
-  const [errorMessage, setErrorMessage] =
-    useState("");
-
   /*
-   * -----------------------------------------
-   * Delete chat menu
-   * -----------------------------------------
+   * -----------------------------------------------------
+   * REFS
+   * -----------------------------------------------------
    */
-  const [showChatMenu, setShowChatMenu] =
-    useState(false);
 
-  const [
-    deletingConversation,
-    setDeletingConversation,
-  ] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
 
-  /*
-   * -----------------------------------------
-   * Refs
-   * -----------------------------------------
-   */
-  const socketRef =
-    useRef<Socket | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const messagesEndRef =
-    useRef<HTMLDivElement | null>(null);
+  const selectedIdRef = useRef("");
 
-  const selectedIdRef =
-    useRef("");
+  const messageIdsRef = useRef(new Set<string>());
 
-  const messageIdsRef =
-    useRef(new Set<string>());
+  const conversationsRef = useRef<Conversation[]>([]);
 
-  /*
-   * IMPORTANT:
-   * Socket callbacks can otherwise use
-   * old conversations state.
-   */
-  const conversationsRef =
-    useRef<Conversation[]>([]);
-
-  /*
-   * -----------------------------------------
-   * Selected conversation
-   * -----------------------------------------
-   */
   const selectedConversation =
     conversations.find(
-      (conversation) =>
-        conversation.id === selectedId,
+      (conversation) => conversation.id === selectedId,
     ) || null;
 
   /*
-   * -----------------------------------------
-   * Scroll to latest message
-   * -----------------------------------------
+   * -----------------------------------------------------
+   * SCROLL TO BOTTOM
+   * -----------------------------------------------------
    */
+
   const scrollToBottom = () => {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView(
-          {
-            behavior: "smooth",
-            block: "end",
-          },
-        );
+        messagesEndRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
       });
     });
   };
 
   /*
-   * -----------------------------------------
-   * Notify Header about unread count change
-   * -----------------------------------------
-   *
-   * MessageNotificationProvider listens
-   * for this browser event and refreshes
-   * /api/conversations.
-   *
-   * IMPORTANT:
-   * This event is dispatched only after
-   * message:read succeeds.
+   * -----------------------------------------------------
+   * NOTIFY HEADER ABOUT UNREAD COUNT
+   * -----------------------------------------------------
    */
+
   const notifyMessagesUpdated = () => {
-    window.dispatchEvent(
-      new Event("messages:updated"),
-    );
+    window.dispatchEvent(new Event("messages:updated"));
   };
 
   /*
-   * -----------------------------------------
-   * Scroll when messages change
-   * -----------------------------------------
+   * -----------------------------------------------------
+   * UPDATE CACHED DATA
+   * -----------------------------------------------------
+   *
+   * This also keeps the cache updated when Socket.IO
+   * changes messages, unread counts, or online status.
    */
+
   useEffect(() => {
-    if (!selectedConversation) {
-      return;
-    }
+    conversationsRef.current = conversations;
+  }, [conversations]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    cachedMessagesUserId = currentUserId;
+
+    conversationsCache = {
+      userId: currentUserId,
+      conversations,
+    };
+
+    conversations.forEach((conversation) => {
+      messagesCache.set(
+        getMessageCacheKey(
+          currentUserId,
+          conversation.id,
+        ),
+        conversation.messages || [],
+      );
+    });
 
     if (
-      selectedConversation.messages.length ===
-      0
+      selectedId &&
+      conversations.some(
+        (conversation) => conversation.id === selectedId,
+      )
     ) {
-      return;
+      cachedSelectedConversationId = selectedId;
+    } else if (
+      cachedSelectedConversationId &&
+      !conversations.some(
+        (conversation) =>
+          conversation.id === cachedSelectedConversationId,
+      )
+    ) {
+      cachedSelectedConversationId =
+        conversations[0]?.id || "";
     }
+  }, [conversations, currentUserId, selectedId]);
+
+  /*
+   * -----------------------------------------------------
+   * SCROLL WHEN MESSAGES CHANGE
+   * -----------------------------------------------------
+   */
+
+  useEffect(() => {
+    if (!selectedConversation) return;
+
+    if (selectedConversation.messages.length === 0) return;
 
     scrollToBottom();
   }, [
@@ -460,111 +472,119 @@ export default function MessagesPage() {
   ]);
 
   /*
-   * -----------------------------------------
-   * Keep conversations ref updated
-   * -----------------------------------------
+   * -----------------------------------------------------
+   * FILTER CONVERSATIONS
+   * -----------------------------------------------------
    */
-  useEffect(() => {
-    conversationsRef.current =
-      conversations;
-  }, [conversations]);
 
-  /*
-   * -----------------------------------------
-   * Filter conversations
-   * -----------------------------------------
-   */
-  const filteredConversations =
-    useMemo(() => {
-      const query =
-        search.trim().toLowerCase();
+  const filteredConversations = useMemo(() => {
+    const query = search.trim().toLowerCase();
 
-      if (!query) {
-        return conversations;
-      }
+    if (!query) return conversations;
 
-      return conversations.filter(
-        (conversation) =>
-          [
-            conversation.name,
-            conversation.location,
-            conversation.profession,
-            conversation.lastMessage,
-          ].some((value) =>
-            value
-              .toLowerCase()
-              .includes(query),
-          ),
-      );
-    }, [
-      conversations,
-      search,
-    ]);
-
-  /*
-   * -----------------------------------------
-   * Total unread messages
-   * -----------------------------------------
-   */
-  const unreadTotal =
-    conversations.reduce(
-      (total, conversation) =>
-        total + conversation.unread,
-      0,
+    return conversations.filter((conversation) =>
+      [
+        conversation.name,
+        conversation.location,
+        conversation.profession,
+        conversation.lastMessage,
+      ].some((value) =>
+        value.toLowerCase().includes(query),
+      ),
     );
+  }, [conversations, search]);
 
   /*
-   * -----------------------------------------
-   * Load logged-in user
-   * -----------------------------------------
+   * -----------------------------------------------------
+   * TOTAL UNREAD MESSAGES
+   * -----------------------------------------------------
    */
+
+  const unreadTotal = conversations.reduce(
+    (total, conversation) => total + conversation.unread,
+    0,
+  );
+
+  /*
+   * =====================================================
+   * LOAD LOGGED-IN USER
+   * =====================================================
+   */
+
   useEffect(() => {
     let cancelled = false;
 
-    const loadCurrentUser =
-      async () => {
-        try {
-          const response =
-            await fetch(
-              "/api/auth/me",
-              {
-                method: "GET",
-                credentials: "include",
-                cache: "no-store",
-              },
-            );
+    const loadCurrentUser = async () => {
+      try {
+        const response = await fetch("/api/auth/me", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
 
-          const data =
-            await response.json();
+        const data = await response.json();
 
-          const userId =
-            data?.user?._id ||
-            data?.user?.id;
+        const userId =
+          data?.user?._id ||
+          data?.user?.id;
 
-          if (
-            !cancelled &&
-            response.ok &&
-            data?.success &&
-            userId
-          ) {
-            const id = String(
-              userId,
-            );
+        if (
+          cancelled ||
+          !response.ok ||
+          !data?.success ||
+          !userId
+        ) {
+          if (!cancelled) {
+            /*
+             * No authenticated user was found.
+             * Clear cached private conversation data.
+             */
+            cachedMessagesUserId = "";
+            cachedSelectedConversationId = "";
+            conversationsCache = null;
+            messagesCache.clear();
 
-            console.log(
-              "Current user ID:",
-              id,
-            );
-
-            setCurrentUserId(id);
+            setCurrentUserId("");
+            setConversations([]);
+            setSelectedId("");
+            setLoadingConversations(false);
           }
-        } catch (error) {
-          console.error(
-            "Current user error:",
-            error,
-          );
+
+          return;
         }
-      };
+
+        const id = String(userId);
+
+        console.log("Current user ID:", id);
+
+        /*
+         * Prevent one account from seeing another
+         * account's cached conversations.
+         */
+        if (
+          cachedMessagesUserId &&
+          cachedMessagesUserId !== id
+        ) {
+          conversationsCache = null;
+          messagesCache.clear();
+          cachedSelectedConversationId = "";
+
+          setConversations([]);
+          setSelectedId("");
+          setLoadingConversations(true);
+        }
+
+        cachedMessagesUserId = id;
+        setCurrentUserId(id);
+      } catch (error) {
+        console.error("Current user error:", error);
+
+        if (!cancelled) {
+          setErrorMessage("Unable to verify your session.");
+          setLoadingConversations(false);
+        }
+      }
+    };
 
     loadCurrentUser();
 
@@ -574,305 +594,314 @@ export default function MessagesPage() {
   }, []);
 
   /*
-   * -----------------------------------------
-   * Load/create conversations
-   * -----------------------------------------
+   * =====================================================
+   * LOAD / CREATE CONVERSATIONS
+   * =====================================================
+   *
+   * Cached conversations appear immediately.
+   * The API still refreshes them in the background.
    */
-  useEffect(() => {
-    let cancelled = false;
 
-    const loadConversations =
-      async () => {
-        try {
-          setLoadingConversations(true);
-          setErrorMessage("");
 
-          /*
-           * Create/find conversation when
-           * coming from Matches/Profile.
-           *
-           * IMPORTANT:
-           * This POST must NOT automatically
-           * restore a deletedFor user.
-           */
-          if (profileIdFromUrl) {
-            console.log(
-              "Creating/finding conversation with:",
-              profileIdFromUrl,
+useEffect(() => {
+  let cancelled = false;
+
+  const loadConversations = async () => {
+    if (!currentUserId) return;
+
+    const hasCachedConversations =
+      conversationsCache?.userId === currentUserId;
+
+    /*
+     * Do not show the sidebar skeleton if cached
+     * conversations are already available.
+     */
+    if (!hasCachedConversations) {
+      setLoadingConversations(true);
+    }
+
+    setErrorMessage("");
+
+    try {
+      /*
+       * Create/find conversation when coming from
+       * a profile or Matches page.
+       */
+      if (profileIdFromUrl) {
+        console.log(
+          "Creating/finding conversation with:",
+          profileIdFromUrl,
+        );
+
+        const createResponse = await fetch(
+          "/api/conversations",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              userId: profileIdFromUrl,
+            }),
+          },
+        );
+
+        const createData = await createResponse.json();
+
+        if (
+          !createResponse.ok ||
+          !createData.success
+        ) {
+          throw new Error(
+            createData.message ||
+              "Unable to create conversation",
+          );
+        }
+      }
+
+      /*
+       * Fetch latest conversation list.
+       */
+      const response = await fetch("/api/conversations", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      const data: ConversationsResponse =
+        await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Unable to load conversations",
+        );
+      }
+
+      if (cancelled) return;
+
+      const loaded = data.conversations || [];
+
+      /*
+       * Normalize conversations and preserve cached
+       * messages while the message endpoint refreshes.
+       */
+      const normalizedConversations: Conversation[] =
+        loaded.map((conversation) => {
+          const conversationId = String(conversation.id);
+
+          const cacheKey = getMessageCacheKey(
+            currentUserId,
+            conversationId,
+          );
+
+          const hasCachedMessages =
+            messagesCache.has(cacheKey);
+
+          return {
+            ...conversation,
+            id: conversationId,
+            participantId: String(
+              conversation.participantId,
+            ),
+            unread: Number(conversation.unread) || 0,
+            messages: hasCachedMessages
+              ? messagesCache.get(cacheKey) || []
+              : conversation.messages || [],
+          };
+        });
+
+      /*
+       * IMPORTANT:
+       * Render conversations immediately.
+       * Do not wait for participant names/photos.
+       */
+      if (cancelled) return;
+
+      normalizedConversations.forEach((conversation) => {
+        conversation.messages.forEach((message) => {
+          messageIdsRef.current.add(message.id);
+        });
+      });
+
+      setConversations(normalizedConversations);
+
+      /*
+       * Select the requested profile immediately.
+       */
+      if (profileIdFromUrl) {
+        const matchingConversation =
+          normalizedConversations.find(
+            (conversation) =>
+              String(conversation.participantId) ===
+              String(profileIdFromUrl),
+          );
+
+        if (matchingConversation) {
+          setSelectedId(matchingConversation.id);
+          setShowMobileChat(true);
+        } else {
+          setSelectedId((previousId) => {
+            const stillExists =
+              normalizedConversations.some(
+                (conversation) =>
+                  conversation.id === previousId,
+              );
+
+            return stillExists
+              ? previousId
+              : normalizedConversations[0]?.id || "";
+          });
+        }
+      } else {
+        /*
+         * Keep the previously selected conversation
+         * if it still exists after the refresh.
+         */
+        setSelectedId((previousId) => {
+          const stillExists =
+            normalizedConversations.some(
+              (conversation) =>
+                conversation.id === previousId,
             );
 
-            const createResponse =
-              await fetch(
-                "/api/conversations",
+          return stillExists
+            ? previousId
+            : normalizedConversations[0]?.id || "";
+        });
+      }
+
+      /*
+       * Hydrate participant names and profile photos
+       * after the unread count has already rendered.
+       */
+      const participantIds = [
+        ...new Set(
+          normalizedConversations
+            .map(
+              (conversation) =>
+                conversation.participantId,
+            )
+            .filter(Boolean),
+        ),
+      ];
+
+      if (participantIds.length > 0) {
+        const usersResponse = await fetch(
+          `/api/users?ids=${encodeURIComponent(
+            participantIds.join(","),
+          )}`,
+          {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+          },
+        );
+
+        const usersData = await usersResponse.json();
+
+        if (
+          !cancelled &&
+          usersResponse.ok &&
+          usersData.success
+        ) {
+          const photoByUserId = new Map<
+            string,
+            { photo: string | null; name: string }
+          >(
+            (usersData.users || []).map(
+              (user: {
+                id: string;
+                photo: string | null;
+                name: string;
+              }) => [
+                String(user.id),
                 {
-                  method: "POST",
-                  headers: {
-                    "Content-Type":
-                      "application/json",
-                  },
-                  credentials: "include",
-                  body: JSON.stringify({
-                    userId:
-                      profileIdFromUrl,
-                  }),
+                  photo: user.photo,
+                  name: user.name,
                 },
-              );
+              ],
+            ),
+          );
 
-            const createData =
-              await createResponse.json();
+          const hydratedConversations =
+            normalizedConversations.map(
+              (conversation) => {
+                const profile = photoByUserId.get(
+                  String(conversation.participantId),
+                );
 
-            console.log(
-              "Conversation create response:",
-              createData,
-            );
+                if (!profile) return conversation;
 
-            if (
-              !createResponse.ok ||
-              !createData.success
-            ) {
-              throw new Error(
-                createData.message ||
-                  "Unable to create conversation",
-              );
-            }
-          }
-
-          /*
-           * Load conversations.
-           *
-           * API must exclude conversations
-           * where current user exists in
-           * deletedFor.
-           */
-          const response =
-            await fetch(
-              "/api/conversations",
-              {
-                method: "GET",
-                credentials: "include",
-                cache: "no-store",
+                return {
+                  ...conversation,
+                  photo: profile.photo,
+                  ...(profile.name
+                    ? {
+                        name: profile.name,
+                        initials: getInitials(profile.name),
+                      }
+                    : {}),
+                };
               },
             );
 
-          const data: ConversationsResponse =
-            await response.json();
-
-          if (
-            !response.ok ||
-            !data.success
-          ) {
-            throw new Error(
-              data.message ||
-                "Unable to load conversations",
-            );
-          }
-
-          if (cancelled) {
-            return;
-          }
-
-          const loaded =
-            data.conversations || [];
-
-          /*
-           * Make sure messages array
-           * always exists.
-           */
-          const normalizedConversations =
-            loaded.map(
-              (conversation) => ({
-                ...conversation,
-
-                id: String(
-                  conversation.id,
-                ),
-
-                participantId: String(
-                  conversation.participantId,
-                ),
-
-                unread:
-                  Number(
-                    conversation.unread,
-                  ) || 0,
-
-                messages:
-                  conversation.messages ||
-                  [],
-              }),
-            );
-
-            const participantIds = [
-              ...new Set(
-                normalizedConversations
-                  .map((conversation) => conversation.participantId)
-                  .filter(Boolean)
-              ),
-            ];
-            
-            if (participantIds.length > 0) {
-              const usersResponse = await fetch(
-                `/api/users?ids=${encodeURIComponent(participantIds.join(","))}`,
-                {
-                  method: "GET",
-                  credentials: "include",
-                  cache: "no-store",
-                }
-              );
-            
-              const usersData = await usersResponse.json();
-            
-              if (usersResponse.ok && usersData.success) {
-                const photoByUserId = new Map<
-                  string,
-                  { photo: string | null; name: string }
-                >(
-                  (usersData.users || []).map(
-                    (user: {
-                      id: string;
-                      photo: string | null;
-                      name: string;
-                    }) => [
-                      String(user.id),
-                      {
-                        photo: user.photo,
-                        name: user.name,
-                      },
-                    ]
-                  )
-                );
-            
-                normalizedConversations.forEach((conversation) => {
-                  const profile = photoByUserId.get(
-                    String(conversation.participantId)
-                  );
-            
-                  if (profile) {
-                    conversation.photo = profile.photo;
-            
-                    if (profile.name) {
-                      conversation.name = profile.name;
-                      conversation.initials = getInitials(profile.name);
-                    }
-                  }
-                });
-              }
-            }
-            
-          /*
-           * Store message IDs.
-           */
-          normalizedConversations.forEach(
-            (conversation) => {
-              conversation.messages.forEach(
-                (message) => {
-                  messageIdsRef.current.add(
-                    message.id,
-                  );
-                },
-              );
-            },
-          );
-
-          setConversations(
-            normalizedConversations,
-          );
-
-          /*
-           * Select requested profile.
-           */
-          if (profileIdFromUrl) {
-            const matchingConversation =
-              normalizedConversations.find(
-                (conversation) =>
-                  String(
-                    conversation.participantId,
-                  ) ===
-                  String(
-                    profileIdFromUrl,
-                  ),
-              );
-
-            if (
-              matchingConversation
-            ) {
-              setSelectedId(
-                matchingConversation.id,
-              );
-
-              setShowMobileChat(
-                true,
-              );
-            }
-          } else if (
-            normalizedConversations.length >
-            0
-          ) {
-            setSelectedId(
-              normalizedConversations[0].id,
-            );
-          }
-        } catch (error) {
-          console.error(
-            "Conversations error:",
-            error,
-          );
-
           if (!cancelled) {
-            setErrorMessage(
-              error instanceof Error
-                ? error.message
-                : "Unable to load conversations",
-            );
-          }
-        } finally {
-          if (!cancelled) {
-            setLoadingConversations(
-              false,
-            );
+            setConversations(hydratedConversations);
           }
         }
-      };
+      }
+    } catch (error) {
+      console.error("Conversations error:", error);
 
-    loadConversations();
+      if (!cancelled) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to load conversations",
+        );
+      }
+    } finally {
+      if (!cancelled) {
+        setLoadingConversations(false);
+      }
+    }
+  };
 
-    return () => {
-      cancelled = true;
-    };
-  }, [profileIdFromUrl]);
+  loadConversations();
+
+  return () => {
+    cancelled = true;
+  };
+}, [profileIdFromUrl, currentUserId]);
 
   /*
-   * -----------------------------------------
-   * Keep selected conversation ID available
-   * inside socket callbacks
-   * -----------------------------------------
+   * =====================================================
+   * KEEP SELECTED ID AVAILABLE TO SOCKET CALLBACKS
+   * =====================================================
    */
+
   useEffect(() => {
-    selectedIdRef.current =
-      selectedId;
+    selectedIdRef.current = selectedId;
+
+    if (selectedId) {
+      cachedSelectedConversationId = selectedId;
+    }
   }, [selectedId]);
 
   /*
-   * -----------------------------------------
-   * Close chat menu when clicking outside
-   * -----------------------------------------
+   * =====================================================
+   * CLOSE CHAT MENU WHEN CLICKING OUTSIDE
+   * =====================================================
    */
+
   useEffect(() => {
-    if (!showChatMenu) {
-      return;
-    }
+    if (!showChatMenu) return;
 
-    const handleClickOutside = (
-      event: MouseEvent,
-    ) => {
-      const target =
-        event.target as HTMLElement;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
 
-      if (
-        !target.closest(
-          `.${styles.chatMenuWrapper}`,
-        )
-      ) {
+      if (!target.closest(`.${styles.chatMenuWrapper}`)) {
         setShowChatMenu(false);
       }
     };
@@ -895,6 +924,7 @@ export default function MessagesPage() {
    * SOCKET.IO CONNECTION
    * =====================================================
    */
+
   useEffect(() => {
     if (!currentUserId) {
       console.log(
@@ -904,14 +934,11 @@ export default function MessagesPage() {
       return;
     }
 
-    console.log(
-      "Connecting Socket.IO:",
-      SOCKET_URL,
-    );
+    console.log("Connecting Socket.IO:", SOCKET_URL);
 
     const socket = io(SOCKET_URL, {
       path: "/socket.io",
-    
+
       auth: (callback) => {
         fetch("/api/auth/socket-token", {
           method: "GET",
@@ -920,13 +947,14 @@ export default function MessagesPage() {
         })
           .then(async (response) => {
             const data = await response.json();
-    
+
             if (!response.ok || !data?.token) {
               throw new Error(
-                data?.message || "Socket token unavailable",
+                data?.message ||
+                  "Socket token unavailable",
               );
-            } 
-    
+            }
+
             callback({ token: data.token });
           })
           .catch((error) => {
@@ -934,134 +962,85 @@ export default function MessagesPage() {
             callback({});
           });
       },
-    
+
       withCredentials: true,
       transports: ["websocket", "polling"],
       timeout: 10000,
     });
 
-    socketRef.current =
-      socket;
+    socketRef.current = socket;
 
     /*
-     * -----------------------------------------
-     * Socket connected
-     * -----------------------------------------
+     * -----------------------------------------------------
+     * SOCKET CONNECTED
+     * -----------------------------------------------------
      */
-    socket.on(
-      "connect",
-      () => {
-        console.log(
-          "Socket connected:",
-          socket.id,
+
+    socket.on("connect", () => {
+      console.log("Socket connected:", socket.id);
+
+      if (selectedIdRef.current) {
+        socket.emit("conversation:join", {
+          conversationId: selectedIdRef.current,
+        });
+
+        socket.emit(
+          "message:read",
+          {
+            conversationId: selectedIdRef.current,
+          },
+          (
+            response?: {
+              success?: boolean;
+              messageIds?: string[];
+            },
+          ) => {
+            if (!response?.success) {
+              console.warn(
+                "Unable to mark messages as read after socket connect:",
+                response,
+              );
+
+              return;
+            }
+
+            notifyMessagesUpdated();
+          },
         );
-
-        /*
-         * Rejoin selected conversation
-         * after connection/reconnection.
-         */
-        if (
-          selectedIdRef.current
-        ) {
-          socket.emit(
-            "conversation:join",
-            {
-              conversationId:
-                selectedIdRef.current,
-            },
-          );
-
-          /*
-           * Mark messages as read.
-           *
-           * IMPORTANT:
-           * Header notification is refreshed
-           * only after backend confirms success.
-           */
-          socket.emit(
-            "message:read",
-            {
-              conversationId:
-                selectedIdRef.current,
-            },
-            (
-              response?: {
-                success?: boolean;
-                messageIds?: string[];
-              },
-            ) => {
-              if (
-                !response?.success
-              ) {
-                console.warn(
-                  "Unable to mark messages as read after socket connect:",
-                  response,
-                );
-
-                return;
-              }
-
-              /*
-               * Backend successfully marked
-               * messages as read.
-               *
-               * Notify Header.
-               */
-              notifyMessagesUpdated();
-            },
-          );
-        }
-      },
-    );
+      }
+    });
 
     /*
-     * -----------------------------------------
-     * Connection error
-     * -----------------------------------------
+     * -----------------------------------------------------
+     * CONNECTION ERROR
+     * -----------------------------------------------------
      */
-    socket.on(
-      "connect_error",
-      (error) => {
-        console.error(
-          "Socket connection error:",
-          error.message,
-        );
 
-        setErrorMessage(
-          `Socket connection error: ${error.message}`,
-        );
-      },
-    );
+    socket.on("connect_error", (error) => {
+      console.error(
+        "Socket connection error:",
+        error.message,
+      );
 
-    /*
-     * -----------------------------------------
-     * Socket disconnected
-     * -----------------------------------------
-     */
-    socket.on(
-      "disconnect",
-      (reason) => {
-        console.log(
-          "Socket disconnected:",
-          reason,
-        );
-      },
-    );
+      setErrorMessage(
+        `Socket connection error: ${error.message}`,
+      );
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("Socket disconnected:", reason);
+    });
 
     /*
      * =====================================================
      * NEW REALTIME MESSAGE
      * =====================================================
      */
+
     socket.on(
       "message:new",
-      async (
-        payload: SocketMessagePayload,
-      ) => {
-        console.log(
-          "Realtime message received:",
-          payload,
-        );
+      async (payload: SocketMessagePayload) => {
+        console.log("Realtime message received:", payload);
 
         if (
           !payload?.conversationId ||
@@ -1070,139 +1049,152 @@ export default function MessagesPage() {
           return;
         }
 
-        const normalized =
-          normalizeMessage(
-            payload.message,
-            currentUserId,
-          );
+        const normalized = normalizeMessage(
+          payload.message,
+          currentUserId,
+        );
+       
+const conversationBeforeUpdate =
+  conversationsRef.current.find(
+    (conversation) =>
+      conversation.id === String(payload.conversationId),
+  );
 
+const pendingMessage =
+  conversationBeforeUpdate?.messages.find(
+    (message) =>
+      message.id.startsWith("temp-") &&
+      message.mine &&
+      message.text === normalized.text,
+  );
+
+if (pendingMessage) {
+  messageIdsRef.current.delete(pendingMessage.id);
+  messageIdsRef.current.add(normalized.id);
+
+  setConversations((current) =>
+    current.map((conversation) => {
+      if (
+        conversation.id !== String(payload.conversationId)
+      ) {
+        return conversation;
+      }
+
+      return {
+        ...conversation,
+        messages: conversation.messages.map((message) =>
+          message.id === pendingMessage.id
+            ? normalized
+            : message,
+        ),
+        lastMessage: normalized.text,
+        lastTime: formatConversationTime(
+          payload.message.createdAt,
+        ),
+      };
+    }),
+  );
+
+  return;
+}
         /*
          * Prevent duplicate messages.
          */
-        if (
-          messageIdsRef.current.has(
-            normalized.id,
-          )
-        ) {
+        if (messageIdsRef.current.has(normalized.id)) {
           return;
         }
 
-        messageIdsRef.current.add(
-          normalized.id,
-        );
+        messageIdsRef.current.add(normalized.id);
 
-        /*
-         * Check whether conversation
-         * currently exists in frontend.
-         */
         const conversationExists =
           conversationsRef.current.some(
             (conversation) =>
-              String(
-                conversation.id,
-              ) ===
-              String(
-                payload.conversationId,
-              ),
+              String(conversation.id) ===
+              String(payload.conversationId),
           );
 
         /*
-         * -----------------------------------------
-         * Conversation does not exist locally
-         * -----------------------------------------
-         *
-         * This can happen when the current user
-         * previously deleted the conversation.
+         * Conversation is not currently in the sidebar.
+         * Refresh the conversation list from the server.
          */
         if (!conversationExists) {
           try {
-            const response =
-              await fetch(
-                "/api/conversations",
-                {
-                  method: "GET",
-                  credentials: "include",
-                  cache: "no-store",
-                },
-              );
+            const response = await fetch(
+              "/api/conversations",
+              {
+                method: "GET",
+                credentials: "include",
+                cache: "no-store",
+              },
+            );
 
             const data: ConversationsResponse =
               await response.json();
 
-            if (
-              response.ok &&
-              data.success
-            ) {
-              const loaded =
-                data.conversations || [];
+            if (response.ok && data.success) {
+              const loaded = data.conversations || [];
 
-              const normalizedConversations =
-                loaded.map(
-                  (conversation) => ({
+              const normalizedConversations: Conversation[] =
+                loaded.map((conversation) => {
+                  const conversationId = String(
+                    conversation.id,
+                  );
+
+                  const cacheKey = getMessageCacheKey(
+                    currentUserId,
+                    conversationId,
+                  );
+
+                  return {
                     ...conversation,
 
-                    id: String(
-                      conversation.id,
-                    ),
+                    id: conversationId,
 
                     participantId: String(
                       conversation.participantId,
                     ),
 
                     unread:
-                      Number(
-                        conversation.unread,
-                      ) || 0,
+                      Number(conversation.unread) || 0,
 
-                    messages:
-                      conversation.messages ||
-                      [],
-                  }),
-                );
+                    messages: messagesCache.has(cacheKey)
+                      ? messagesCache.get(cacheKey) || []
+                      : conversation.messages || [],
+                  };
+                });
 
-              /*
-               * Add existing message IDs.
-               */
               normalizedConversations.forEach(
                 (conversation) => {
                   conversation.messages.forEach(
                     (message) => {
-                      messageIdsRef.current.add(
-                        message.id,
-                      );
+                      messageIdsRef.current.add(message.id);
                     },
                   );
                 },
               );
 
-              setConversations(
-                normalizedConversations,
-              );
+              if (
+                !normalizedConversations.some(
+                  (conversation) =>
+                    conversation.id ===
+                    String(payload.conversationId),
+                )
+              ) {
+                return;
+              }
 
-              /*
-               * Find restored conversation.
-               */
+              setConversations(normalizedConversations);
+
               const restoredConversation =
                 normalizedConversations.find(
                   (conversation) =>
-                    String(
-                      conversation.id,
-                    ) ===
-                    String(
-                      payload.conversationId,
-                    ),
+                    String(conversation.id) ===
+                    String(payload.conversationId),
                 );
 
-              if (
-                restoredConversation
-              ) {
-                setSelectedId(
-                  restoredConversation.id,
-                );
-
-                setShowMobileChat(
-                  true,
-                );
+              if (restoredConversation) {
+                setSelectedId(restoredConversation.id);
+                setShowMobileChat(true);
               }
             }
           } catch (error) {
@@ -1213,85 +1205,67 @@ export default function MessagesPage() {
           }
 
           scrollToBottom();
-
           return;
         }
 
         /*
-         * -----------------------------------------
-         * Existing conversation
-         * -----------------------------------------
+         * Update existing conversation.
          */
-        setConversations(
-          (current) =>
-            current.map(
-              (conversation) => {
-                if (
-                  String(
-                    conversation.id,
-                  ) !==
-                  String(
-                    payload.conversationId,
-                  )
-                ) {
-                  return conversation;
-                }
+        setConversations((current) =>
+          current.map((conversation) => {
+            if (
+              String(conversation.id) !==
+              String(payload.conversationId)
+            ) {
+              return conversation;
+            }
 
-                const isCurrentConversation =
-                  selectedIdRef.current ===
-                  conversation.id;
+            const isCurrentConversation =
+              selectedIdRef.current === conversation.id;
 
-                return {
-                  ...conversation,
+            const alreadyExists =
+              conversation.messages.some(
+                (message) => message.id === normalized.id,
+              );
 
-                  messages: [
+            return {
+              ...conversation,
+
+              messages: alreadyExists
+                ? conversation.messages
+                : [
                     ...conversation.messages,
                     normalized,
                   ],
 
-                  lastMessage:
-                    normalized.text,
+              lastMessage: normalized.text,
 
-                  lastTime:
-                    formatConversationTime(
-                      payload.message
-                        .createdAt,
-                    ),
+              lastTime: formatConversationTime(
+                payload.message.createdAt,
+              ),
 
-                  unread:
-                    normalized.mine ||
-                    isCurrentConversation
-                      ? 0
-                      : conversation.unread +
-                        1,
-                };
-              },
-            ),
+              unread:
+                normalized.mine || isCurrentConversation
+                  ? 0
+                  : conversation.unread + 1,
+            };
+          }),
         );
 
         /*
-         * -----------------------------------------
-         * If this is an incoming message inside
-         * the currently open conversation,
-         * immediately mark it as read.
-         *
-         * IMPORTANT:
-         * Header is updated ONLY after ACK.
-         * -----------------------------------------
+         * Mark an incoming message as read if this
+         * conversation is already open.
          */
         if (
           !normalized.mine &&
           selectedIdRef.current ===
-            String(
-              payload.conversationId,
-            ) &&
+            String(payload.conversationId) &&
           socket.connected
         ) {
           socket.emit(
             "message:read",
             {
-              conversationId:
-                payload.conversationId,
+              conversationId: payload.conversationId,
             },
             (
               response?: {
@@ -1299,9 +1273,7 @@ export default function MessagesPage() {
                 messageIds?: string[];
               },
             ) => {
-              if (
-                !response?.success
-              ) {
+              if (!response?.success) {
                 console.warn(
                   "Unable to mark realtime message as read:",
                   response,
@@ -1310,12 +1282,6 @@ export default function MessagesPage() {
                 return;
               }
 
-              /*
-               * Backend successfully updated
-               * unread messages.
-               *
-               * Refresh Header badge.
-               */
               notifyMessagesUpdated();
             },
           );
@@ -1327,20 +1293,14 @@ export default function MessagesPage() {
 
     /*
      * =====================================================
-     * REALTIME READ RECEIPT
+     * REALTIME READ RECEIPTS
      * =====================================================
-     *
-     * Existing ✓ -> ✓✓ functionality.
      */
+
     socket.on(
       "message:read",
-      (
-        payload: MessageReadPayload,
-      ) => {
-        console.log(
-          "Realtime message read:",
-          payload,
-        );
+      (payload: MessageReadPayload) => {
+        console.log("Realtime message read:", payload);
 
         if (
           !payload?.conversationId ||
@@ -1349,127 +1309,79 @@ export default function MessagesPage() {
           return;
         }
 
-        setConversations(
-          (current) =>
-            current.map(
-              (conversation) => {
-                if (
-                  String(
-                    conversation.id,
-                  ) !==
-                  String(
-                    payload.conversationId,
-                  )
-                ) {
-                  return conversation;
-                }
+        setConversations((current) =>
+          current.map((conversation) => {
+            if (
+              String(conversation.id) !==
+              String(payload.conversationId)
+            ) {
+              return conversation;
+            }
 
-                return {
-                  ...conversation,
+            return {
+              ...conversation,
 
-                  messages:
-                    conversation.messages.map(
-                      (message) =>
-                        String(
-                          message.id,
-                        ) ===
-                        String(
-                          payload.messageId,
-                        )
-                          ? {
-                              ...message,
-                              read:
-                                payload.read ===
-                                true,
-                            }
-                          : message,
-                    ),
-                };
-              },
-            ),
+              messages: conversation.messages.map(
+                (message) =>
+                  String(message.id) ===
+                  String(payload.messageId)
+                    ? {
+                        ...message,
+                        read: payload.read === true,
+                      }
+                    : message,
+              ),
+            };
+          }),
         );
       },
     );
 
     /*
-     * -----------------------------------------
-     * Online/offline updates
-     * -----------------------------------------
+     * -----------------------------------------------------
+     * ONLINE / OFFLINE STATUS
+     * -----------------------------------------------------
      */
+
     socket.on(
       "presence:update",
-      (
-        payload: PresencePayload,
-      ) => {
-        if (
-          !payload?.userId
-        ) {
-          return;
-        }
+      (payload: PresencePayload) => {
+        if (!payload?.userId) return;
 
-        setConversations(
-          (current) =>
-            current.map(
-              (conversation) =>
-                String(
-                  conversation.participantId,
-                ) ===
-                String(
-                  payload.userId,
-                )
-                  ? {
-                      ...conversation,
-                      online:
-                        payload.online,
-                    }
-                  : conversation,
-            ),
+        setConversations((current) =>
+          current.map((conversation) =>
+            String(conversation.participantId) ===
+            String(payload.userId)
+              ? {
+                  ...conversation,
+                  online: payload.online,
+                }
+              : conversation,
+          ),
         );
       },
     );
 
     /*
-     * -----------------------------------------
-     * Socket cleanup
-     * -----------------------------------------
+     * -----------------------------------------------------
+     * SOCKET CLEANUP
+     * -----------------------------------------------------
      */
+
     return () => {
-      console.log(
-        "Cleaning Socket.IO connection",
-      );
+      console.log("Cleaning Socket.IO connection");
 
-      socket.off(
-        "connect",
-      );
-
-      socket.off(
-        "connect_error",
-      );
-
-      socket.off(
-        "disconnect",
-      );
-
-      socket.off(
-        "message:new",
-      );
-
-      socket.off(
-        "message:read",
-      );
-
-      socket.off(
-        "presence:update",
-      );
+      socket.off("connect");
+      socket.off("connect_error");
+      socket.off("disconnect");
+      socket.off("message:new");
+      socket.off("message:read");
+      socket.off("presence:update");
 
       socket.disconnect();
 
-      if (
-        socketRef.current ===
-        socket
-      ) {
-        socketRef.current =
-          null;
+      if (socketRef.current === socket) {
+        socketRef.current = null;
       }
     };
   }, [currentUserId]);
@@ -1478,264 +1390,197 @@ export default function MessagesPage() {
    * =====================================================
    * LOAD MESSAGES WHEN SELECTED CONVERSATION CHANGES
    * =====================================================
+   *
+   * Cached messages stay visible while the API refreshes.
+   * The skeleton only appears when this conversation
+   * does not have cached messages.
    */
+
   useEffect(() => {
-    if (!selectedId) {
-      return;
-    }
+    if (!selectedId || !currentUserId) return;
 
     let cancelled = false;
 
-    const loadMessages =
-      async () => {
-        try {
+    const cacheKey = getMessageCacheKey(
+      currentUserId,
+      selectedId,
+    );
+
+    const hasCachedMessages = messagesCache.has(cacheKey);
+
+    const loadMessages = async () => {
+      try {
+        if (!hasCachedMessages) {
           setLoadingMessages(true);
-          setErrorMessage("");
+        } else {
+          setLoadingMessages(false);
+        }
 
-          const response =
-            await fetch(
-              `/api/conversations/${selectedId}/messages`,
-              {
-                method: "GET",
-                credentials: "include",
-                cache: "no-store",
-              },
-            );
+        setErrorMessage("");
 
-          const data: MessagesResponse =
-            await response.json();
+        const response = await fetch(
+          `/api/conversations/${selectedId}/messages`,
+          {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+          },
+        );
 
-          if (
-            !response.ok ||
-            !data.success
-          ) {
-            throw new Error(
-              data.message ||
-                "Unable to load messages",
-            );
-          }
+        const data: MessagesResponse =
+          await response.json();
 
-          if (cancelled) {
-            return;
-          }
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.message || "Unable to load messages",
+          );
+        }
 
-          const loadedMessages =
-            (
-              data.messages || []
-            ).map(
-              (message) =>
-                normalizeMessage(
-                  message,
-                  currentUserId,
-                ),
-            );
+        if (cancelled) return;
+
+        const loadedMessages = (
+          data.messages || []
+        ).map((message) =>
+          normalizeMessage(message, currentUserId),
+        );
+
+        /*
+         * Save refreshed messages in the cache.
+         */
+        messagesCache.set(cacheKey, loadedMessages);
+
+        /*
+         * Keep track of known message IDs.
+         */
+        loadedMessages.forEach((message) => {
+          messageIdsRef.current.add(message.id);
+        });
+
+        /*
+         * Update messages and clear local unread count.
+         */
+        setConversations((current) =>
+          current.map((conversation) =>
+            conversation.id === selectedId
+              ? {
+                  ...conversation,
+                  messages: loadedMessages,
+                  unread: 0,
+                }
+              : conversation,
+          ),
+        );
+
+        /*
+         * Join the conversation room.
+         */
+        if (socketRef.current?.connected) {
+          socketRef.current.emit("conversation:join", {
+            conversationId: selectedId,
+          });
 
           /*
-           * Store message IDs.
+           * Notify Header only after the backend confirms
+           * that messages were marked as read.
            */
-          loadedMessages.forEach(
-            (message) => {
-              messageIdsRef.current.add(
-                message.id,
-              );
+          socketRef.current.emit(
+            "message:read",
+            {
+              conversationId: selectedId,
             },
-          );
-
-          /*
-           * Update messages and locally
-           * clear unread count.
-           */
-          setConversations(
-            (current) =>
-              current.map(
-                (conversation) =>
-                  conversation.id ===
-                  selectedId
-                    ? {
-                        ...conversation,
-
-                        messages:
-                          loadedMessages,
-
-                        unread: 0,
-                      }
-                    : conversation,
-              ),
-          );
-
-          /*
-           * Join conversation room.
-           */
-          if (
-            socketRef.current?.connected
-          ) {
-            socketRef.current.emit(
-              "conversation:join",
-              {
-                conversationId:
-                  selectedId,
+            (
+              response?: {
+                success?: boolean;
+                messageIds?: string[];
               },
-            );
+            ) => {
+              console.log(
+                "message:read response:",
+                response,
+              );
 
-            /*
-             * -----------------------------------------
-             * Mark messages as read on backend.
-             * -----------------------------------------
-             *
-             * IMPORTANT:
-             * We notify Header ONLY after
-             * message:read returns success.
-             */
-            socketRef.current.emit(
-              "message:read",
-              {
-                conversationId:
-                  selectedId,
-              },
-              (
-                response?: {
-                  success?: boolean;
-                  messageIds?: string[];
-                },
-              ) => {
-                console.log(
-                  "message:read response:",
+              if (!response?.success) {
+                console.warn(
+                  "Unable to mark messages as read:",
                   response,
                 );
 
-                if (
-                  !response?.success
-                ) {
-                  console.warn(
-                    "Unable to mark messages as read:",
-                    response,
-                  );
+                return;
+              }
 
-                  return;
-                }
-
-                /*
-                 * Backend successfully marked
-                 * unread messages as read.
-                 *
-                 * Tell Header notification
-                 * provider to refresh count.
-                 */
-                notifyMessagesUpdated();
-              },
-            );
-          }
-
-          scrollToBottom();
-        } catch (error) {
-          console.error(
-            "Messages loading error:",
-            error,
+              notifyMessagesUpdated();
+            },
           );
-
-          if (!cancelled) {
-            setErrorMessage(
-              error instanceof Error
-                ? error.message
-                : "Unable to load messages",
-            );
-          }
-        } finally {
-          if (!cancelled) {
-            setLoadingMessages(
-              false,
-            );
-          }
         }
-      };
+
+        scrollToBottom();
+      } catch (error) {
+        console.error("Messages loading error:", error);
+
+        if (!cancelled) {
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Unable to load messages",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingMessages(false);
+        }
+      }
+    };
 
     loadMessages();
 
-    /*
-     * Leave conversation room when
-     * switching conversations.
-     */
     return () => {
       cancelled = true;
 
-      if (
-        socketRef.current?.connected
-      ) {
-        socketRef.current.emit(
-          "conversation:leave",
-          {
-            conversationId:
-              selectedId,
-          },
-        );
+      if (socketRef.current?.connected) {
+        socketRef.current.emit("conversation:leave", {
+          conversationId: selectedId,
+        });
       }
     };
-  }, [
-    selectedId,
-    currentUserId,
-  ]);
+  }, [selectedId, currentUserId]);
 
   /*
    * =====================================================
    * SELECT CONVERSATION
    * =====================================================
    */
-  const openConversation = (
-    conversationId: string,
-  ) => {
-    /*
-     * Close more-options menu.
-     */
+
+  const openConversation = (conversationId: string) => {
     setShowChatMenu(false);
 
-    /*
-     * Leave old room.
-     */
     if (
       socketRef.current?.connected &&
       selectedId &&
       selectedId !== conversationId
     ) {
-      socketRef.current.emit(
-        "conversation:leave",
-        {
-          conversationId:
-            selectedId,
-        },
-      );
+      socketRef.current.emit("conversation:leave", {
+        conversationId: selectedId,
+      });
     }
 
-    /*
-     * Select new conversation.
-     */
-    setSelectedId(
-      conversationId,
-    );
+    setSelectedId(conversationId);
+    cachedSelectedConversationId = conversationId;
 
-    setShowMobileChat(
-      true,
-    );
+    setShowMobileChat(true);
 
     /*
-     * Clear unread locally.
-     *
-     * IMPORTANT:
-     * Do NOT call notifyMessagesUpdated()
-     * here because backend message:read may
-     * not have completed yet.
+     * Clear unread locally. Header is notified after
+     * the backend confirms message:read.
      */
-    setConversations(
-      (current) =>
-        current.map(
-          (conversation) =>
-            conversation.id ===
-            conversationId
-              ? {
-                  ...conversation,
-                  unread: 0,
-                }
-              : conversation,
-        ),
+    setConversations((current) =>
+      current.map((conversation) =>
+        conversation.id === conversationId
+          ? {
+              ...conversation,
+              unread: 0,
+            }
+          : conversation,
+      ),
     );
   };
 
@@ -1744,6 +1589,7 @@ export default function MessagesPage() {
    * DELETE CONVERSATION
    * =====================================================
    */
+
   const deleteConversation = async () => {
     if (
       !selectedConversation ||
@@ -1752,161 +1598,96 @@ export default function MessagesPage() {
       return;
     }
 
-    const conversationId =
-      selectedConversation.id;
+    const conversationId = selectedConversation.id;
 
-    /*
-     * IMPORTANT:
-     * This is a soft delete for the current
-     * user. Permanent deletion only happens
-     * when both users delete the conversation.
-     */
-    const shouldDelete =
-      window.confirm(
-        `Delete your conversation with ${selectedConversation.name}? The chat will be removed from your side. Messages will be permanently deleted only when both users delete the conversation.`,
-      );
+    const shouldDelete = window.confirm(
+      `Delete your conversation with ${selectedConversation.name}? The chat will be removed from your side. Messages will be permanently deleted only when both users delete the conversation.`,
+    );
 
-    if (!shouldDelete) {
-      return;
-    }
+    if (!shouldDelete) return;
 
     try {
       setDeletingConversation(true);
       setErrorMessage("");
       setShowChatMenu(false);
 
-      /*
-       * Leave Socket.IO conversation room.
-       */
-      if (
-        socketRef.current?.connected
-      ) {
-        socketRef.current.emit(
-          "conversation:leave",
-          {
-            conversationId,
-          },
-        );
+      if (socketRef.current?.connected) {
+        socketRef.current.emit("conversation:leave", {
+          conversationId,
+        });
       }
 
-      /*
-       * Delete conversation from database.
-       *
-       * Backend decides whether this is:
-       *
-       * 1. Soft delete for current user
-       *
-       * OR
-       *
-       * 2. Permanent delete if other user
-       *    has already deleted it.
-       */
-      const response =
-        await fetch(
-          `/api/delete/${conversationId}`,
-          {
-            method: "DELETE",
-            credentials: "include",
-            cache: "no-store",
-          },
-        );
-
-      const data =
-        await response.json();
-
-      if (
-        !response.ok ||
-        !data.success
-      ) {
-        throw new Error(
-          data.message ||
-            "Unable to delete conversation",
-        );
-      }
-
-      /*
-       * IMPORTANT:
-       * Clear URL query parameters.
-       *
-       * Otherwise /messages?userId=...
-       * could call POST /api/conversations
-       * again after deletion.
-       */
-      router.replace(
-        "/messages",
-      );
-
-      /*
-       * Remove message IDs from
-       * duplicate tracker ONLY AFTER
-       * database deletion succeeded.
-       */
-      selectedConversation.messages.forEach(
-        (message) => {
-          messageIdsRef.current.delete(
-            message.id,
-          );
+      const response = await fetch(
+        `/api/delete/${conversationId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          cache: "no-store",
         },
       );
 
-      /*
-       * Remove conversation
-       * from frontend state.
-       */
-      const remaining =
-        conversations.filter(
-          (conversation) =>
-            conversation.id !==
-            conversationId,
-        );
+      const data = await response.json();
 
-      setConversations(
-        remaining,
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Unable to delete conversation",
+        );
+      }
+
+      /*
+       * Clear URL query parameters so a deleted chat
+       * is not automatically created again.
+       */
+      router.replace("/messages");
+
+      /*
+       * Clear deleted messages from duplicate tracking.
+       */
+      selectedConversation.messages.forEach((message) => {
+        messageIdsRef.current.delete(message.id);
+      });
+
+      /*
+       * Remove the deleted conversation from the cache.
+       */
+      messagesCache.delete(
+        getMessageCacheKey(currentUserId, conversationId),
       );
 
+      const remaining = conversations.filter(
+        (conversation) => conversation.id !== conversationId,
+      );
+
+      conversationsCache = {
+        userId: currentUserId,
+        conversations: remaining,
+      };
+
+      setConversations(remaining);
+
       /*
-       * Open next conversation.
+       * Select the next available conversation.
        */
       if (remaining.length > 0) {
-        setSelectedId(
-          remaining[0].id,
-        );
-
-        setShowMobileChat(
-          true,
-        );
+        setSelectedId(remaining[0].id);
+        cachedSelectedConversationId = remaining[0].id;
+        setShowMobileChat(true);
       } else {
-        /*
-         * No chats remaining.
-         */
         setSelectedId("");
-
-        setShowMobileChat(
-          false,
-        );
+        cachedSelectedConversationId = "";
+        setShowMobileChat(false);
       }
 
-      /*
-       * Header unread count also needs
-       * to be refreshed after deletion.
-       */
       notifyMessagesUpdated();
 
-      console.log(
-        "Conversation deleted successfully:",
-        {
-          conversationId,
-          permanentlyDeleted:
-            Boolean(
-              data.permanentlyDeleted,
-            ),
-        },
-      );
+      console.log("Conversation deleted successfully:", {
+        conversationId,
+        permanentlyDeleted: Boolean(
+          data.permanentlyDeleted,
+        ),
+      });
     } catch (error) {
-      console.error(
-        "Delete conversation error:",
-        error,
-      );
+      console.error("Delete conversation error:", error);
 
       setErrorMessage(
         error instanceof Error
@@ -1923,110 +1704,118 @@ export default function MessagesPage() {
    * SEND MESSAGE
    * =====================================================
    */
-  const sendMessage = () => {
-    const text =
-      messageText.trim();
 
-    if (!text) {
-      return;
-    }
 
-    if (!selectedId) {
-      setErrorMessage(
-        "Please select a conversation.",
-      );
+const sendMessage = () => {
+  const text = messageText.trim();
 
-      return;
-    }
+  if (!text || !selectedId || sending) return;
 
-    const socket =
-      socketRef.current;
+  const socket = socketRef.current;
 
-    if (!socket) {
-      setErrorMessage(
-        "Socket is not initialized.",
-      );
-
-      console.error(
-        "Socket is not initialized",
-      );
-
-      return;
-    }
-
-    if (!socket.connected) {
-      setErrorMessage(
-        "Chat connection is not available. Please wait a moment and try again.",
-      );
-
-      console.error(
-        "Socket is disconnected",
-      );
-
-      return;
-    }
-
-    if (sending) {
-      return;
-    }
-
-    setSending(true);
-    setErrorMessage("");
-
-    console.log(
-      "Sending message:",
-      {
-        conversationId:
-          selectedId,
-        text,
-        socketId:
-          socket.id,
-      },
+  if (!socket?.connected) {
+    setErrorMessage(
+      "Chat connection is unavailable. Please try again.",
     );
+    return;
+  }
 
-    socket.emit(
-      "message:send",
-      {
-        conversationId:
-          selectedId,
-        text,
-      },
-      (
-        response?: {
-          success?: boolean;
-          message?: string;
-        },
-      ) => {
-        console.log(
-          "message:send response:",
-          response,
-        );
+  const conversationId = selectedId;
+  const tempId = `temp-${Date.now()}`;
 
-        setSending(false);
-
-        if (
-          !response?.success
-        ) {
-          setErrorMessage(
-            response?.message ||
-              "Unable to send message.",
-          );
-
-          return;
-        }
-
-        setMessageText("");
-
-        scrollToBottom();
-      },
-    );
+  const optimisticMessage: Message = {
+    id: tempId,
+    conversationId,
+    senderId: currentUserId,
+    receiverId:
+      selectedConversation?.participantId || "",
+    text,
+    time: formatMessageTime(new Date().toISOString()),
+    mine: true,
+    read: false,
   };
 
+  // Show the message immediately.
+  messageIdsRef.current.add(tempId);
+
+  setConversations((current) =>
+    current.map((conversation) => {
+      if (conversation.id !== conversationId) {
+        return conversation;
+      }
+
+      return {
+        ...conversation,
+        messages: [
+          ...conversation.messages,
+          optimisticMessage,
+        ],
+        lastMessage: text,
+        lastTime: "Now",
+        unread: 0,
+      };
+    }),
+  );
+
+  // Clear the input immediately.
+  setMessageText("");
+  setSending(true);
+  setErrorMessage("");
+  scrollToBottom();
+
+  socket.emit(
+    "message:send",
+    {
+      conversationId,
+      text,
+    },
+    (response?: {
+      success?: boolean;
+      message?: string;
+    }) => {
+      setSending(false);
+
+      if (!response?.success) {
+        // Remove the optimistic message if sending failed.
+        messageIdsRef.current.delete(tempId);
+
+        setConversations((current) =>
+          current.map((conversation) => {
+            if (conversation.id !== conversationId) {
+              return conversation;
+            }
+
+            return {
+              ...conversation,
+              messages: conversation.messages.filter(
+                (message) => message.id !== tempId,
+              ),
+            };
+          }),
+        );
+
+        setMessageText(text);
+
+        setErrorMessage(
+          response?.message || "Unable to send message.",
+        );
+
+        return;
+      }
+
+      // The server accepted the message.
+      // The message:new event should reconcile it
+      // with the persisted message returned by the server.
+    },
+  );
+};
+
   /*
-   * -----------------------------------------
-   * Enter sends message
-   * -----------------------------------------
+   * -----------------------------------------------------
+   * ENTER KEY SENDS MESSAGE
+   * -----------------------------------------------------
    */
+
   const handleMessageKeyDown = (
     event: React.KeyboardEvent<HTMLInputElement>,
   ) => {
@@ -2035,7 +1824,6 @@ export default function MessagesPage() {
       !event.shiftKey
     ) {
       event.preventDefault();
-
       sendMessage();
     }
   };
@@ -2045,40 +1833,21 @@ export default function MessagesPage() {
    * NO CONVERSATIONS
    * =====================================================
    */
+
   if (
     !loadingConversations &&
     conversations.length === 0
   ) {
     return (
       <main className={styles.page}>
-        <div
-          className={
-            styles.backgroundGlow
-          }
-        />
-
-        <div
-          className={
-            styles.backgroundGlowTwo
-          }
-        />
+        <div className={styles.backgroundGlow} />
+        <div className={styles.backgroundGlowTwo} />
 
         <div className="container">
-          <div
-            className={
-              styles.pageHeader
-            }
-          >
+          <div className={styles.pageHeader}>
             <div>
-              <span
-                className={
-                  styles.eyebrow
-                }
-              >
-                <FiMessageCircle
-                  aria-hidden="true"
-                />
-
+              <span className={styles.eyebrow}>
+                <FiMessageCircle aria-hidden="true" />
                 Your conversations
               </span>
             </div>
@@ -2087,43 +1856,26 @@ export default function MessagesPage() {
           {errorMessage && (
             <div
               role="alert"
-              style={{
-                marginBottom: "16px",
-              }}
+              style={{ marginBottom: "16px" }}
             >
               {errorMessage}
             </div>
           )}
 
-          <section
-            className={
-              styles.safetyCard
-            }
-          >
-            <div
-              className={
-                styles.safetyIcon
-              }
-            >
-              <FiMessageCircle
-                aria-hidden="true"
-              />
+          <section className={styles.safetyCard}>
+            <div className={styles.safetyIcon}>
+              <FiMessageCircle aria-hidden="true" />
             </div>
 
             <div>
-              <strong>
-                No conversations yet
-              </strong>
-
+              <strong>No conversations yet</strong>
               <p>
-                Start by connecting with a
-                profile you are interested in.
+                Start by connecting with a profile you are
+                interested in.
               </p>
             </div>
 
-            <Link href="/matches">
-              Find matches
-            </Link>
+            <Link href="/matches">Find matches</Link>
           </section>
         </div>
       </main>
@@ -2135,62 +1887,32 @@ export default function MessagesPage() {
    * MAIN PAGE
    * =====================================================
    */
+
   return (
     <main className={styles.page}>
-      <div
-        className={
-          styles.backgroundGlow
-        }
-      />
-
-      <div
-        className={
-          styles.backgroundGlowTwo
-        }
-      />
+      <div className={styles.backgroundGlow} />
+      <div className={styles.backgroundGlowTwo} />
 
       <div className="container">
         {/* Page header */}
-        <div
-          className={
-            styles.pageHeader
-          }
-        >
+        <div className={styles.pageHeader}>
           <div>
-            <span
-              className={
-                styles.eyebrow
-              }
-            >
-              <FiMessageCircle
-                aria-hidden="true"
-              />
-
+            <span className={styles.eyebrow}>
+              <FiMessageCircle aria-hidden="true" />
               Your conversations
             </span>
           </div>
 
-          <div
-            className={
-              styles.messageCount
-            }
-          >
-            <FiMessageCircle
-              aria-hidden="true"
-            />
-
-            <span>
-              {unreadTotal} unread
-            </span>
+          <div className={styles.messageCount}>
+            <FiMessageCircle aria-hidden="true" />
+            <span>{unreadTotal} unread</span>
           </div>
         </div>
 
         {errorMessage && (
           <div
             role="alert"
-            style={{
-              marginBottom: "16px",
-            }}
+            style={{ marginBottom: "16px" }}
           >
             {errorMessage}
           </div>
@@ -2199,67 +1921,34 @@ export default function MessagesPage() {
         {/* Messenger */}
         <section
           className={`${styles.messenger} ${
-            showMobileChat
-              ? styles.mobileChatOpen
-              : ""
+            showMobileChat ? styles.mobileChatOpen : ""
           }`}
         >
-          {/* =========================================
-              Conversations sidebar
-          ========================================== */}
-          <aside
-            className={
-              styles.conversationPanel
-            }
-          >
-<div className={styles.conversationHeader}>
-  <div>
-    <Link
-      href="/search"
-      className={styles.backHomeButton}
-      aria-label="Back to home"
-      title="Back to Home"
-    >
-      <FiArrowLeft aria-hidden="true" />
-      <span>Back</span>
-    </Link>
-
-    {/* <h2>Conversations</h2>
-
-    <span>
-      {loadingConversations
-        ? "Loading..."
-        : `${conversations.length} connections`}
-    </span> */}
-  </div>
-
-  {/* <button
-    type="button"
-    aria-label="Message information"
-    className={styles.infoButton}
-    title="Your conversations are private"
-  >
-    <FiInfo aria-hidden="true" />
-  </button> */}
-</div>
+          {/* Conversations sidebar */}
+          <aside className={styles.conversationPanel}>
+            <div className={styles.conversationHeader}>
+              <div>
+                <Link
+                  href="/search"
+                  className={styles.backHomeButton}
+                  aria-label="Back to home"
+                  title="Back to Home"
+                >
+                  <FiArrowLeft aria-hidden="true" />
+                  <span>Back</span>
+                </Link>
+              </div>
+            </div>
 
             {/* Search */}
-            <div
-              className={
-                styles.searchBox
-              }
-            >
-              <FiSearch
-                aria-hidden="true"
-              />
+            <div className={styles.searchBox}>
+              <FiSearch aria-hidden="true" />
 
               <input
                 type="search"
                 value={search}
                 onChange={(event) =>
-                  setSearch(
-                    event.target.value,
-                  )
+                  setSearch(event.target.value)
                 }
                 placeholder="Search conversations..."
                 aria-label="Search conversations"
@@ -2267,256 +1956,144 @@ export default function MessagesPage() {
             </div>
 
             {/* Conversation list */}
-            <div
-              className={
-                styles.conversationList
-              }
-            >
+            <div className={styles.conversationList}>
               {loadingConversations ? (
                 <SkeletonLoader
                   variant="conversations"
                   count={6}
                 />
-              ) : filteredConversations.length >
-                0 ? (
-                filteredConversations.map(
-                  (
-                    conversation,
-                  ) => (
-                    <button
-                      type="button"
-                      key={
-                        conversation.id
+              ) : filteredConversations.length > 0 ? (
+                filteredConversations.map((conversation) => (
+                  <button
+                    type="button"
+                    key={conversation.id}
+                    className={`${styles.conversationItem} ${
+                      selectedId === conversation.id
+                        ? styles.selectedConversation
+                        : ""
+                    }`}
+                    onClick={() =>
+                      openConversation(conversation.id)
+                    }
+                  >
+                    <ProfileAvatar
+                      photo={conversation.photo}
+                      name={conversation.name}
+                      initials={conversation.initials}
+                      className={styles.conversationAvatar}
+                      imageClassName={
+                        styles.conversationAvatarImage
                       }
-                      className={`${styles.conversationItem} ${
-                        selectedId ===
-                        conversation.id
-                          ? styles.selectedConversation
-                          : ""
-                      }`}
-                      onClick={() =>
-                        openConversation(
-                          conversation.id,
-                        )
-                      }
-                    >
-                      <ProfileAvatar
-  photo={conversation.photo}
-  name={conversation.name}
-  initials={conversation.initials}
-  className={styles.conversationAvatar}
-  imageClassName={styles.conversationAvatarImage}
-  size={48}
-  online={conversation.online}
-  onlineClassName={styles.avatarOnline}
-/>
+                      size={48}
+                      online={conversation.online}
+                      onlineClassName={styles.avatarOnline}
+                    />
+
+                    <div className={styles.conversationDetails}>
+                      <div
+                        className={
+                          styles.conversationNameRow
+                        }
+                      >
+                        <strong>{conversation.name}</strong>
+
+                        {conversation.verified && (
+                          <span
+                            className={styles.smallVerified}
+                          >
+                            <FiCheck aria-hidden="true" />
+                          </span>
+                        )}
+
+                        <time>{conversation.lastTime}</time>
+                      </div>
 
                       <div
                         className={
-                          styles.conversationDetails
+                          styles.conversationBottom
                         }
                       >
-                        <div
-                          className={
-                            styles.conversationNameRow
-                          }
-                        >
-                          <strong>
-                            {
-                              conversation.name
-                            }
-                          </strong>
+                        <p>{conversation.lastMessage}</p>
 
-                          {conversation.verified && (
-                            <span
-                              className={
-                                styles.smallVerified
-                              }
-                            >
-                              <FiCheck
-                                aria-hidden="true"
-                              />
-                            </span>
-                          )}
-
-                          <time>
-                            {
-                              conversation.lastTime
-                            }
-                          </time>
-                        </div>
-
-                        <div
-                          className={
-                            styles.conversationBottom
-                          }
-                        >
-                          <p>
-                            {
-                              conversation.lastMessage
-                            }
-                          </p>
-
-                          {conversation.unread >
-                            0 && (
-                            <span
-                              className={
-                                styles.unreadBadge
-                              }
-                            >
-                              {
-                                conversation.unread
-                              }
-                            </span>
-                          )}
-                        </div>
+                        {conversation.unread > 0 && (
+                          <span className={styles.unreadBadge}>
+                            {conversation.unread}
+                          </span>
+                        )}
                       </div>
-                    </button>
-                  ),
-                )
+                    </div>
+                  </button>
+                ))
               ) : (
-                <div
-                  className={
-                    styles.noConversations
-                  }
-                >
-                  <FiSearch
-                    aria-hidden="true"
-                  />
-
-                  <strong>
-                    No conversations found
-                  </strong>
-
-                  <span>
-                    Try a different search.
-                  </span>
+                <div className={styles.noConversations}>
+                  <FiSearch aria-hidden="true" />
+                  <strong>No conversations found</strong>
+                  <span>Try a different search.</span>
                 </div>
               )}
             </div>
 
             {/* Privacy */}
-            <div
-              className={
-                styles.sidebarPrivacy
-              }
-            >
-              <FiLock
-                aria-hidden="true"
-              />
-
-              <span>
-                Your conversations are private.
-              </span>
+            <div className={styles.sidebarPrivacy}>
+              <FiLock aria-hidden="true" />
+              <span>Your conversations are private.</span>
             </div>
           </aside>
 
-          {/* =========================================
-              Chat panel
-          ========================================== */}
-          <section
-            className={
-              styles.chatPanel
-            }
-          >
+          {/* Chat panel */}
+          <section className={styles.chatPanel}>
             {!selectedConversation ? (
-              <div
-                className={
-                  styles.noConversations
-                }
-              >
-                <FiMessageCircle
-                  aria-hidden="true"
-                />
-
-                <strong>
-                  Select a conversation
-                </strong>
-
+              <div className={styles.noConversations}>
+                <FiMessageCircle aria-hidden="true" />
+                <strong>Select a conversation</strong>
                 <span>
-                  Choose someone from your
-                  conversations.
+                  Choose someone from your conversations.
                 </span>
               </div>
             ) : (
               <>
-                {/* ===================================
-                    Chat header
-                ==================================== */}
-                <header
-                  className={
-                    styles.chatHeader
-                  }
-                >
-                  {/* Mobile back */}
+                {/* Chat header */}
+                <header className={styles.chatHeader}>
                   <button
                     type="button"
-                    className={
-                      styles.mobileBack
-                    }
+                    className={styles.mobileBack}
                     onClick={() => {
-                      setShowMobileChat(
-                        false,
-                      );
-
-                      setShowChatMenu(
-                        false,
-                      );
+                      setShowMobileChat(false);
+                      setShowChatMenu(false);
                     }}
                     aria-label="Back to conversations"
                   >
-                    <FiChevronLeft
-                      aria-hidden="true"
-                    />
+                    <FiChevronLeft aria-hidden="true" />
                   </button>
 
-                  {/* User */}
                   <Link
                     href={`/profile/${selectedConversation.participantId}`}
-                    className={
-                      styles.chatUser
-                    }
+                    className={styles.chatUser}
                   >
                     <ProfileAvatar
-  photo={selectedConversation.photo}
-  name={selectedConversation.name}
-  initials={selectedConversation.initials}
-  className={styles.chatAvatar}
-  imageClassName={styles.chatAvatarImage}
-  size={48}
-  online={selectedConversation.online}
-/>
+                      photo={selectedConversation.photo}
+                      name={selectedConversation.name}
+                      initials={selectedConversation.initials}
+                      className={styles.chatAvatar}
+                      imageClassName={styles.chatAvatarImage}
+                      size={48}
+                      online={selectedConversation.online}
+                    />
 
                     <div>
-                      <div
-                        className={
-                          styles.chatName
-                        }
-                      >
+                      <div className={styles.chatName}>
                         <strong>
-                          {
-                            selectedConversation.name
-                          }
+                          {selectedConversation.name}
                         </strong>
 
                         {selectedConversation.verified && (
-                          <span
-                            className={
-                              styles.chatVerified
-                            }
-                          >
-                            <FiCheck
-                              aria-hidden="true"
-                            />
+                          <span className={styles.chatVerified}>
+                            <FiCheck aria-hidden="true" />
                           </span>
                         )}
                       </div>
 
-                      <span
-                        className={
-                          styles.chatStatus
-                        }
-                      >
+                      <span className={styles.chatStatus}>
                         {selectedConversation.online
                           ? "Online now"
                           : selectedConversation.location}
@@ -2524,66 +2101,38 @@ export default function MessagesPage() {
                     </div>
                   </Link>
 
-                  {/* Actions */}
-                  <div
-                    className={
-                      styles.chatActions
-                    }
-                  >
+                  {/* Chat actions */}
+                  <div className={styles.chatActions}>
                     {selectedConversation.phone && (
                       <a
                         href={`tel:${selectedConversation.phone}`}
                         aria-label="Call"
                         title="Call"
                       >
-                        <FiPhone
-                          aria-hidden="true"
-                        />
+                        <FiPhone aria-hidden="true" />
                       </a>
                     )}
 
-                    {/* More options + delete */}
-                    <div
-                      className={
-                        styles.chatMenuWrapper
-                      }
-                    >
+                    <div className={styles.chatMenuWrapper}>
                       <button
                         type="button"
                         aria-label="More options"
                         title="More options"
                         onClick={() =>
-                          setShowChatMenu(
-                            (current) =>
-                              !current,
-                          )
+                          setShowChatMenu((current) => !current)
                         }
-                        disabled={
-                          deletingConversation
-                        }
+                        disabled={deletingConversation}
                       >
-                        <FiMoreHorizontal
-                          aria-hidden="true"
-                        />
+                        <FiMoreHorizontal aria-hidden="true" />
                       </button>
 
                       {showChatMenu && (
-                        <div
-                          className={
-                            styles.chatMenu
-                          }
-                        >
+                        <div className={styles.chatMenu}>
                           <button
                             type="button"
-                            className={
-                              styles.deleteChatButton
-                            }
-                            onClick={
-                              deleteConversation
-                            }
-                            disabled={
-                              deletingConversation
-                            }
+                            className={styles.deleteChatButton}
+                            onClick={deleteConversation}
+                            disabled={deletingConversation}
                           >
                             {deletingConversation
                               ? "Deleting..."
@@ -2595,41 +2144,23 @@ export default function MessagesPage() {
                   </div>
                 </header>
 
-                {/* ===================================
-                    Profile strip
-                ==================================== */}
-                <div
-                  className={
-                    styles.profileStrip
-                  }
-                >
+                {/* Profile strip */}
+                <div className={styles.profileStrip}>
                   <div>
-                    <span
-                      className={
-                        styles.stripIcon
-                      }
-                    >
-                      <FiHeart
-                        aria-hidden="true"
-                      />
+                    <span className={styles.stripIcon}>
+                      <FiHeart aria-hidden="true" />
                     </span>
 
                     <div>
                       <strong>
-                        {
-                          selectedConversation.compatibility
-                        }
-                        % compatibility
+                        {selectedConversation.compatibility}%
+                        {" "}compatibility
                       </strong>
 
                       <span>
-                        {
-                          selectedConversation.profession
-                        }
+                        {selectedConversation.profession}
                         {" · "}
-                        {
-                          selectedConversation.location
-                        }
+                        {selectedConversation.location}
                       </span>
                     </div>
                   </div>
@@ -2641,219 +2172,133 @@ export default function MessagesPage() {
                   </Link>
                 </div>
 
-                {/* ===================================
-                    Messages
-                ==================================== */}
+                {/* Messages area */}
                 <div className={styles.messagesArea}>
-                   {/* Safety message */}
-                   <div className={styles.safetyMessage}>
-                    <FiShield aria-hidden="true"/>
+                  <div className={styles.safetyMessage}>
+                    <FiShield aria-hidden="true" />
 
                     <span>
-                      Take your time getting to
-                      know each other. Never share
-                      sensitive personal information
+                      Take your time getting to know each other.
+                      Never share sensitive personal information
                       unless you feel comfortable.
                     </span>
                   </div>
+
                   <div className={styles.dateDivider}>
-                    <span>
-                      Today
-                    </span>
+                    <span>Today</span>
                   </div>
 
-                 
-
-                  {/* Message skeleton */}
+                  {/* Cached messages are displayed without
+                      a skeleton while the API refreshes. */}
                   {loadingMessages ? (
                     <SkeletonLoader
                       variant="messages"
                       count={5}
                     />
-                  ) : selectedConversation
-                      .messages.length >
-                    0 ? (
-                    selectedConversation.messages.map(
-                      (
-                        message,
-                      ) => (
-                        <div
-                          key={
-                            message.id
-                          }
-                          className={`${styles.messageRow} ${
-                            message.mine
-                              ? styles.myMessage
-                              : styles.theirMessage
-                          }`}
-                        >
-                          {!message.mine && (
-                              <ProfileAvatar
-                                photo={selectedConversation.photo}
-                                name={selectedConversation.name}
-                                initials={selectedConversation.initials}
-                                className={styles.messageAvatar}
-                                imageClassName={styles.messageAvatarImage}
-                                size={36}
-                              />
-                            )}
-
-                          <div
-                            className={
-                              styles.messageContent
+                  ) : selectedConversation.messages.length > 0 ? (
+                    selectedConversation.messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`${styles.messageRow} ${
+                          message.mine
+                            ? styles.myMessage
+                            : styles.theirMessage
+                        }`}
+                      >
+                        {!message.mine && (
+                          <ProfileAvatar
+                            photo={selectedConversation.photo}
+                            name={selectedConversation.name}
+                            initials={selectedConversation.initials}
+                            className={styles.messageAvatar}
+                            imageClassName={
+                              styles.messageAvatarImage
                             }
-                          >
-                            <div
-                              className={
-                                styles.messageBubble
-                              }
-                            >
-                              {
-                                message.text
-                              }
-                            </div>
+                            size={36}
+                          />
+                        )}
 
-                            <div
-                              className={
-                                styles.messageMeta
-                              }
-                            >
-                              <time>
-                                {
-                                  message.time
+                        <div className={styles.messageContent}>
+                          <div className={styles.messageBubble}>
+                            {message.text}
+                          </div>
+
+                          <div className={styles.messageMeta}>
+                            <time>{message.time}</time>
+
+                            {message.mine && (
+                              <span
+                                className={
+                                  message.read
+                                    ? styles.readStatus
+                                    : ""
                                 }
-                              </time>
+                              >
+                                <FiCheck aria-hidden="true" />
 
-                              {message.mine && (
-                                <span
-                                  className={
-                                    message.read
-                                      ? styles.readStatus
-                                      : ""
-                                  }
-                                >
-                                  <FiCheck
-                                    aria-hidden="true"
-                                  />
-
-                                  {message.read && (
-                                    <FiCheck
-                                      aria-hidden="true"
-                                    />
-                                  )}
-                                </span>
-                              )}
-                            </div>
+                                {message.read && (
+                                  <FiCheck aria-hidden="true" />
+                                )}
+                              </span>
+                            )}
                           </div>
                         </div>
-                      ),
-                    )
+                      </div>
+                    ))
                   ) : (
-                    <div
-                      className={
-                        styles.noConversations
-                      }
-                    >
-                      <FiMessageCircle
-                        aria-hidden="true"
-                      />
-
-                      <strong>
-                        No messages yet
-                      </strong>
-
-                      <span>
-                        Start the conversation.
-                      </span>
+                    <div className={styles.noConversations}>
+                      <FiMessageCircle aria-hidden="true" />
+                      <strong>No messages yet</strong>
+                      <span>Start the conversation.</span>
                     </div>
                   )}
 
-                  <div
-                    ref={
-                      messagesEndRef
-                    }
-                  />
+                  <div ref={messagesEndRef} />
                 </div>
 
-                {/* ===================================
-                    Composer
-                ==================================== */}
-                <div
-                  className={
-                    styles.composerArea
-                  }
-                >
-                  <div
-                    className={
-                      styles.composerHint
-                    }
-                  >
-                    <FiShield
-                      aria-hidden="true"
-                    />
-
+                {/* Composer */}
+                <div className={styles.composerArea}>
+                  <div className={styles.composerHint}>
+                    <FiShield aria-hidden="true" />
                     <span>
-                      Keep conversations
-                      respectful and private.
+                      Keep conversations respectful and private.
                     </span>
                   </div>
 
-                  <div
-                    className={
-                      styles.composer
-                    }
-                  >
+                  <div className={styles.composer}>
                     <input
                       type="text"
                       value={messageText}
-                      onChange={(
-                        event,
-                      ) =>
-                        setMessageText(
-                          event.target
-                            .value,
-                        )
+                      onChange={(event) =>
+                        setMessageText(event.target.value)
                       }
-                      onKeyDown={
-                        handleMessageKeyDown
-                      }
+                      onKeyDown={handleMessageKeyDown}
                       placeholder="Write a message..."
                       aria-label="Write a message"
                       maxLength={2000}
                       disabled={
-                        sending ||
-                        deletingConversation
+                        sending || deletingConversation
                       }
                     />
 
                     <button
                       type="button"
-                      onClick={
-                        sendMessage
-                      }
+                      onClick={sendMessage}
                       disabled={
                         !messageText.trim() ||
                         sending ||
                         deletingConversation
                       }
                       aria-label="Send message"
-                      className={
-                        styles.sendButton
-                      }
+                      className={styles.sendButton}
                     >
-                      <FiSend
-                        aria-hidden="true"
-                      />
+                      <FiSend aria-hidden="true" />
                     </button>
                   </div>
 
-                  <p
-                    className={
-                      styles.composerPrivacy
-                    }
-                  >
-                    Messages are intended for
-                    people you have connected with.
+                  <p className={styles.composerPrivacy}>
+                    Messages are intended for people you have
+                    connected with.
                   </p>
                 </div>
               </>
@@ -2861,26 +2306,12 @@ export default function MessagesPage() {
           </section>
         </section>
 
-        {/* =========================================
-            Bottom safety card
-        ========================================== */}
-        <section
-          className={
-            styles.safetyCard
-          }
-        >
-         
-
-         
-
+        {/* Bottom safety card */}
+        <section className={styles.safetyCard}>
           <Link href="/safety">
-          <FiShield
-              aria-hidden="true"
-            />Safety tips
-
-            <FiChevronLeft
-              aria-hidden="true"
-            />
+            <FiShield aria-hidden="true" />
+            Safety tips
+            <FiChevronLeft aria-hidden="true" />
           </Link>
         </section>
       </div>

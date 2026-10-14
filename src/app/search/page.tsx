@@ -70,9 +70,62 @@ function getAgeRange(value: string) {
   };
 }
 
+let profilesCache: Profile[] | null = null;
+let profilesRequest: Promise<Profile[]> | null = null;
+
+async function getCachedProfiles(
+  forceRefresh = false,
+): Promise<Profile[]> {
+  if (!forceRefresh && profilesCache !== null) {
+    return profilesCache;
+  }
+
+  if (!forceRefresh && profilesRequest) {
+    return profilesRequest;
+  }
+
+  const request = (async () => {
+    const response = await fetch("/api/users", {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.message || "Failed to load profiles",
+      );
+    }
+
+    const users: Profile[] = Array.isArray(data.users)
+      ? data.users
+      : [];
+
+    profilesCache = users;
+    return users;
+  })();
+
+  profilesRequest = request;
+
+  try {
+    return await request;
+  } finally {
+    if (profilesRequest === request) {
+      profilesRequest = null;
+    }
+  }
+}
+
 export default function SearchPage() {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [profiles, setProfiles] = useState<Profile[]>(
+    () => profilesCache ?? [],
+  );
+  
+  const [loading, setLoading] = useState(
+    () => profilesCache === null,
+  );
+  
   const [error, setError] = useState("");
 
   const [search, setSearch] = useState("");
@@ -89,43 +142,62 @@ export default function SearchPage() {
   /*
    * Fetch users from MongoDB API
    */
+
   useEffect(() => {
-    const fetchProfiles = async () => {
+    let active = true;
+  
+    async function loadProfiles() {
       try {
-        setLoading(true);
         setError("");
-
-        const response = await fetch("/api/users", {
-          method: "GET",
-          cache: "no-store",
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch profiles");
+  
+        if (profilesCache !== null) {
+          setProfiles(profilesCache);
+          setLoading(false);
+          return;
         }
-
-        const data = await response.json();
-
-        if (!data.success) {
-          throw new Error(
-            data.message || "Failed to load profiles"
+  
+        setLoading(true);
+  
+        const users = await getCachedProfiles();
+  
+        if (active) {
+          setProfiles(users);
+        }
+      } catch (error) {
+        console.error("FETCH_PROFILES_ERROR:", error);
+  
+        if (active) {
+          setError(
+            "Unable to load profiles. Please try again.",
           );
         }
-
-        setProfiles(data.users || []);
-      } catch (error) {
-        console.error(error);
-
-        setError(
-          "Unable to load profiles. Please try again."
-        );
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
+    }
+  
+    void loadProfiles();
+  
+    return () => {
+      active = false;
     };
-
-    fetchProfiles();
   }, []);
+  const handleRetry = async () => {
+    try {
+      setLoading(true);
+      setError("");
+  
+      const users = await getCachedProfiles(true);
+      setProfiles(users);
+    } catch (error) {
+      console.error("RETRY_PROFILES_ERROR:", error);
+      setError("Unable to load profiles. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   /*
    * Generate filter options from actual MongoDB data.
@@ -616,14 +688,7 @@ export default function SearchPage() {
 
                 <p>{error}</p>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    window.location.reload()
-                  }
-                >
-                  Try again
-                </button>
+                <button type="button" onClick={handleRetry}>Try again</button>
               </div>
             ) : filteredProfiles.length > 0 ? (
               <>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
+import { useFavorites } from "@/components/FavoritesProvider/FavoritesProvider";
 import {
   FiArrowLeft,
   FiBriefcase,
@@ -137,7 +138,30 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [isShortlisted, setIsShortlisted] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
+
+const isShortlisted = id ? isFavorite(id) : false;
+
+const [favoriteLoading, setFavoriteLoading] = useState(false);
+
+const handleFavoriteToggle = async () => {
+  if (!id || favoriteLoading) return;
+
+  try {
+    setFavoriteLoading(true);
+    await toggleFavorite(id);
+  } catch (error) {
+    console.error("PROFILE_FAVORITE_ERROR:", error);
+
+    alert(
+      error instanceof Error
+        ? error.message
+        : "Unable to update favorites. Please try again.",
+    );
+  } finally {
+    setFavoriteLoading(false);
+  }
+};
   const [interestSent, setInterestSent] = useState(false);
 
   useEffect(() => {
@@ -391,22 +415,32 @@ export default function UserProfilePage() {
               
 
               {/* SHORTLIST BUTTON */}
-              <button
-                type="button"
-                className={`${styles.shortlistButton} ${
-                  isShortlisted ? styles.active : ""
-                }`}
-                onClick={() => setIsShortlisted((current) => !current)}
-                aria-label={
-                  isShortlisted
-                    ? "Remove from shortlist"
-                    : "Add to shortlist"
-                }
-              >
-                <FiHeart
-                  fill={isShortlisted ? "currentColor" : "none"}
-                />
-              </button>
+              
+                {/* FAVORITE BUTTON */}
+                <button
+                  type="button"
+                  className={`${styles.shortlistButton} ${
+                    isShortlisted ? styles.active : ""
+                  }`}
+                  onClick={handleFavoriteToggle}
+                  disabled={favoriteLoading}
+                  aria-label={
+                    isShortlisted
+                      ? "Remove from favorites"
+                      : "Add to favorites"
+                  }
+                  aria-pressed={isShortlisted}
+                  title={
+                    isShortlisted
+                      ? "Remove from favorites"
+                      : "Add to favorites"
+                  }
+                >
+                  <FiHeart
+                    fill={isShortlisted ? "currentColor" : "none"}
+                  />
+                </button>
+
             </div>
           </div>
         </section>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { useFavorites } from "@/components/FavoritesProvider/FavoritesProvider";
 
 import {
   FiCheck,
@@ -47,69 +48,117 @@ type ApiResponse = {
   users: MatchProfile[];
 };
 
+// Cache matches while navigating within the website.
+let matchesCache: MatchProfile[] | null = null;
+let matchesRequest: Promise<MatchProfile[]> | null = null;
+
+async function getCachedMatches(
+  forceRefresh = false,
+): Promise<MatchProfile[]> {
+  if (!forceRefresh && matchesCache !== null) {
+    return matchesCache;
+  }
+
+  if (!forceRefresh && matchesRequest) {
+    return matchesRequest;
+  }
+
+  const request = (async () => {
+    const response = await fetch("/api/matches", {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    const data = (await response.json()) as ApiResponse;
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.message || "Failed to load matches",
+      );
+    }
+
+    const users: MatchProfile[] = Array.isArray(data.users)
+      ? data.users
+      : [];
+
+    matchesCache = users;
+    return users;
+  })();
+
+  matchesRequest = request;
+
+  try {
+    return await request;
+  } finally {
+    if (matchesRequest === request) {
+      matchesRequest = null;
+    }
+  }
+}
+
 export default function MatchesPage() {
-  const [profiles, setProfiles] = useState<MatchProfile[]>([]);
+  const [profiles, setProfiles] = useState<MatchProfile[]>(
+    () => matchesCache ?? [],
+  );
   const [activeTab, setActiveTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("compatibility");
 
-  const [shortlisted, setShortlisted] = useState<string[]>([]);
+  // const [shortlisted, setShortlisted] = useState<string[]>([]);
+  const { isFavorite, toggleFavorite } = useFavorites();
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(
+    () => matchesCache === null,
+  );
   const [error, setError] = useState("");
 
-  /*
-   * Load matches
-   */
-  useEffect(() => {
-    let mounted = true;
+/*
+ * Load matches from cache or API
+ */
+useEffect(() => {
+  let mounted = true;
 
-    async function loadMatches() {
-      try {
-        setLoading(true);
-        setError("");
+  async function loadMatches() {
+    try {
+      setError("");
 
-        const response = await fetch("/api/matches", {
-          method: "GET",
-          cache: "no-store",
-        });
+      // Cached profiles are already available.
+      if (matchesCache !== null) {
+        setProfiles(matchesCache);
+        setLoading(false);
+        return;
+      }
 
-        const data = (await response.json()) as ApiResponse;
+      setLoading(true);
 
-        if (!response.ok || !data.success) {
-          throw new Error(
-            data.message || "Failed to load matches",
-          );
-        }
+      const users = await getCachedMatches();
 
-        if (mounted) {
-          setProfiles(
-            Array.isArray(data.users) ? data.users : [],
-          );
-        }
-      } catch (err) {
-        console.error("Failed to load matches:", err);
+      if (mounted) {
+        setProfiles(users);
+      }
+    } catch (err) {
+      console.error("Failed to load matches:", err);
 
-        if (mounted) {
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Something went wrong while loading matches.",
-          );
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+      if (mounted) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Something went wrong while loading matches.",
+        );
+      }
+    } finally {
+      if (mounted) {
+        setLoading(false);
       }
     }
+  }
 
-    loadMatches();
+  void loadMatches();
 
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  return () => {
+    mounted = false;
+  };
+}, []);
 
   /*
    * Dynamic stats
@@ -182,15 +231,41 @@ export default function MatchesPage() {
     return result;
   }, [profiles, activeTab, search, sortBy]);
 
+  const handleRetry = async () => {
+    try {
+      setLoading(true);
+      setError("");
+  
+      const users = await getCachedMatches(true);
+      setProfiles(users);
+    } catch (err) {
+      console.error("MATCHES_RETRY_ERROR:", err);
+  
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load matches. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /*
    * Shortlist
    */
-  const toggleShortlist = (id: string) => {
-    setShortlisted((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
-    );
+  const handleFavoriteToggle = async (id: string) => {
+    try {
+      await toggleFavorite(id);
+    } catch (error) {
+      console.error("MATCHES_FAVORITE_ERROR:", error);
+  
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Unable to update favorites. Please try again.",
+      );
+    }
   };
 
   /*
@@ -241,7 +316,7 @@ export default function MatchesPage() {
 
             <button
               type="button"
-              onClick={() => window.location.reload()}
+              onClick={handleRetry}
             >
               Try again
             </button>
@@ -408,9 +483,7 @@ export default function MatchesPage() {
 
             <div className={styles.profileGrid}>
               {filteredProfiles.map((profile) => {
-                const isShortlisted = shortlisted.includes(
-                  profile.id,
-                );
+                const isShortlisted = isFavorite(profile.id);
 
                 const cleanMobile = profile.mobile
                   ? String(profile.mobile).replace(/\D/g, "")
@@ -536,35 +609,27 @@ export default function MatchesPage() {
                         {/* Message */}
 
                         <button
-                          type="button"
-                          className={`${styles.shortlistButton} ${
-                            isShortlisted
-                              ? styles.shortlisted
-                              : ""
-                          }`}
-                          onClick={() =>
-                            toggleShortlist(profile.id)
-                          }
-                          aria-label={
-                            isShortlisted
-                              ? `Remove ${profile.name} from shortlist`
-                              : `Add ${profile.name} to shortlist`
-                          }
-                          title={
-                            isShortlisted
-                              ? "Remove from shortlist"
-                              : "Add to shortlist"
-                          }
-                        >
-                          <FiHeart
-                            aria-hidden="true"
-                            fill={
+                            type="button"
+                            className={`${styles.shortlistButton} ${
+                              isShortlisted ? styles.shortlisted : ""
+                            }`}
+                            onClick={() => handleFavoriteToggle(profile.id)}
+                            aria-label={
                               isShortlisted
-                                ? "currentColor"
-                                : "none"
+                                ? `Remove ${profile.name} from favorites`
+                                : `Add ${profile.name} to favorites`
                             }
-                          />
-                        </button>
+                            title={
+                              isShortlisted
+                                ? "Remove from favorites"
+                                : "Add to favorites"
+                            }
+                          >
+                            <FiHeart
+                              aria-hidden="true"
+                              fill={isShortlisted ? "currentColor" : "none"}
+                            />
+                          </button>
                         {/* Call */}
                         {cleanMobile && (
                           <a

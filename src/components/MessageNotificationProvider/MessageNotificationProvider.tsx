@@ -1,8 +1,10 @@
+
 "use client";
 
 import {
   createContext,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -18,9 +20,7 @@ type MessageNotificationContextType = {
 };
 
 const MessageNotificationContext =
-  createContext<MessageNotificationContextType | null>(
-    null,
-  );
+  createContext<MessageNotificationContextType | null>(null);
 
 type MessageNotificationProviderProps = {
   children: ReactNode;
@@ -36,7 +36,6 @@ type ConversationsResponse = {
 
 type SocketMessagePayload = {
   conversationId: string;
-
   message: {
     id?: string;
     _id?: string;
@@ -48,197 +47,115 @@ type SocketMessagePayload = {
   };
 };
 
+type MessagesUpdatedDetail = {
+  unreadCount?: number;
+};
+
 export function MessageNotificationProvider({
   children,
 }: MessageNotificationProviderProps) {
-  const [unreadCount, setUnreadCount] =
-    useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const mountedRef = useRef(false);
+  const requestIdRef = useRef(0);
 
-  /*
-   * -----------------------------------------
-   * Load unread messages from API
-   * -----------------------------------------
-   */
-  const refreshUnreadCount = async () => {
+  const refreshUnreadCount = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+
     try {
-      const response = await fetch(
-        "/api/conversations",
-        {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-        },
-      );
+      const response = await fetch("/api/conversations", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
 
-      if (!response.ok) {
-        return;
-      }
+      if (!response.ok) return;
 
-      const data: ConversationsResponse =
-        await response.json();
+      const data: ConversationsResponse = await response.json();
 
-      if (!data.success) {
-        return;
-      }
+      if (!data.success) return;
 
-      const conversations =
-        data.conversations || [];
-
-      const totalUnread =
-        conversations.reduce(
-          (total, conversation) =>
-            total +
-            (Number(
-              conversation.unread,
-            ) || 0),
-          0,
-        );
-
-      if (mountedRef.current) {
-        setUnreadCount(totalUnread);
-      }
-    } catch (error) {
-      console.error(
-        "MESSAGE_NOTIFICATION_ERROR:",
-        error,
-      );
-    }
-  };
-
-  /*
-   * -----------------------------------------
-   * Clear badge
-   * -----------------------------------------
-   */
-  const clearUnreadCount = () => {
-    setUnreadCount(0);
-  };
-
-  /*
-   * -----------------------------------------
-   * Initial unread count
-   * -----------------------------------------
-   */
-  useEffect(() => {
-    mountedRef.current = true;
-
-    refreshUnreadCount();
-
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  /*
-   * -----------------------------------------
-   * Socket.IO
-   * -----------------------------------------
-   */
-  useEffect(() => {
-    const socket = getSocket();
-
-    const handleConnect = () => {
-      console.log(
-        "MESSAGE NOTIFICATION SOCKET CONNECTED:",
-        socket.id,
-      );
-
-      /*
-       * Re-sync unread count whenever
-       * socket connects/reconnects.
-       */
-      refreshUnreadCount();
-    };
-
-    /*
-     * -----------------------------------------
-     * NEW MESSAGE
-     * -----------------------------------------
-     */
-    const handleNewMessage = (
-      payload: SocketMessagePayload,
-    ) => {
-      console.log(
-        "HEADER MESSAGE NOTIFICATION:",
-        payload,
-      );
-
+      // Ignore outdated requests and responses after unmount.
       if (
-        !payload?.message ||
-        !payload.message.receiverId
+        !mountedRef.current ||
+        requestId !== requestIdRef.current
       ) {
         return;
       }
 
-      /*
-       * Do NOT blindly increment here.
-       *
-       * Instead fetch latest unread count
-       * from database/API.
-       *
-       * This prevents duplicate count when
-       * socket reconnects or multiple tabs
-       * are open.
-       */
-      refreshUnreadCount();
-    };
+      const totalUnread = (data.conversations || []).reduce(
+        (total, conversation) =>
+          total + Math.max(0, Number(conversation.unread) || 0),
+        0,
+      );
 
-    /*
-     * -----------------------------------------
-     * Message was read somewhere
-     * -----------------------------------------
-     *
-     * Messages page will dispatch:
-     *
-     * window.dispatchEvent(
-     *   new Event("messages:updated")
-     * )
-     *
-     * after opening/reading a conversation.
-     */
-    const handleMessagesUpdated = () => {
-      refreshUnreadCount();
-    };
+      setUnreadCount(totalUnread);
+    } catch (error) {
+      console.error("MESSAGE_NOTIFICATION_ERROR:", error);
+    }
+  }, []);
 
-    socket.on(
-      "connect",
-      handleConnect,
-    );
+  const clearUnreadCount = useCallback(() => {
+    // Prevent an older in-flight request from restoring the badge.
+    requestIdRef.current += 1;
+    setUnreadCount(0);
+  }, []);
 
-    socket.on(
-      "message:new",
-      handleNewMessage,
-    );
+  useEffect(() => {
+    mountedRef.current = true;
+    void refreshUnreadCount();
 
-    window.addEventListener(
-      "messages:updated",
-      handleMessagesUpdated,
-    );
-
-    /*
-     * -----------------------------------------
-     * Cleanup
-     * -----------------------------------------
-     */
     return () => {
-      socket.off(
-        "connect",
-        handleConnect,
-      );
+      mountedRef.current = false;
+      requestIdRef.current += 1;
+    };
+  }, [refreshUnreadCount]);
 
-      socket.off(
-        "message:new",
-        handleNewMessage,
-      );
+  useEffect(() => {
+    const socket = getSocket();
+
+    const handleConnect = () => {
+      void refreshUnreadCount();
+    };
+
+    const handleNewMessage = (payload: SocketMessagePayload) => {
+      if (!payload?.message?.receiverId) return;
+
+      void refreshUnreadCount();
+    };
+
+    const handleMessagesUpdated = (event: Event) => {
+      const customEvent =
+        event as CustomEvent<MessagesUpdatedDetail>;
+
+      const nextCount = customEvent.detail?.unreadCount;
+
+      if (typeof nextCount === "number" && Number.isFinite(nextCount)) {
+        // Update the badge immediately using the page's latest local count.
+        requestIdRef.current += 1;
+        setUnreadCount(Math.max(0, nextCount));
+        return;
+      }
+
+      // Events without a count indicate that the API should be rechecked.
+      void refreshUnreadCount();
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("message:new", handleNewMessage);
+
+    window.addEventListener("messages:updated", handleMessagesUpdated);
+
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("message:new", handleNewMessage);
 
       window.removeEventListener(
         "messages:updated",
         handleMessagesUpdated,
       );
     };
-  }, []);
+  }, [refreshUnreadCount]);
 
   return (
     <MessageNotificationContext.Provider
@@ -253,16 +170,8 @@ export function MessageNotificationProvider({
   );
 }
 
-/*
- * -----------------------------------------
- * Custom hook
- * -----------------------------------------
- */
 export function useMessageNotifications() {
-  const context =
-    useContext(
-      MessageNotificationContext,
-    );
+  const context = useContext(MessageNotificationContext);
 
   if (!context) {
     throw new Error(

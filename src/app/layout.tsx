@@ -1,6 +1,6 @@
 
 import type { Metadata } from "next";
-
+import { Toaster } from "sonner";
 import Providers from "@/components/Providers";
 import LayoutShell from "@/components//LayoutShell/LayoutShell";
 import NotificationPrompt from "@/components/NotificationPrompt/NotificationPrompt";
@@ -35,6 +35,7 @@ export default function RootLayout({
           <NotificationPrompt />
         </Providers>
         </FavoritesProvider>
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

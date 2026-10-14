@@ -290,7 +290,7 @@ export default function Header() {
           aria-label="Matrimonial home"
         >
           <Image
-            src="/images/logo/EverMilan.png"
+            src="/public/images/logo/EverMilan.png"
             alt="Matrimonial Logo"
             width={200}
             height={100}
