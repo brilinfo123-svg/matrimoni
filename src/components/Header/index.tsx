@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -12,45 +11,21 @@ import {
   FiMessageCircle,
   FiSearch,
   FiUser,
+  FiUsers,
   FiX,
 } from "react-icons/fi";
 
-import {
-  useFavorites,
-} from "@/components/FavoritesProvider/FavoritesProvider";
-
-import {
-  useMessageNotifications,
-} from "@/components/MessageNotificationProvider/MessageNotificationProvider";
+import { useFavorites } from "@/components/FavoritesProvider/FavoritesProvider";
+import { useMessageNotifications } from "@/components/MessageNotificationProvider/MessageNotificationProvider";
 
 import styles from "./index.module.scss";
 
 const navigation = [
-  {
-    label: "Notification",
-    href: "/settings",
-    icon: FiBell,
-  },
-  {
-    label: "Discover",
-    href: "/search",
-    icon: FiSearch,
-  },
-  {
-    label: "Matches",
-    href: "/matches",
-    icon: FiHeart,
-  },
-  {
-    label: "Favorites",
-    href: "/favorites",
-    icon: FiHeart,
-  },
-  {
-    label: "Messages",
-    href: "/messages",
-    icon: FiMessageCircle,
-  },
+  { label: "Notification", href: "/settings", icon: FiBell },
+  { label: "Discover", href: "/search", icon: FiSearch },
+  { label: "Matches", href: "/matches", icon: FiUsers },
+  { label: "Favorites", href: "/favorites", icon: FiHeart },
+  { label: "Messages", href: "/messages", icon: FiMessageCircle },
 ];
 
 type CurrentUser = {
@@ -84,9 +59,12 @@ export default function Header() {
   const formattedUnreadCount =
     unreadCount > 99 ? "99+" : unreadCount;
 
-  /*
-   * Get currently logged-in user
-   */
+  const isLoggedIn = !isLoadingUser && Boolean(user);
+
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+  };
+
   const loadCurrentUser = async () => {
     try {
       setIsLoadingUser(true);
@@ -104,11 +82,7 @@ export default function Header() {
 
       const data: MeResponse = await response.json();
 
-      if (data.success && data.user) {
-        setUser(data.user);
-      } else {
-        setUser(null);
-      }
+      setUser(data.success && data.user ? data.user : null);
     } catch (error) {
       console.error("HEADER_AUTH_ERROR:", error);
       setUser(null);
@@ -118,12 +92,33 @@ export default function Header() {
   };
 
   useEffect(() => {
-    loadCurrentUser();
+    void loadCurrentUser();
   }, []);
 
-  /*
-   * Build user name and initials
-   */
+  // Close the mobile drawer when the user presses Escape.
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeMenu();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMenuOpen]);
+
+  // Close the drawer if the user logs out or is no longer authenticated.
+  useEffect(() => {
+    if (!isLoggedIn) {
+      closeMenu();
+    }
+  }, [isLoggedIn]);
+
   const firstName = user?.firstName?.trim() || "";
   const lastName = user?.lastName?.trim() || "";
 
@@ -131,12 +126,9 @@ export default function Header() {
     `${firstName} ${lastName}`.trim() || "My Account";
 
   const userInitials =
-    `${firstName.charAt(0)}${lastName.charAt(0)}`
-      .toUpperCase() || "U";
+    `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() ||
+    "U";
 
-  /*
-   * Get profile photo
-   */
   const profilePhoto = Array.isArray(user?.photos)
     ? user.photos[0] || ""
     : user?.photos || "";
@@ -145,15 +137,6 @@ export default function Header() {
     setImageError(false);
   }, [profilePhoto]);
 
-  const isLoggedIn = !isLoadingUser && !!user;
-
-  const closeMenu = () => {
-    setIsMenuOpen(false);
-  };
-
-  /*
-   * Logout
-   */
   const handleLogout = async () => {
     if (isLoggingOut) return;
 
@@ -166,25 +149,19 @@ export default function Header() {
         credentials: "include",
       });
 
-      const data = await response.json();
-
-      console.log("HEADER: Logout response:", data);
+      if (!response.ok) {
+        throw new Error("Logout request failed");
+      }
 
       setUser(null);
       window.location.assign("/");
     } catch (error) {
       console.error("LOGOUT_ERROR:", error);
-
-      setUser(null);
-      window.location.assign("/");
     } finally {
       setIsLoggingOut(false);
     }
   };
 
-  /*
-   * Shared avatar content
-   */
   const renderAvatar = (mobile = false) => {
     const avatarClass = mobile
       ? styles.mobileAccountAvatar
@@ -213,16 +190,11 @@ export default function Header() {
 
     return (
       <span className={avatarClass}>
-        <span className={initialsClass}>
-          {userInitials}
-        </span>
+        <span className={initialsClass}>{userInitials}</span>
       </span>
     );
   };
 
-  /*
-   * Navigation item with message/favorite badge
-   */
   const renderNavigationItems = (mobile = false) => {
     return navigation.map((item) => {
       const Icon = item.icon;
@@ -241,16 +213,12 @@ export default function Header() {
         <Link
           key={item.href}
           href={item.href}
-          className={
-            mobile ? styles.mobileNavLink : styles.navLink
-          }
+          className={mobile ? styles.mobileNavLink : styles.navLink}
           onClick={mobile ? closeMenu : undefined}
         >
           <span
             className={
-              mobile
-                ? styles.mobileNavIcon
-                : styles.messageNavIcon
+              mobile ? styles.mobileNavIcon : styles.messageNavIcon
             }
           >
             <Icon aria-hidden="true" />
@@ -280,169 +248,184 @@ export default function Header() {
   };
 
   return (
-    <header className={styles.header}>
-      <div className={styles.container}>
-        {/* Logo */}
-        <Link
-          href="/"
-          className={styles.logo}
-          onClick={closeMenu}
-          aria-label="Matrimonial home"
-        >
-          <Image
-            src="/public/images/logo/EverMilan.png"
-            alt="Matrimonial Logo"
-            width={200}
-            height={100}
-            priority
-          />
-        </Link>
-
-        {/* Desktop navigation */}
-        <nav
-          className={styles.desktopNav}
-          aria-label="Main navigation"
-        >
-          {renderNavigationItems()}
-        </nav>
-
-        {/* Desktop actions */}
-        <div className={styles.desktopActions}>
-          {isLoadingUser ? (
-            <div
-              className={styles.authLoading}
-              aria-hidden="true"
-            />
-          ) : isLoggedIn ? (
-            <>
-              <Link
-                href="/profile"
-                className={styles.userButton}
-                aria-label={`Open ${userName}'s dashboard`}
-              >
-                {renderAvatar()}
-
-                <span className={styles.userName}>
-                  {userName}
-                </span>
-              </Link>
-
-              <button
-                type="button"
-                className={styles.logoutButton}
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-              >
-                <FiLogOut aria-hidden="true" />
-
-                <span>
-                  {isLoggingOut ? "Logging out..." : "Logout"}
-                </span>
-              </button>
-            </>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className={styles.loginButton}
-              >
-                <FiUser aria-hidden="true" />
-                <span>Login</span>
-              </Link>
-
-              <Link
-                href="/register"
-                className={styles.registerButton}
-              >
-                Create Profile
-              </Link>
-            </>
-          )}
-        </div>
-
-        {/* Mobile menu button */}
+    <>
+      {/* Backdrop: appears behind the drawer on mobile */}
+      {isMenuOpen && isLoggedIn && (
         <button
           type="button"
-          className={styles.menuButton}
-          onClick={() => setIsMenuOpen((prev) => !prev)}
-          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-          aria-expanded={isMenuOpen}
-          aria-controls="mobile-navigation"
-        >
-          {isMenuOpen ? <FiX /> : <FiMenu />}
-        </button>
-      </div>
+          className={styles.mobileMenuOverlay}
+          onClick={closeMenu}
+          aria-label="Close navigation menu"
+          tabIndex={-1}
+        />
+      )}
 
-      {/* Mobile navigation */}
-      <div
-        id="mobile-navigation"
-        className={`${styles.mobileMenu} ${
-          isMenuOpen ? styles.mobileMenuOpen : ""
-        }`}
-      >
-        <nav
-          className={styles.mobileNav}
-          aria-label="Mobile navigation"
-        >
-          {renderNavigationItems(true)}
+      <header className={styles.header}>
+        <div className={styles.container}>
+          {/* Logo */}
+          <Link
+            href="/"
+            className={styles.logo}
+            onClick={closeMenu}
+            aria-label="Matrimonial home"
+          >
+            <Image
+              src="/public/images/logo/EverMilan.png"
+              alt="Matrimonial Logo"
+              width={200}
+              height={100}
+              priority
+            />
+          </Link>
 
-          <div className={styles.mobileDivider} />
+          {/* Desktop navigation */}
+          <nav
+            className={styles.desktopNav}
+            aria-label="Main navigation"
+          >
+            {renderNavigationItems()}
+          </nav>
 
-          {/* Mobile authentication */}
-          {isLoadingUser ? (
-            <div className={styles.mobileAuthLoading}>
-              Loading...
-            </div>
-          ) : isLoggedIn ? (
-            <>
-              <Link
-                href="/profile"
-                className={styles.mobileAccount}
-                onClick={closeMenu}
-              >
-                {renderAvatar(true)}
+          {/* Desktop actions */}
+          <div className={styles.desktopActions}>
+            {isLoadingUser ? (
+              <div
+                className={styles.authLoading}
+                aria-hidden="true"
+              />
+            ) : isLoggedIn ? (
+              <>
+                <Link
+                  href="/profile"
+                  className={styles.userButton}
+                  aria-label={`Open ${userName}'s dashboard`}
+                >
+                  {renderAvatar()}
 
-                <span>
-                  <strong>{userName}</strong>
-                  <small>My Dashboard</small>
-                </span>
-              </Link>
+                  <span className={styles.userName}>
+                    {userName}
+                  </span>
+                </Link>
 
+                <button
+                  type="button"
+                  className={styles.logoutButton}
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                >
+                  <FiLogOut aria-hidden="true" />
+                  <span>
+                    {isLoggingOut ? "Logging out..." : "Logout"}
+                  </span>
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className={styles.loginButton}
+                >
+                  <FiUser aria-hidden="true" />
+                  <span>Login</span>
+                </Link>
+
+                <Link
+                  href="/register"
+                  className={styles.registerButton}
+                >
+                  Create Profile
+                </Link>
+              </>
+            )}
+          </div>
+
+          {/* Mobile header actions */}
+          <div className={styles.mobileHeaderActions}>
+            {isLoadingUser ? (
+              <div
+                className={styles.authLoading}
+                aria-hidden="true"
+              />
+            ) : isLoggedIn ? (
               <button
                 type="button"
-                className={styles.mobileLogout}
-                onClick={handleLogout}
-                disabled={isLoggingOut}
+                className={styles.menuButton}
+                onClick={() => setIsMenuOpen((prev) => !prev)}
+                aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+                aria-expanded={isMenuOpen}
+                aria-controls="mobile-navigation"
               >
-                <FiLogOut aria-hidden="true" />
-
-                <span>
-                  {isLoggingOut ? "Logging out..." : "Logout"}
-                </span>
+                {isMenuOpen ? <FiX /> : <FiMenu />}
               </button>
-            </>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className={styles.mobileLogin}
-                onClick={closeMenu}
-              >
-                <FiUser aria-hidden="true" />
-                <span>Login</span>
-              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className={styles.mobileHeaderLogin}
+                >
+                  Login
+                </Link>
 
-              <Link
-                href="/register"
-                className={styles.mobileRegister}
-                onClick={closeMenu}
-              >
-                Create Profile
-              </Link>
-            </>
-          )}
-        </nav>
-      </div>
-    </header>
+                <Link
+                  href="/register"
+                  className={styles.mobileHeaderRegister}
+                >
+                  Register
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile slide-in navigation */}
+        <div
+          id="mobile-navigation"
+          className={`${styles.mobileMenu} ${
+            isMenuOpen && isLoggedIn ? styles.mobileMenuOpen : ""
+          }`}
+          aria-hidden={!isMenuOpen || !isLoggedIn}
+          inert={!isMenuOpen || !isLoggedIn}
+        >
+          <nav
+            className={styles.mobileNav}
+            aria-label="Mobile navigation"
+          >
+            {renderNavigationItems(true)}
+
+            <div className={styles.mobileDivider} />
+
+            {/* Mobile account actions */}
+            {isLoggedIn && (
+              <>
+                <Link
+                  href="/profile"
+                  className={styles.mobileAccount}
+                  onClick={closeMenu}
+                >
+                  {renderAvatar(true)}
+
+                  <span>
+                    <strong>{userName}</strong>
+                    <small>My Dashboard</small>
+                  </span>
+                </Link>
+
+                <button
+                  type="button"
+                  className={styles.mobileLogout}
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                >
+                  <FiLogOut aria-hidden="true" />
+                  <span>
+                    {isLoggingOut ? "Logging out..." : "Logout"}
+                  </span>
+                </button>
+              </>
+            )}
+          </nav>
+        </div>
+      </header>
+    </>
   );
 }

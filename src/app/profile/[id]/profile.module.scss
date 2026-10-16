@@ -65,6 +65,12 @@
   font-size: 12px;
   font-weight: 800;
   transition: color 180ms ease;
+  @media screen and (max-width: 620px) {
+    background-color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: #000;
+  }
 }
 
 .backButton:hover {

@@ -24,10 +24,10 @@ const footerLinks = {
       label: "Success Stories",
       href: "/success-stories",
     },
-    {
-      label: "Pricing",
-      href: "/pricing",
-    },
+    // {
+    //   label: "Pricing",
+    //   href: "/pricing",
+    // },
   ],
 
   company: [
@@ -41,7 +41,7 @@ const footerLinks = {
     },
     {
       label: "Blog",
-      href: "/blog",
+      href: "/blogs",
     },
     {
       label: "Safety",
@@ -58,10 +58,10 @@ const footerLinks = {
       label: "Terms & Conditions",
       href: "/terms",
     },
-    {
-      label: "Cookie Policy",
-      href: "/cookies",
-    },
+    // {
+    //   label: "Cookie Policy",
+    //   href: "/cookies",
+    // },
   ],
 };
 
@@ -111,7 +111,7 @@ export default function Footer() {
 
               <span className={styles.logoText}>
                 <span className={styles.logoName}>
-                  Matrimonialdsfsf
+                  EveryMilan<small>.com</small>
                 </span>
 
                 <span className={styles.logoTagline}>
@@ -135,7 +135,7 @@ export default function Footer() {
                 <FiMail aria-hidden="true" />
               </span>
 
-              <span>support@matrimonial.com</span>
+              <span>support@EveryMilan.com</span>
             </a>
           </div>
 

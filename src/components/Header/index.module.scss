@@ -34,45 +34,12 @@
   flex-shrink: 0;
   color: #222222;
   text-decoration: none;
-  @media screen and (max-width: 400px) {
-    img{
-      width: 130px;
-    }
+
+  img {
+    display: block;
+    width: 200px;
+    height: auto;
   }
-}
-
-.messageNavIcon {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.messageBadge,
-.mobileMessageBadge {
-  position: absolute;
-  top: -9px;
-  right: -11px;
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid #fff;
-  border-radius: 999px;
-  background: #a83268;
-  color: #fff;
-  font-size: 9px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.mobileNavIcon {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .logoIcon {
@@ -109,44 +76,7 @@
 }
 
 /* =========================================
-   DESKTOP NAVIGATION
-========================================= */
-
-.desktopNav {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.navLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 10px;
-  color: #555555;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: none;
-  transition:
-    background 0.2s ease,
-    color 0.2s ease;
-}
-
-.navLink svg {
-  width: 17px;
-  height: 17px;
-  flex-shrink: 0;
-}
-
-.navLink:hover {
-  color: #a83268;
-  background: #fff5f8;
-}
-
-/* =========================================
-   MESSAGE NOTIFICATION BADGE
+   NAVIGATION ICONS & BADGES
 ========================================= */
 
 .messageNavIcon,
@@ -184,6 +114,43 @@
 .mobileMessageBadge {
   top: -8px;
   right: -10px;
+}
+
+/* =========================================
+   DESKTOP NAVIGATION
+========================================= */
+
+.desktopNav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.navLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  color: #555555;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.navLink svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+.navLink:hover {
+  color: #a83268;
+  background: #fff5f8;
 }
 
 /* =========================================
@@ -285,7 +252,6 @@
 
 /* =========================================
    USER AVATARS
-   Shared image and initials styles
 ========================================= */
 
 .userAvatar,
@@ -421,6 +387,56 @@
 }
 
 /* =========================================
+   MOBILE HEADER ACTIONS
+========================================= */
+
+.mobileHeaderActions {
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mobileHeaderLogin,
+.mobileHeaderRegister {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.mobileHeaderLogin {
+  border: 1px solid #e6d6dd;
+  background: #ffffff;
+  color: #a83268;
+}
+
+.mobileHeaderLogin:hover {
+  background: #fff5f8;
+}
+
+.mobileHeaderRegister {
+  border: 1px solid #a83268;
+  background: #a83268;
+  color: #ffffff;
+}
+
+.mobileHeaderRegister:hover {
+  background: #912955;
+  border-color: #912955;
+}
+
+/* =========================================
    MOBILE MENU BUTTON
 ========================================= */
 
@@ -450,10 +466,11 @@
 }
 
 /* =========================================
-   MOBILE MENU
+   MOBILE DRAWER & BACKDROP
 ========================================= */
 
-.mobileMenu {
+.mobileMenu,
+.mobileMenuOverlay {
   display: none;
 }
 
@@ -553,7 +570,7 @@
 }
 
 /* =========================================
-   MOBILE LOGOUT
+   MOBILE LOGOUT & LOADING
 ========================================= */
 
 .mobileLogout {
@@ -612,6 +629,8 @@
 .mobileNavLink:focus-visible,
 .mobileLogin:focus-visible,
 .mobileRegister:focus-visible,
+.mobileHeaderLogin:focus-visible,
+.mobileHeaderRegister:focus-visible,
 .userButton:focus-visible,
 .logoutButton:focus-visible,
 .mobileAccount:focus-visible,
@@ -648,31 +667,75 @@
     min-height: 55px;
   }
 
+  .logo img {
+    width: 160px;
+  }
+
   .desktopNav,
   .desktopActions {
     display: none;
   }
 
-  .menuButton {
+  .mobileHeaderActions {
     display: flex;
   }
 
-  .mobileMenu {
-    display: block;
-    max-height: 0;
-    overflow: hidden;
-    opacity: 0;
-    border-top: 1px solid transparent;
-    transition:
-      max-height 0.3s ease,
-      opacity 0.2s ease,
-      border-color 0.2s ease;
+  .menuButton {
+    display: flex;
+    width: 38px;
+    height: 38px;
   }
 
+  /* Dimmed backdrop */
+  .mobileMenuOverlay {
+    display: block;
+    position: fixed;
+    inset: 55px 0 0;
+    z-index: 999;
+    width: 100%;
+    height: calc(100vh - 55px);
+    height: calc(100dvh - 55px);
+    padding: 0;
+    border: 0;
+    background: rgba(24, 16, 20, 0.42);
+    cursor: pointer;
+    animation: overlayFadeIn 0.25s ease both;
+  }
+
+  /* Drawer closed by default */
+  .mobileMenu {
+    display: block;
+    position: fixed;
+    top: 55px;
+    bottom: 0;
+    left: 0;
+    z-index: 1001;
+    width: min(320px, 85vw);
+    height: calc(100vh - 55px);
+    height: calc(100dvh - 55px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: #ffffff;
+    border-right: 1px solid #f0e5ea;
+    box-shadow: 12px 0 35px rgba(35, 15, 25, 0.12);
+    transform: translateX(-105%);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      transform 0.3s ease,
+      visibility 0.3s ease;
+  }
+
+  /* Drawer open */
   .mobileMenuOpen {
-    max-height: 500px;
-    opacity: 1;
-    border-top-color: #eeeeee;
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .mobileNav {
+    padding: 16px 14px 28px;
   }
 }
 
@@ -683,6 +746,11 @@
 @media (max-width: 400px) {
   .container {
     width: min(100% - 20px, 1280px);
+    gap: 10px;
+  }
+
+  .logo img {
+    width: 130px;
   }
 
   .logoTagline {
@@ -697,11 +765,32 @@
     width: 39px;
     height: 39px;
   }
+
+  .mobileHeaderActions {
+    gap: 6px;
+  }
+
+  .mobileHeaderLogin,
+  .mobileHeaderRegister {
+    min-height: 34px;
+    padding: 0 9px;
+    font-size: 11px;
+  }
 }
 
 /* =========================================
-   REDUCED MOTION
+   ANIMATIONS & REDUCED MOTION
 ========================================= */
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .navLink,
@@ -712,8 +801,14 @@
   .userButton,
   .userAvatar,
   .logoutButton,
-  .mobileLogout {
+  .mobileLogout,
+  .mobileHeaderLogin,
+  .mobileHeaderRegister {
     transition: none;
+  }
+
+  .mobileMenuOverlay {
+    animation: none;
   }
 
   .authLoading span {
