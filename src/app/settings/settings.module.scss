@@ -255,6 +255,492 @@
    INFO BOX
 ========================= */
 
+
+/* =========================
+   SETTINGS STATUS MESSAGES
+========================= */
+
+.errorBox,
+.successBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin-bottom: 18px;
+  padding: 15px 17px;
+  border-radius: 14px;
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    font-size: 18px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+}
+
+.errorBox {
+  border: 1px solid #f2c8ce;
+  background: #fff4f5;
+  color: #a52738;
+}
+
+.successBox {
+  border: 1px solid #c9e8d5;
+  background: #f1fbf5;
+  color: #237747;
+}
+
+.loadingCard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 160px;
+  border: 1px solid rgba(40, 30, 35, 0.07);
+  border-radius: 20px;
+  background: #fff;
+  color: #756d73;
+
+  p {
+    margin: 0;
+    font-size: 14px;
+  }
+}
+
+.spinner {
+  width: 21px;
+  height: 21px;
+  border: 2px solid #ead5df;
+  border-top-color: #a83268;
+  border-radius: 50%;
+  animation: settingsSpin 0.7s linear infinite;
+}
+
+@keyframes settingsSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================
+   PRIVACY SETTINGS
+========================= */
+
+.settingCard {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 20px;
+  padding: 25px 28px;
+  border: 1px solid rgba(40, 30, 35, 0.07);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 35px rgba(55, 24, 40, 0.045);
+}
+
+.settingIcon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 15px;
+  background: #f9edf3;
+  color: #a83268;
+  font-size: 21px;
+}
+
+.settingContent {
+  flex: 1;
+  min-width: 0;
+
+  h2,
+  h3 {
+    margin: 0 0 7px;
+    color: #302930;
+    font-size: 17px;
+    font-weight: 650;
+  }
+
+  p {
+    margin: 0;
+    color: #817780;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+}
+
+.statusVisible,
+.statusHidden {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 10px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.statusVisible {
+  background: #edf8f0;
+  color: #287646;
+}
+
+.statusHidden {
+  background: #f9edf3;
+  color: #a83268;
+}
+
+/* Accessible mobile visibility switch */
+
+.switch {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 51px;
+  height: 29px;
+  cursor: pointer;
+
+  input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+
+    &:checked + .switchTrack {
+      background: #a83268;
+    }
+
+    &:checked + .switchTrack::before {
+      transform: translateX(22px);
+    }
+
+    &:focus-visible + .switchTrack {
+      outline: 3px solid rgba(168, 50, 104, 0.3);
+      outline-offset: 3px;
+    }
+
+    &:disabled + .switchTrack {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+  }
+}
+
+.switchTrack {
+  position: absolute;
+  inset: 0;
+  border-radius: 30px;
+  background: #d8d1d6;
+  transition: background 0.2s ease;
+  cursor: pointer;
+
+  &::before {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 21px;
+    height: 21px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+    content: "";
+    transition: transform 0.2s ease;
+  }
+}
+
+/* =========================
+   ACCOUNT MANAGEMENT
+========================= */
+
+.accountSection {
+  overflow: hidden;
+  margin-top: 20px;
+  border: 1px solid rgba(40, 30, 35, 0.07);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 12px 35px rgba(55, 24, 40, 0.045);
+}
+
+.accountSectionHeader {
+  padding: 26px 28px 22px;
+
+  h2 {
+    margin: 8px 0 7px;
+    color: #302930;
+    font-size: 21px;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0;
+    color: #817780;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+}
+
+.accountAction {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  padding: 23px 28px;
+}
+
+.accountDivider {
+  height: 1px;
+  margin: 0 28px;
+  background: #eee9ec;
+}
+
+.deactivateButton,
+.deleteButton {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 43px;
+  padding: 0 17px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    opacity 0.2s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(168, 50, 104, 0.25);
+    outline-offset: 3px;
+  }
+}
+
+.deactivateButton {
+  border-color: #e8d5df;
+  background: #fff8fb;
+  color: #a83268;
+
+  &:hover:not(:disabled) {
+    border-color: #a83268;
+    background: #f9edf3;
+  }
+}
+
+.deleteButton {
+  background: #b42336;
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background: #951c2c;
+  }
+}
+
+.dangerIcon {
+  background: #fff0f1;
+  color: #b42336;
+}
+
+/* =========================
+   RESPONSIVE SETTINGS
+========================= */
+
+@media (max-width: 760px) {
+  .settingCard {
+    gap: 14px;
+    padding: 21px;
+  }
+
+  .accountAction {
+    gap: 13px;
+    padding: 21px;
+  }
+
+  .accountSectionHeader {
+    padding: 23px 21px 18px;
+  }
+
+  .accountDivider {
+    margin: 0 21px;
+  }
+}
+
+@media (max-width: 560px) {
+  .settingCard {
+    flex-wrap: wrap;
+    gap: 13px;
+    padding: 19px 17px;
+    border-radius: 18px;
+  }
+
+  .settingIcon {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    font-size: 18px;
+  }
+
+  .settingContent {
+    h2,
+    h3 {
+      font-size: 15px;
+    }
+
+    p {
+      font-size: 12px;
+    }
+  }
+
+  .switch {
+    margin-left: auto;
+  }
+
+  .accountSection {
+    border-radius: 18px;
+  }
+
+  .accountSectionHeader {
+    padding: 21px 17px 17px;
+
+    h2 {
+      font-size: 19px;
+    }
+  }
+
+  .accountAction {
+    flex-wrap: wrap;
+    padding: 19px 17px;
+  }
+
+  .accountAction .settingContent {
+    flex-basis: calc(100% - 60px);
+  }
+
+  .deactivateButton,
+  .deleteButton {
+    width: 100%;
+    min-height: 45px;
+  }
+
+  .accountDivider {
+    margin: 0 17px;
+  }
+}
+
+.activateButton {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 20px;
+  border: 1px solid #a83268;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #a83268, #c74780);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+    font-size: 14px;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 18px rgba(168, 50, 104, 0.22);
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(168, 50, 104, 0.3);
+    outline-offset: 3px;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+.deactivateButton {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 12px 20px;
+  border: 1px solid #b77928;
+  border-radius: 12px;
+  background: #fff8eb;
+  color: #8a5315;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    opacity 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: #ffefd2;
+    transform: translateY(-2px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .accountAction {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .accountAction .activateButton,
+  .accountAction .deactivateButton {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+
+  .switchTrack,
+  .switchTrack::before,
+  .deactivateButton,
+  .deleteButton {
+    transition: none;
+  }
+}
+
+
 .infoBox {
   display: flex;
   align-items: center;

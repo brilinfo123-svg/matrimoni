@@ -36,6 +36,7 @@ type MatchProfile = {
   height: string;
   maritalStatus: string;
   mobile: string | null;
+  isMobileVisible: boolean;
   newMatch: boolean;
   about: string;
 };
@@ -485,9 +486,8 @@ useEffect(() => {
               {filteredProfiles.map((profile) => {
                 const isShortlisted = isFavorite(profile.id);
 
-                const cleanMobile = profile.mobile
-                  ? String(profile.mobile).replace(/\D/g, "")
-                  : "";
+                const cleanMobile = profile.mobile ? String(profile.mobile).replace(/\D/g, "") : "";
+                const canShowMobile = profile.isMobileVisible === true && cleanMobile.length > 0;
 
                 return (
                   <article
@@ -631,7 +631,9 @@ useEffect(() => {
                             />
                           </button>
                         {/* Call */}
-                        {cleanMobile && (
+                        
+                        {/* Call */}
+                        {canShowMobile && (
                           <a
                             href={`tel:${cleanMobile}`}
                             className={styles.callButton}
@@ -643,7 +645,7 @@ useEffect(() => {
                         )}
 
                         {/* WhatsApp */}
-                        {cleanMobile && (
+                        {canShowMobile && (
                           <a
                             href={`https://wa.me/${cleanMobile}`}
                             target="_blank"
@@ -652,9 +654,15 @@ useEffect(() => {
                             aria-label={`WhatsApp ${profile.name}`}
                             title={`WhatsApp ${profile.name}`}
                           >
-                            <Image src="/public/images/logo/whatsapp.png" alt="WhatsApp" width={20} height={20} />
+                            <Image
+                              src="/public/images/logo/whatsapp.png"
+                              alt="WhatsApp"
+                              width={20}
+                              height={20}
+                            />
                           </a>
                         )}
+
                       </div>
                     </div>
                   </article>

@@ -49,11 +49,12 @@ export interface IUser extends Document {
   partnerLifestyle: string;
 
   photos: string[];
+  isMobileVisible: boolean;
+  isActive: boolean;
   favorites: mongoose.Types.ObjectId[];
   isEmailVerified: boolean;
   isMobileVerified: boolean;
   isProfileComplete: boolean;
-  isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -260,6 +261,15 @@ const UserSchema = new Schema<IUser>(
     photos: {
       type: [String],
       default: [],
+    },
+    isMobileVisible: {
+      type: Boolean,
+      default: true,
+    },
+    
+    isActive: {
+      type: Boolean,
+      default: true,
     },
     favorites: {
       type: [Schema.Types.ObjectId],

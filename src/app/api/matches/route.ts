@@ -7,6 +7,8 @@ import { verifyAuthToken } from "@/lib/auth";
 
 type UserDocument = {
   mobile: string;
+  isMobileVisible?: boolean;
+  isActive?: boolean;
   _id: mongoose.Types.ObjectId;
 
   firstName?: string;
@@ -888,20 +890,19 @@ export async function GET() {
      * ============================================
      */
 
-    const allCandidates =
-      (await usersCollection
+    const allCandidates = (
+      await usersCollection
         .find({
           _id: {
-            $ne:
-              new mongoose.Types.ObjectId(
-                userId,
-              ),
+            $ne: new mongoose.Types.ObjectId(userId),
           },
+          isActive: true,
         })
         .sort({
           createdAt: -1,
         })
-        .toArray()) as UserDocument[];
+        .toArray()
+    ) as UserDocument[];
 
     /*
      * ============================================
@@ -1077,7 +1078,9 @@ export async function GET() {
               user.maritalStatus ||
               "Not specified",
 
-              mobile: user.mobile || "",
+              mobile: user.isMobileVisible === true ? String(user.mobile || ""): "",
+
+              isMobileVisible: user.isMobileVisible === true,
 
             newMatch:
               user.createdAt

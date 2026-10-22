@@ -21,7 +21,7 @@ import { useMessageNotifications } from "@/components/MessageNotificationProvide
 import styles from "./index.module.scss";
 
 const navigation = [
-  { label: "Notification", href: "/settings", icon: FiBell },
+  { label: "Setting", href: "/settings", icon: FiBell },
   { label: "Discover", href: "/search", icon: FiSearch },
   { label: "Matches", href: "/matches", icon: FiUsers },
   { label: "Favorites", href: "/favorites", icon: FiHeart },

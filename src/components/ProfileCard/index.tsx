@@ -9,7 +9,6 @@ import {
   FiCheck,
   FiHeart,
   FiMapPin,
-  FiMessageCircle,
   FiPhone,
   FiStar,
 } from "react-icons/fi";
@@ -37,6 +36,9 @@ export type Profile = {
   profileFor?: string;
   gender?: string;
 
+  // Mobile contact visibility setting
+  isMobileVisible?: boolean;
+
   // Mobile number
   mobile?: string | number | null;
 
@@ -63,17 +65,19 @@ export default function ProfileCard({
   profile,
 }: ProfileCardProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
+
   const favorite = isFavorite(profile.id);
-  const shortlisted = isFavorite(profile.id);
+
   /*
-   * Clean mobile number
-   *
-   * Example:
-   * "765-280-0999" -> "7652800999"
+   * Clean mobile number.
+   * Example: "765-280-0999" -> "7652800999"
    */
   const cleanMobile = profile.mobile
     ? String(profile.mobile).replace(/\D/g, "")
     : "";
+
+  // Hide contact buttons when the user disables mobile visibility.
+  const canShowMobile = profile.isMobileVisible === true;
 
   return (
     <article className={styles.profileCard}>
@@ -161,9 +165,6 @@ export default function ProfileCard({
 
         {/* Actions */}
         <div className={styles.cardActions}>
-          {/* Shortlist */}
-         
-
           {/* View Profile */}
           <Link
             href={`/profile/${profile.id}`}
@@ -172,17 +173,7 @@ export default function ProfileCard({
             View profile
           </Link>
 
-          {/* Message */}
-          {/* <Link
-            href={`/messages?userId=${profile.id}`}
-            className={styles.messageButton}
-            aria-label={`Message ${profile.name}`}
-          >
-            <FiMessageCircle aria-hidden="true" />
-          </Link> */}
-
-          {/* Call */}
-          
+          {/* Favorites */}
           <button
             type="button"
             className={`${styles.shortlistButton} ${
@@ -213,27 +204,32 @@ export default function ProfileCard({
             />
           </button>
 
-          {cleanMobile && (
-            <a
-              href={`tel:${cleanMobile}`}
-              className={styles.callButton}
-              aria-label={`Call ${profile.name}`}
-            >
-              <FiPhone aria-hidden="true" />
-            </a>
-          )}
+          {/* Call and WhatsApp: only when mobile visibility is enabled */}
+          {canShowMobile && cleanMobile && (
+            <>
+              <a
+                href={`tel:${cleanMobile}`}
+                className={styles.callButton}
+                aria-label={`Call ${profile.name}`}
+              >
+                <FiPhone aria-hidden="true" />
+              </a>
 
-          {/* WhatsApp */}
-          {cleanMobile && (
-            <a
-              href={`https://wa.me/${cleanMobile}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.whatsappButton}
-              aria-label={`WhatsApp ${profile.name}`}
-            >
-             <Image src="/public/images/logo/whatsapp.png" alt="WhatsApp" width={20} height={20} />
-            </a>
+              <a
+                href={`https://wa.me/${cleanMobile}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.whatsappButton}
+                aria-label={`WhatsApp ${profile.name}`}
+              >
+                <Image
+                  src="/public/images/logo/whatsapp.png"
+                  alt="WhatsApp"
+                  width={20}
+                  height={20}
+                />
+              </a>
+            </>
           )}
         </div>
       </div>

@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
@@ -9,9 +10,7 @@ import {
   AUTH_COOKIE_NAME,
 } from "@/lib/auth";
 
-export async function POST(
-  request: Request,
-) {
+export async function POST(request: Request) {
   try {
     const body = await request.json();
 
@@ -21,12 +20,15 @@ export async function POST(
 
     const password = body.password;
 
-    if (!email || !password) {
+    if (
+      !email ||
+      typeof password !== "string" ||
+      !password
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Email and password are required.",
+          message: "Email and password are required.",
         },
         {
           status: 400,
@@ -38,23 +40,15 @@ export async function POST(
 
     const user = await User.findOne({
       email,
-    }).select("+password") .lean();
+    })
+      .select("+password")
+      .lean();
 
-    console.log("LOGIN_API: Raw user:", user);
-    console.log(
-      "LOGIN_API: Email:",
-      user?.email,
-    );
-    console.log(
-      "LOGIN_API: Password exists:",
-      !!user?.password,
-    );
-    if (!user) {
+    if (!user || !user.password) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Invalid email or password.",
+          message: "Invalid email or password.",
         },
         {
           status: 401,
@@ -62,31 +56,17 @@ export async function POST(
       );
     }
 
-    if (user.isActive === false) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Your account is currently inactive.",
-        },
-        {
-          status: 403,
-        },
-      );
-    }
-
-    const passwordMatches =
-      await bcrypt.compare(
-        password,
-        user.password,
-      );
+    // Verify the password for both active and inactive accounts.
+    const passwordMatches = await bcrypt.compare(
+      password,
+      user.password,
+    );
 
     if (!passwordMatches) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Invalid email or password.",
+          message: "Invalid email or password.",
         },
         {
           status: 401,
@@ -94,49 +74,39 @@ export async function POST(
       );
     }
 
-    /*
-     * Create JWT using the MongoDB user ID.
-     */
-    const token =
-      await createAuthToken(
-        user._id.toString(),
-      );
+    // Do not block inactive users at login.
+    const isActive = user.isActive !== false;
 
-    /*
-     * Create response.
-     */
-    const response =
-      NextResponse.json({
-        success: true,
-        message: "Login successful.",
+    // Create JWT using the MongoDB user ID.
+    const token = await createAuthToken(
+      user._id.toString(),
+    );
 
-        user: {
-          id: user._id.toString(),
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-        },
-      });
+    // Preserve the existing login response and add account status.
+    const response = NextResponse.json({
+      success: true,
+      message: "Login successful.",
+      user: {
+        id: user._id.toString(),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        isActive,
+      },
+      redirectTo: isActive
+        ? "/dashboard"
+        : "/account-deactivated",
+    });
 
-    /*
-     * Store JWT inside HTTP-only cookie.
-     */
+    // Preserve the existing HTTP-only session cookie settings.
     response.cookies.set({
       name: AUTH_COOKIE_NAME,
       value: token,
-
       httpOnly: true,
-
-      secure:
-        process.env.NODE_ENV ===
-        "production",
-
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-
       path: "/",
-
-      maxAge:
-        60 * 60 * 24 * 7,
+      maxAge: 60 * 60 * 24 * 7,
     });
 
     console.log(
@@ -145,21 +115,22 @@ export async function POST(
     );
 
     console.log(
+      "LOGIN_API: Account active:",
+      isActive,
+    );
+
+    console.log(
       "LOGIN_API: Auth cookie created.",
     );
 
     return response;
   } catch (error) {
-    console.error(
-      "LOGIN_ERROR:",
-      error,
-    );
+    console.error("LOGIN_ERROR:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message:
-          "Something went wrong while signing in.",
+        message: "Something went wrong while signing in.",
       },
       {
         status: 500,

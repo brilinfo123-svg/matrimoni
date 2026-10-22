@@ -14,16 +14,20 @@ import {
 
 import styles from "./login.module.scss";
 
+
 type LoginResponse = {
   success?: boolean;
   message?: string;
+  redirectTo?: string;
   user?: {
     id?: string;
     firstName?: string;
     lastName?: string;
     email?: string;
+    isActive?: boolean;
   };
 };
+
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -256,6 +260,7 @@ export default function LoginPage() {
         return;
       }
 
+ 
       // --------------------------------
       // Login successful
       // --------------------------------
@@ -283,9 +288,18 @@ export default function LoginPage() {
         "LOGIN: Session cookie created.",
       );
 
+      // Inactive accounts always go to the
+      // account-deactivated page.
+      // Active accounts keep the existing
+      // callback URL behavior.
+      const redirectTo =
+        data.user?.isActive === false
+          ? "/account-deactivated"
+          : callbackUrl;
+
       console.log(
         "LOGIN: Redirecting to:",
-        callbackUrl,
+        redirectTo,
       );
 
       console.log(
@@ -293,16 +307,11 @@ export default function LoginPage() {
       );
 
       /*
-       * Use full browser navigation.
-       *
-       * This ensures the newly-created
-       * HTTP-only cookie is available
-       * when the next protected page
-       * loads.
+       * Full browser navigation ensures the
+       * HTTP-only session cookie is available
+       * when the destination page loads.
        */
-      window.location.assign(
-        callbackUrl,
-      );
+      window.location.assign(redirectTo);
     } catch (error) {
       console.error(
         "=================================",
