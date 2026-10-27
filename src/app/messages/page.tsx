@@ -102,7 +102,7 @@ type MessageReadPayload = {
 
 const SOCKET_URL =
   process.env.NEXT_PUBLIC_SOCKET_URL ||
-  "http://localhost:3000";
+  "https://matrimoni-socket.onrender.com";
 
 /*
  * =====================================================
