@@ -18,8 +18,7 @@ function calculateAge(
   const today = new Date();
 
   let age =
-    today.getFullYear() -
-    dob.getFullYear();
+    today.getFullYear() - dob.getFullYear();
 
   const monthDifference =
     today.getMonth() - dob.getMonth();
@@ -50,7 +49,7 @@ function getInitials(
   );
 }
 
-function getPhotos(photos: unknown) {
+function getPhotos(photos: unknown): string[] {
   if (!Array.isArray(photos)) {
     return [];
   }
@@ -87,24 +86,19 @@ export async function GET(
   try {
     const { id } = await context.params;
 
-    if (
-      !mongoose.Types.ObjectId.isValid(id)
-    ) {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
         {
           success: false,
           message: "Invalid profile ID",
         },
-        {
-          status: 400,
-        },
+        { status: 400 },
       );
     }
 
     await connectDB();
 
-    const db =
-      mongoose.connection.db;
+    const db = mongoose.connection.db;
 
     if (!db) {
       throw new Error(
@@ -112,20 +106,17 @@ export async function GET(
       );
     }
 
-    const user =
-      await db
-        .collection("users")
-        .findOne(
-          {
-            _id: new mongoose.Types.ObjectId(id),
-          },
-          {
-            projection: {
-              password: 0,
-              email: 0,
-            },
-          },
-        );
+    const user = await db.collection("users").findOne(
+      {
+        _id: new mongoose.Types.ObjectId(id),
+      },
+      {
+        projection: {
+          password: 0,
+          email: 0,
+        },
+      },
+    );
 
     if (!user) {
       return NextResponse.json(
@@ -133,9 +124,7 @@ export async function GET(
           success: false,
           message: "Profile not found",
         },
-        {
-          status: 404,
-        },
+        { status: 404 },
       );
     }
 
@@ -149,9 +138,7 @@ export async function GET(
         ? user.lastName
         : "";
 
-    const age = calculateAge(
-      user.dateOfBirth,
-    );
+    const age = calculateAge(user.dateOfBirth);
 
     const verified =
       Boolean(user.isEmailVerified) ||
@@ -168,24 +155,16 @@ export async function GET(
         "Unnamed profile",
 
       age,
+      dateOfBirth: user.dateOfBirth || null,
 
-      dateOfBirth:
-        user.dateOfBirth || null,
+      gender: user.gender || "",
+      profileFor: user.profileFor || "",
 
-      gender:
-        user.gender || "",
+      mobile: user.mobile || "",
+      isMobileVisible: Boolean(user.isMobileVisible),
 
-      profileFor:
-        user.profileFor || "",
-      
-      mobile:
-        user.mobile || "",
-
-      city:
-        user.city || "",
-
-      state:
-        user.state || "",
+      city: user.city || "",
+      state: user.state || "",
 
       location: [
         user.city,
@@ -194,107 +173,61 @@ export async function GET(
         .filter(Boolean)
         .join(", "),
 
-      religion:
-        user.religion || "",
+        // About Yourself
+      aboutYourself:
+      typeof user.aboutYourself === "string"
+        ? user.aboutYourself.trim()
+        : typeof user.about === "string"
+          ? user.about.trim()
+          : "",
+      // Basic details
+      religion: user.religion || "",
+      cast: user.cast || "",
+      motherTongue: user.motherTongue || "",
+      maritalStatus: user.maritalStatus || "",
 
-      motherTongue:
-        user.motherTongue || "",
+      // Education and career
+      education: user.education || "",
+      college: user.college || "",
+      profession: user.profession || "",
+      company: user.company || "",
+      income: user.income || "",
 
-      maritalStatus:
-        user.maritalStatus || "",
+      // Family
+      fatherOccupation: user.fatherOccupation || "",
+      motherOccupation: user.motherOccupation || "",
 
-      education:
-        user.education || "",
+      // Lifestyle
+      diet: user.diet || "",
+      smoking: user.smoking || "",
+      drinking: user.drinking || "",
 
-      college:
-        user.college || "",
-
-      profession:
-        user.profession || "",
-
-      company:
-        user.company || "",
-
-      income:
-        user.income || "",
-
-      familyType:
-        user.familyType || "",
-
-      familyValues:
-        user.familyValues || "",
-
-      fatherOccupation:
-        user.fatherOccupation || "",
-
-      motherOccupation:
-        user.motherOccupation || "",
-
-      siblings:
-        user.siblings || "",
-
-      lifestyle:
-        user.lifestyle || "",
-
-      diet:
-        user.diet || "",
-
-      smoking:
-        user.smoking || "",
-
-      drinking:
-        user.drinking || "",
-
-      partnerAgeMin:
-        user.partnerAgeMin || "",
-
-      partnerAgeMax:
-        user.partnerAgeMax || "",
-
-      partnerState:
-        user.partnerState || "",
-
-      partnerCity:
-        user.partnerCity || "",
-
-      partnerReligion:
-        user.partnerReligion || "",
-
-      partnerEducation:
-        user.partnerEducation || "",
-
-      partnerProfession:
-        user.partnerProfession || "",
-
+      // Partner preferences
+      partnerAgeMin: user.partnerAgeMin || "",
+      partnerAgeMax: user.partnerAgeMax || "",
+      partnerState: user.partnerState || "",
+      partnerCity: user.partnerCity || "",
+      partnerReligion: user.partnerReligion || "",
+      partnerCast: user.partnerCast || "",
+      partnerEducation: user.partnerEducation || "",
+      partnerProfession: user.partnerProfession || "",
       partnerMaritalStatus:
         user.partnerMaritalStatus || "",
 
-      partnerLifestyle:
-        user.partnerLifestyle || "",
-
+      // Photos
       photos: getPhotos(user.photos),
 
-      initials: getInitials(
-        firstName,
-        lastName,
-      ),
+      initials: getInitials(firstName, lastName),
 
+      // Verification
       verified,
 
-      isEmailVerified:
-        Boolean(user.isEmailVerified),
+      isEmailVerified: Boolean(user.isEmailVerified),
+      isMobileVerified: Boolean(user.isMobileVerified),
+      isProfileComplete: Boolean(user.isProfileComplete),
 
-      isMobileVerified:
-        Boolean(user.isMobileVerified),
-
-      isProfileComplete:
-        Boolean(user.isProfileComplete),
-
-      createdAt:
-        user.createdAt || null,
-
-      updatedAt:
-        user.updatedAt || null,
+      createdAt: user.createdAt || null,
+      updatedAt: user.updatedAt || null,
     };
 
     return NextResponse.json({
@@ -312,9 +245,7 @@ export async function GET(
         success: false,
         message: "Failed to fetch profile",
       },
-      {
-        status: 500,
-      },
+      { status: 500 },
     );
   }
-}
+} 

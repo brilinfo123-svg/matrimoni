@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+
 import {
   FiArrowRight,
   FiBriefcase,
@@ -35,7 +41,9 @@ type UserProfile = {
 
   state?: string;
   city?: string;
+
   religion?: string;
+  cast?: string;
   motherTongue?: string;
   maritalStatus?: string;
 
@@ -45,13 +53,9 @@ type UserProfile = {
   company?: string;
   income?: string;
 
-  familyType?: string;
-  familyValues?: string;
   fatherOccupation?: string;
   motherOccupation?: string;
-  siblings?: string;
 
-  lifestyle?: string;
   diet?: string;
   smoking?: string;
   drinking?: string;
@@ -61,17 +65,18 @@ type UserProfile = {
   partnerState?: string;
   partnerCity?: string;
   partnerReligion?: string;
+  partnerCast?: string;
   partnerEducation?: string;
   partnerProfession?: string;
   partnerMaritalStatus?: string;
-  partnerLifestyle?: string;
 
   photos?: string[];
 
+  isMobileVisible?: boolean;
+  isActive?: boolean;
   isEmailVerified?: boolean;
   isMobileVerified?: boolean;
   isProfileComplete?: boolean;
-  isActive?: boolean;
 
   createdAt?: string;
   updatedAt?: string;
@@ -84,9 +89,7 @@ type MeResponse = {
 };
 
 function calculateAge(dateOfBirth?: string) {
-  if (!dateOfBirth) {
-    return null;
-  }
+  if (!dateOfBirth) return null;
 
   const birthDate = new Date(dateOfBirth);
 
@@ -97,12 +100,10 @@ function calculateAge(dateOfBirth?: string) {
   const today = new Date();
 
   let age =
-    today.getFullYear() -
-    birthDate.getFullYear();
+    today.getFullYear() - birthDate.getFullYear();
 
   const monthDifference =
-    today.getMonth() -
-    birthDate.getMonth();
+    today.getMonth() - birthDate.getMonth();
 
   if (
     monthDifference < 0 ||
@@ -112,7 +113,7 @@ function calculateAge(dateOfBirth?: string) {
     age--;
   }
 
-  return age;
+  return age >= 0 ? age : null;
 }
 
 function formatLocation(
@@ -120,7 +121,7 @@ function formatLocation(
   state?: string,
 ) {
   return [city, state]
-    .filter(Boolean)
+    .filter((value) => Boolean(value?.trim()))
     .join(", ");
 }
 
@@ -131,10 +132,27 @@ function formatValue(
   return value?.trim() || fallback;
 }
 
+function formatProfileFor(value?: string) {
+  if (!value) return "Not specified";
+
+  const labels: Record<string, string> = {
+    self: "Myself",
+    son: "Son",
+    daughter: "Daughter",
+    brother: "Brother",
+    sister: "Sister",
+    friend: "Friend",
+    relative: "Relative",
+  };
+
+  return (
+    labels[value.toLowerCase()] ||
+    value.replace(/[_-]/g, " ")
+  );
+}
+
 function formatMaritalStatus(value?: string) {
-  if (!value) {
-    return "Not specified";
-  }
+  if (!value) return "Not specified";
 
   const statusMap: Record<string, string> = {
     never_married: "Never married",
@@ -158,17 +176,9 @@ function formatAgeRange(
   min?: string,
   max?: string,
 ) {
-  if (min && max) {
-    return `${min} – ${max} years`;
-  }
-
-  if (min) {
-    return `${min}+ years`;
-  }
-
-  if (max) {
-    return `Up to ${max} years`;
-  }
+  if (min && max) return `${min} – ${max} years`;
+  if (min) return `${min}+ years`;
+  if (max) return `Up to ${max} years`;
 
   return "Not specified";
 }
@@ -180,10 +190,43 @@ function getInitials(
   const first = firstName?.trim()?.[0] || "";
   const last = lastName?.trim()?.[0] || "";
 
-  return (
-    `${first}${last}`.toUpperCase() ||
-    "U"
-  );
+  return `${first}${last}`.toUpperCase() || "U";
+}
+
+/**
+ * Calculate completion from the profile fields
+ * actually available in the User model.
+ */
+function calculateProfileCompletion(
+  profile: UserProfile,
+) {
+  const checks = [
+    Boolean(profile.firstName?.trim()),
+    Boolean(profile.lastName?.trim()),
+    Boolean(profile.gender?.trim()),
+    Boolean(profile.dateOfBirth?.trim()),
+    Boolean(profile.state?.trim()),
+    Boolean(profile.city?.trim()),
+    Boolean(profile.religion?.trim()),
+    Boolean(profile.cast?.trim()),
+    Boolean(profile.motherTongue?.trim()),
+    Boolean(profile.maritalStatus?.trim()),
+    Boolean(profile.education?.trim()),
+    Boolean(profile.college?.trim()),
+    Boolean(profile.profession?.trim()),
+    Boolean(profile.company?.trim()),
+    Boolean(profile.income?.trim()),
+    Boolean(profile.fatherOccupation?.trim()),
+    Boolean(profile.motherOccupation?.trim()),
+    Boolean(profile.diet?.trim()),
+    Boolean(profile.smoking?.trim()),
+    Boolean(profile.drinking?.trim()),
+    Boolean(profile.photos?.length),
+  ];
+
+  const completed = checks.filter(Boolean).length;
+
+  return Math.round((completed / checks.length) * 100);
 }
 
 function DetailItem({
@@ -206,7 +249,7 @@ function SectionHeader({
   title,
   action = false,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   action?: boolean;
 }) {
@@ -238,35 +281,11 @@ function ProfileSkeleton() {
     <div className={styles.page}>
       <div className={styles.container}>
         <div className={styles.profileSkeleton}>
-          <div
-            className={
-              styles.skeletonHeader
-            }
-          />
-
-          <div
-            className={
-              styles.skeletonHero
-            }
-          />
-
-          <div
-            className={
-              styles.skeletonCard
-            }
-          />
-
-          <div
-            className={
-              styles.skeletonCard
-            }
-          />
-
-          <div
-            className={
-              styles.skeletonCard
-            }
-          />
+          <div className={styles.skeletonHeader} />
+          <div className={styles.skeletonHero} />
+          <div className={styles.skeletonCard} />
+          <div className={styles.skeletonCard} />
+          <div className={styles.skeletonCard} />
         </div>
       </div>
     </div>
@@ -277,11 +296,8 @@ export default function ProfilePage() {
   const [profile, setProfile] =
     useState<UserProfile | null>(null);
 
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -291,14 +307,11 @@ export default function ProfilePage() {
         setLoading(true);
         setError("");
 
-        const response = await fetch(
-          "/api/auth/me",
-          {
-            method: "GET",
-            credentials: "include",
-            cache: "no-store",
-          },
-        );
+        const response = await fetch("/api/auth/me", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
 
         const data: MeResponse =
           await response.json();
@@ -313,16 +326,13 @@ export default function ProfilePage() {
         if (!cancelled) {
           setProfile(data.user || null);
         }
-      } catch (error) {
-        console.error(
-          "PROFILE_LOAD_ERROR:",
-          error,
-        );
+      } catch (err) {
+        console.error("PROFILE_LOAD_ERROR:", err);
 
         if (!cancelled) {
           setError(
-            error instanceof Error
-              ? error.message
+            err instanceof Error
+              ? err.message
               : "Something went wrong while loading your profile.",
           );
         }
@@ -341,10 +351,7 @@ export default function ProfilePage() {
   }, []);
 
   const age = useMemo(
-    () =>
-      calculateAge(
-        profile?.dateOfBirth,
-      ),
+    () => calculateAge(profile?.dateOfBirth),
     [profile?.dateOfBirth],
   );
 
@@ -354,28 +361,13 @@ export default function ProfilePage() {
         profile?.firstName,
         profile?.lastName,
       ),
-    [
-      profile?.firstName,
-      profile?.lastName,
-    ],
+    [profile?.firstName, profile?.lastName],
   );
 
   const location = useMemo(
-    () =>
-      formatLocation(
-        profile?.city,
-        profile?.state,
-      ),
-    [
-      profile?.city,
-      profile?.state,
-    ],
+    () => formatLocation(profile?.city, profile?.state),
+    [profile?.city, profile?.state],
   );
-
-  const completion = profile
-    ?.isProfileComplete
-    ? 100
-    : 78;
 
   if (loading) {
     return <ProfileSkeleton />;
@@ -388,17 +380,12 @@ export default function ProfilePage() {
           <div className={styles.errorCard}>
             <FiShield />
 
-            <h2>
-              Unable to load profile
-            </h2>
-
+            <h2>Unable to load profile</h2>
             <p>{error}</p>
 
             <button
               type="button"
-              onClick={() =>
-                window.location.reload()
-              }
+              onClick={() => window.location.reload()}
             >
               Try again
             </button>
@@ -415,13 +402,10 @@ export default function ProfilePage() {
           <div className={styles.errorCard}>
             <FiUser />
 
-            <h2>
-              Profile not found
-            </h2>
+            <h2>Profile not found</h2>
 
             <p>
-              We couldn't find your profile
-              information.
+              We couldn't find your profile information.
             </p>
 
             <Link href="/dashboard">
@@ -438,145 +422,147 @@ export default function ProfilePage() {
       profile.lastName || ""
     }`.trim() || "User";
 
-  const verified =
-    Boolean(
-      profile.isEmailVerified ||
-        profile.isMobileVerified,
-    );
+  const verified = Boolean(
+    profile.isEmailVerified ||
+      profile.isMobileVerified,
+  );
+
+  const completion =
+    calculateProfileCompletion(profile);
 
   const basicDetails = [
     {
-      label: "Age",
-      value: age
-        ? `${age} years`
-        : "Not specified",
+      label: "Profile created for",
+      value: formatProfileFor(profile.profileFor),
     },
     {
-      label: "Height",
-      value: "Not specified",
+      label: "Age",
+      value: age !== null ? `${age} years` : "Not specified",
+    },
+    {
+      label: "Gender",
+      value: formatValue(profile.gender),
+    },
+    {
+      label: "Date of birth",
+      value: formatValue(profile.dateOfBirth),
     },
     {
       label: "Marital status",
-      value: formatMaritalStatus(
-        profile.maritalStatus,
-      ),
+      value: formatMaritalStatus(profile.maritalStatus),
+    },
+    {
+      label: "Religion",
+      value: formatValue(profile.religion),
+    },
+    {
+      label: "Caste / Community",
+      value: formatValue(profile.cast),
     },
     {
       label: "Mother tongue",
-      value: formatValue(
-        profile.motherTongue,
-      ),
+      value: formatValue(profile.motherTongue),
+    },
+    {
+      label: "Email",
+      value: formatValue(profile.email),
+    },
+    {
+      label: "Mobile",
+      value: formatValue(profile.mobile),
     },
   ];
 
   const educationDetails = [
     {
       label: "Highest education",
-      value: formatValue(
-        profile.education,
-      ),
+      value: formatValue(profile.education),
     },
     {
-      label: "Field of study",
-      value: "Not specified",
-    },
-    {
-      label: "Institute",
-      value: formatValue(
-        profile.college,
-      ),
+      label: "College / Institute",
+      value: formatValue(profile.college),
     },
   ];
 
   const careerDetails = [
     {
       label: "Profession",
-      value: formatValue(
-        profile.profession,
-      ),
+      value: formatValue(profile.profession),
     },
     {
-      label: "Employment",
-      value: profile.company
-        ? `At ${profile.company}`
-        : "Not specified",
+      label: "Company",
+      value: formatValue(profile.company),
     },
     {
-      label: "Industry",
-      value: "Technology",
+      label: "Annual income",
+      value: formatValue(profile.income),
     },
   ];
 
   const familyDetails = [
     {
-      label: "Family type",
-      value: formatValue(
-        profile.familyType,
-      ),
+      label: "Father's occupation",
+      value: formatValue(profile.fatherOccupation),
+    },
+    {
+      label: "Mother's occupation",
+      value: formatValue(profile.motherOccupation),
     },
     {
       label: "Family location",
-      value: formatLocation(
-        profile.city,
-        profile.state,
-      ) || "Not specified",
-    },
-    {
-      label: "Siblings",
-      value: formatValue(
-        profile.siblings,
-      ),
+      value: location || "Not specified",
     },
   ];
 
   const lifestyleDetails = [
     {
       label: "Diet",
-      value: formatValue(
-        profile.diet,
-      ),
+      value: formatValue(profile.diet),
     },
     {
       label: "Smoking",
-      value: formatValue(
-        profile.smoking,
-      ),
+      value: formatValue(profile.smoking),
     },
     {
       label: "Drinking",
-      value: formatValue(
-        profile.drinking,
-      ),
+      value: formatValue(profile.drinking),
     },
   ];
 
   const partnerPreferences = [
     {
-      label: "Age",
+      label: "Preferred age",
       value: formatAgeRange(
         profile.partnerAgeMin,
         profile.partnerAgeMax,
       ),
     },
     {
-      label: "Location",
-      value:
-        formatLocation(
-          profile.partnerCity,
-          profile.partnerState,
-        ) ||
-        formatValue(
-          profile.partnerState,
-        ),
+      label: "Preferred state",
+      value: formatValue(profile.partnerState),
     },
     {
-      label: "Education",
-      value: formatValue(
-        profile.partnerEducation,
-      ),
+      label: "Preferred city",
+      value: formatValue(profile.partnerCity),
     },
     {
-      label: "Marital status",
+      label: "Preferred religion",
+      value: formatValue(profile.partnerReligion),
+    },
+    {
+      label: "Preferred caste / community",
+      value: formatValue(profile.partnerCast),
+    },
+    {
+      label: "Preferred education",
+      value: formatValue(profile.partnerEducation),
+    },
+    {
+      label: "Preferred profession",
+      value: formatValue(profile.partnerProfession),
+    },
+    {
+      label: "Preferred marital status",
       value: formatMaritalStatus(
         profile.partnerMaritalStatus,
       ),
@@ -585,37 +571,23 @@ export default function ProfilePage() {
 
   return (
     <div className={styles.page}>
-      <div
-        className={
-          styles.backgroundGlow
-        }
-      />
-
-      <div
-        className={
-          styles.backgroundGlowTwo
-        }
-      />
+      <div className={styles.backgroundGlow} />
+      <div className={styles.backgroundGlowTwo} />
 
       <div className={styles.container}>
-        {/* ================= HEADER ================= */}
+        {/* HEADER */}
 
-        <header
-          className={styles.pageHeader}
-        >
+        <header className={styles.pageHeader}>
           <div>
-            <span
-              className={styles.eyebrow}
-            >
+            <span className={styles.eyebrow}>
               My profile
             </span>
 
             <h1>Your profile</h1>
 
             <p>
-              This is how your profile
-              appears to people you
-              connect with.
+              Review your personal details and partner
+              preferences.
             </p>
           </div>
 
@@ -628,534 +600,272 @@ export default function ProfilePage() {
           </Link>
         </header>
 
-        {/* ================= HERO ================= */}
+        {/* PROFILE HERO */}
 
-        <section
-          className={styles.profileHero}
-        >
-          <div
-            className={styles.profileMain}
-          >
-            <div
-              className={
-                styles.photoWrapper
-              }
-            >
-              <div
-                className={
-                  styles.profilePhoto
-                }
-              >
+        <section className={styles.profileHero}>
+          <div className={styles.profileMain}>
+            <div className={styles.photoWrapper}>
+              <div className={styles.profilePhoto}>
                 {profile.photos?.[0] ? (
                   <img
-                    src={
-                      profile.photos[0]
-                    }
+                    src={profile.photos[0]}
                     alt={fullName}
                   />
                 ) : (
-                  <span>
-                    {initials}
-                  </span>
+                  <span>{initials}</span>
                 )}
               </div>
 
               {verified && (
                 <span
-                  className={
-                    styles.verifiedBadge
-                  }
-                  title="Verified profile"
+                  className={styles.verifiedBadge}
+                  title="Email or phone verified"
                 >
                   <FiCheck aria-hidden="true" />
                 </span>
               )}
-
-              <span
-                className={
-                  styles.onlineDot
-                }
-              />
             </div>
 
-            <div
-              className={
-                styles.profileIdentity
-              }
-            >
-              <div
-                className={
-                  styles.nameRow
-                }
-              >
+            <div className={styles.profileIdentity}>
+              <div className={styles.nameRow}>
                 <h2>{fullName}</h2>
 
                 {verified && (
-                  <span
-                    className={
-                      styles.verifiedText
-                    }
-                  >
+                  <span className={styles.verifiedText}>
                     <FiShield aria-hidden="true" />
                     Verified
                   </span>
                 )}
               </div>
 
-              <p
-                className={
-                  styles.profileMeta
-                }
-              >
-                {age
+              <p className={styles.profileMeta}>
+                {age !== null
                   ? `${age} years`
                   : "Age not specified"}
 
                 <span>•</span>
 
-                {formatValue(
-                  profile.profession,
-                )}
+                {formatValue(profile.profession)}
               </p>
 
-              <div
-                className={
-                  styles.location
-                }
-              >
+              <div className={styles.location}>
                 <FiMapPin aria-hidden="true" />
 
                 <span>
-                  {location ||
-                    "Location not specified"}
+                  {location || "Location not specified"}
                 </span>
               </div>
 
-              <div
-                className={
-                  styles.profileTags
-                }
-              >
+              <div className={styles.profileTags}>
                 <span>
                   <FiHeart aria-hidden="true" />
-
-                  Looking for a meaningful
-                  relationship
+                  {formatValue(profile.religion)}
+                  {profile.cast
+                    ? ` · ${profile.cast}`
+                    : ""}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* ================= COMPLETION ================= */}
+          {/* PROFILE COMPLETION */}
 
-          <div
-            className={styles.completion}
-          >
-            <div
-              className={
-                styles.completionTop
-              }
-            >
+          <div className={styles.completion}>
+            <div className={styles.completionTop}>
               <div>
-                <span>
-                  Profile completion
-                </span>
-
-                <strong>
-                  {completion}%
-                </strong>
+                <span>Profile completion</span>
+                <strong>{completion}%</strong>
               </div>
 
-              <span
-                className={
-                  styles.completionIcon
-                }
-              >
+              <span className={styles.completionIcon}>
                 <FiStar aria-hidden="true" />
               </span>
             </div>
 
-            <div
-              className={
-                styles.progressTrack
-              }
-            >
+            <div className={styles.progressTrack}>
               <div
-                className={
-                  styles.progressBar
-                }
-                style={{
-                  width: `${completion}%`,
-                }}
+                className={styles.progressBar}
+                style={{ width: `${completion}%` }}
               />
             </div>
 
-            {!profile.isProfileComplete && (
+            {completion < 100 && (
               <Link
                 href="/edit"
-                className={
-                  styles.completeLink
-                }
+                className={styles.completeLink}
               >
                 Complete your profile
-
                 <FiArrowRight aria-hidden="true" />
               </Link>
             )}
           </div>
         </section>
 
-        {/* ================= CONTENT ================= */}
+        {/* CONTENT */}
 
         <div className={styles.layout}>
-          <main
-            className={
-              styles.mainContent
-            }
-          >
+          <main className={styles.mainContent}>
             {/* BASIC DETAILS */}
 
-            <section
-              className={styles.card}
-            >
+            <section className={styles.card}>
               <SectionHeader
-                icon={
-                  <FiUser aria-hidden="true" />
-                }
+                icon={<FiUser aria-hidden="true" />}
                 title="Basic details"
                 action
               />
 
-              <div
-                className={
-                  styles.detailsGrid
-                }
-              >
-                {basicDetails.map(
-                  (item) => (
-                    <DetailItem
-                      key={item.label}
-                      label={
-                        item.label
-                      }
-                      value={
-                        item.value
-                      }
-                    />
-                  ),
-                )}
+              <div className={styles.detailsGrid}>
+                {basicDetails.map((item) => (
+                  <DetailItem
+                    key={item.label}
+                    label={item.label}
+                    value={item.value}
+                  />
+                ))}
               </div>
             </section>
 
-            {/* ABOUT */}
+            {/* EDUCATION AND CAREER */}
 
-            <section
-              className={styles.card}
-            >
+            <section className={styles.card}>
               <SectionHeader
-                icon={
-                  <FiHeart aria-hidden="true" />
-                }
-                title="About me"
-                action
-              />
-
-              <p
-                className={
-                  styles.aboutText
-                }
-              >
-                No about information
-                has been added yet.
-              </p>
-            </section>
-
-            {/* EDUCATION + CAREER */}
-
-            <section
-              className={styles.card}
-            >
-              <SectionHeader
-                icon={
-                  <FiBriefcase aria-hidden="true" />
-                }
+                icon={<FiBriefcase aria-hidden="true" />}
                 title="Education & career"
                 action
               />
 
-              <div
-                className={
-                  styles.subsection
-                }
-              >
+              <div className={styles.subsection}>
                 <h3>Education</h3>
 
-                <div
-                  className={
-                    styles.detailsGrid
-                  }
-                >
-                  {educationDetails.map(
-                    (item) => (
-                      <DetailItem
-                        key={
-                          item.label
-                        }
-                        label={
-                          item.label
-                        }
-                        value={
-                          item.value
-                        }
-                      />
-                    ),
-                  )}
+                <div className={styles.detailsGrid}>
+                  {educationDetails.map((item) => (
+                    <DetailItem
+                      key={item.label}
+                      label={item.label}
+                      value={item.value}
+                    />
+                  ))}
                 </div>
               </div>
 
-              <div
-                className={
-                  styles.divider
-                }
-              />
+              <div className={styles.divider} />
 
-              <div
-                className={
-                  styles.subsection
-                }
-              >
+              <div className={styles.subsection}>
                 <h3>Career</h3>
 
-                <div
-                  className={
-                    styles.detailsGrid
-                  }
-                >
-                  {careerDetails.map(
-                    (item) => (
-                      <DetailItem
-                        key={
-                          item.label
-                        }
-                        label={
-                          item.label
-                        }
-                        value={
-                          item.value
-                        }
-                      />
-                    ),
-                  )}
+                <div className={styles.detailsGrid}>
+                  {careerDetails.map((item) => (
+                    <DetailItem
+                      key={item.label}
+                      label={item.label}
+                      value={item.value}
+                    />
+                  ))}
                 </div>
               </div>
             </section>
 
             {/* FAMILY */}
 
-            <section
-              className={styles.card}
-            >
+            <section className={styles.card}>
               <SectionHeader
-                icon={
-                  <FiUsers aria-hidden="true" />
-                }
+                icon={<FiUsers aria-hidden="true" />}
                 title="Family"
                 action
               />
 
-              <div
-                className={
-                  styles.detailsGrid
-                }
-              >
-                {familyDetails.map(
-                  (item) => (
-                    <DetailItem
-                      key={
-                        item.label
-                      }
-                      label={
-                        item.label
-                      }
-                      value={
-                        item.value
-                      }
-                    />
-                  ),
-                )}
+              <div className={styles.detailsGrid}>
+                {familyDetails.map((item) => (
+                  <DetailItem
+                    key={item.label}
+                    label={item.label}
+                    value={item.value}
+                  />
+                ))}
               </div>
             </section>
 
             {/* LIFESTYLE */}
 
-            <section
-              className={styles.card}
-            >
+            <section className={styles.card}>
               <SectionHeader
-                icon={
-                  <FiHome aria-hidden="true" />
-                }
+                icon={<FiHome aria-hidden="true" />}
                 title="Lifestyle"
                 action
               />
 
-              <div
-                className={
-                  styles.detailsGrid
-                }
-              >
-                {lifestyleDetails.map(
-                  (item) => (
-                    <DetailItem
-                      key={
-                        item.label
-                      }
-                      label={
-                        item.label
-                      }
-                      value={
-                        item.value
-                      }
-                    />
-                  ),
-                )}
-              </div>
-            </section>
-
-            {/* INTERESTS */}
-
-            <section
-              className={styles.card}
-            >
-              <SectionHeader
-                icon={
-                  <FiStar aria-hidden="true" />
-                }
-                title="Interests & hobbies"
-                action
-              />
-
-              <div
-                className={
-                  styles.interests
-                }
-              >
-                <span>
-                  No interests added
-                  yet
-                </span>
+              <div className={styles.detailsGrid}>
+                {lifestyleDetails.map((item) => (
+                  <DetailItem
+                    key={item.label}
+                    label={item.label}
+                    value={item.value}
+                  />
+                ))}
               </div>
             </section>
 
             {/* PARTNER PREFERENCES */}
 
-            <section
-              className={styles.card}
-            >
+            <section className={styles.card}>
               <SectionHeader
-                icon={
-                  <FiHeart aria-hidden="true" />
-                }
+                icon={<FiHeart aria-hidden="true" />}
                 title="Partner preferences"
                 action
               />
 
-              <p
-                className={
-                  styles.preferenceIntro
-                }
-              >
-                The kind of person you
-                would like to connect
-                with.
+              <p className={styles.preferenceIntro}>
+                Your saved preferences for a potential
+                life partner.
               </p>
 
-              <div
-                className={
-                  styles.detailsGrid
-                }
-              >
-                {partnerPreferences.map(
-                  (item) => (
-                    <DetailItem
-                      key={
-                        item.label
-                      }
-                      label={
-                        item.label
-                      }
-                      value={
-                        item.value
-                      }
-                    />
-                  ),
-                )}
+              <div className={styles.detailsGrid}>
+                {partnerPreferences.map((item) => (
+                  <DetailItem
+                    key={item.label}
+                    label={item.label}
+                    value={item.value}
+                  />
+                ))}
               </div>
 
               <Link
                 href="/edit"
-                className={
-                  styles.preferenceButton
-                }
+                className={styles.preferenceButton}
               >
-                Manage partner
-                preferences
-
+                Manage partner preferences
                 <FiChevronRight aria-hidden="true" />
               </Link>
             </section>
           </main>
 
-          {/* ================= SIDEBAR ================= */}
+          {/* SIDEBAR */}
 
-          <aside
-            className={styles.sidebar}
-          >
-            <section
-              className={
-                styles.sideCard
-              }
-            >
-              <div
-                className={
-                  styles.sideIcon
-                }
-              >
+          <aside className={styles.sidebar}>
+            {/* VERIFICATION */}
+
+            <section className={styles.sideCard}>
+              <div className={styles.sideIcon}>
                 <FiShield aria-hidden="true" />
               </div>
 
-              <span
-                className={
-                  styles.sideEyebrow
-                }
-              >
+              <span className={styles.sideEyebrow}>
                 Profile trust
               </span>
 
               <h3>
-                Build confidence with
-                verification
+                Your verification status
               </h3>
 
               <p>
-                Verified information can
-                help other members
-                understand that your
-                profile is genuine.
+                Your verification indicators reflect the
+                information saved on your account.
               </p>
 
-              <div
-                className={
-                  styles.verificationList
-                }
-              >
+              <div className={styles.verificationList}>
                 {/* EMAIL */}
 
-                <div
-                  className={
-                    styles.verificationItem
-                  }
-                >
+                <div className={styles.verificationItem}>
                   <span
                     className={
                       profile.isEmailVerified
@@ -1171,26 +881,18 @@ export default function ProfilePage() {
                   </span>
 
                   <div>
-                    <strong>
-                      Email
-                    </strong>
-
+                    <strong>Email</strong>
                     <span>
                       {profile.isEmailVerified
                         ? "Verified"
-                        : "Verified"}
-                        {/* // : "Not verified" */}
+                        : "Not verified"}
                     </span>
                   </div>
                 </div>
 
                 {/* PHONE */}
 
-                <div
-                  className={
-                    styles.verificationItem
-                  }
-                >
+                <div className={styles.verificationItem}>
                   <span
                     className={
                       profile.isMobileVerified
@@ -1206,43 +908,11 @@ export default function ProfilePage() {
                   </span>
 
                   <div>
-                    <strong>
-                      Phone
-                    </strong>
-
+                    <strong>Phone</strong>
                     <span>
                       {profile.isMobileVerified
                         ? "Verified"
-                        : "Verified"}
-                        {/* // : "Not verified" */}
-                    </span>
-                  </div>
-                </div>
-
-                {/* IDENTITY */}
-
-                <div
-                  className={
-                    styles.verificationItem
-                  }
-                >
-                  <span
-                    className={
-                      styles.pending
-                    }
-                  >
-                    <FiShield aria-hidden="true" />
-                  </span>
-
-                  <div>
-                    <strong>
-                      Identity
-                    </strong>
-
-                    <span>
-                    Verified
-                    {/* // : "Not verified" */}
-                      {/* Not verified */}
+                        : "Not verified"}
                     </span>
                   </div>
                 </div>
@@ -1250,49 +920,33 @@ export default function ProfilePage() {
 
               <Link
                 href="/dashboard/verification"
-                className={
-                  styles.sideButton
-                }
+                className={styles.sideButton}
               >
                 Manage verification
-
                 <FiArrowRight aria-hidden="true" />
               </Link>
             </section>
 
             {/* PRIVACY */}
 
-            <section
-              className={
-                styles.privacyCard
-              }
-            >
-              <span
-                className={
-                  styles.privacyIcon
-                }
-              >
+            <section className={styles.privacyCard}>
+              <span className={styles.privacyIcon}>
                 <FiLock aria-hidden="true" />
               </span>
 
               <div>
                 <strong>
-                  Your privacy, your
-                  choice.
+                  Your privacy, your choice.
                 </strong>
 
                 <p>
-                  Control who can discover
-                  your profile and what
-                  information you share.
+                  Control who can discover your profile
+                  and what information you share.
                 </p>
               </div>
 
-              <Link
-                href="/settings"
-              >
+              <Link href="/settings">
                 Privacy settings
-
                 <FiChevronRight aria-hidden="true" />
               </Link>
             </section>

@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       city,
 
       religion,
+      cast,
       motherTongue,
       maritalStatus,
 
@@ -32,14 +33,9 @@ export async function POST(request: Request) {
       profession,
       company,
       income,
-
-      familyType,
-      familyValues,
       fatherOccupation,
       motherOccupation,
-      siblings,
-
-      lifestyle,
+      aboutYourself,
       diet,
       smoking,
       drinking,
@@ -51,14 +47,15 @@ export async function POST(request: Request) {
       partnerCity,
 
       partnerReligion,
+      partnerCast,
       partnerEducation,
       partnerProfession,
       partnerMaritalStatus,
-      partnerLifestyle,
 
       photos,
     } = body;
 
+    // Required fields validation
     if (!profileFor) {
       return NextResponse.json(
         {
@@ -69,7 +66,14 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!email || !password || !mobile) {
+    if (
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      typeof mobile !== "string" ||
+      !email.trim() ||
+      !password ||
+      !mobile.trim()
+    ) {
       return NextResponse.json(
         {
           success: false,
@@ -93,14 +97,16 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Password must contain at least 8 characters.",
+          message: "Password must contain at least 8 characters.",
         },
         { status: 400 },
       );
     }
 
-    if (!/^\d{10}$/.test(mobile)) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedMobile = mobile.trim();
+
+    if (!/^\d{10}$/.test(normalizedMobile)) {
       return NextResponse.json(
         {
           success: false,
@@ -112,25 +118,11 @@ export async function POST(request: Request) {
 
     await connectDB();
 
-    const normalizedEmail =
-        typeof email === "string"
-          ? email.trim().toLowerCase()
-          : "";
-
-      if (!normalizedEmail || !password || !mobile) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: "Email, mobile and password are required.",
-          },
-          { status: 400 },
-        );
-      }
-
+    // Check for an existing email or mobile number
     const existingUser = await User.findOne({
       $or: [
         { email: normalizedEmail },
-        { mobile: mobile.trim() },
+        { mobile: normalizedMobile },
       ],
     });
 
@@ -145,7 +137,7 @@ export async function POST(request: Request) {
         );
       }
 
-      if (existingUser.mobile === mobile.trim()) {
+      if (existingUser.mobile === normalizedMobile) {
         return NextResponse.json(
           {
             success: false,
@@ -159,11 +151,12 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // Create the user
     const user = await User.create({
       profileFor,
 
       email: normalizedEmail,
-      mobile: mobile.trim(),
+      mobile: normalizedMobile,
       password: hashedPassword,
 
       firstName,
@@ -175,6 +168,7 @@ export async function POST(request: Request) {
       city,
 
       religion,
+      cast: typeof cast === "string" ? cast.trim() : "",
       motherTongue,
       maritalStatus,
 
@@ -184,13 +178,11 @@ export async function POST(request: Request) {
       company,
       income,
 
-      familyType,
-      familyValues,
       fatherOccupation,
       motherOccupation,
-      siblings,
-
-      lifestyle,
+      aboutYourself:
+      typeof aboutYourself === "string" ? aboutYourself.trim().slice(0, 1000) : "",
+      
       diet,
       smoking,
       drinking,
@@ -202,10 +194,10 @@ export async function POST(request: Request) {
       partnerCity,
 
       partnerReligion,
+      partnerCast: typeof partnerCast === "string" ? partnerCast.trim() : "",
       partnerEducation,
       partnerProfession,
       partnerMaritalStatus,
-      partnerLifestyle,
 
       photos: Array.isArray(photos) ? photos : [],
 

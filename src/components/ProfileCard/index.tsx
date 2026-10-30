@@ -29,6 +29,7 @@ export type Profile = {
   maritalStatus: string;
 
   religion?: string;
+  cast?: string;
   motherTongue?: string;
   company?: string;
   college?: string;
@@ -135,7 +136,9 @@ export default function ProfileCard({
           {profile.profession && (
             <>
               <span>•</span>
-              {profile.profession}
+              {profile.cast && (
+             <>{profile.cast}</>
+          )}
             </>
           )}
         </p>
@@ -161,6 +164,9 @@ export default function ProfileCard({
           {profile.religion && (
             <span>{profile.religion}</span>
           )}
+          {/* {profile.cast && (
+            <span>{profile.cast}</span>
+          )} */}
         </div>
 
         {/* Actions */}

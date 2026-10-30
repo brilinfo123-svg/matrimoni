@@ -419,6 +419,7 @@ export async function GET() {
             user.maritalStatus || "Not specified",
 
           religion: user.religion || "",
+          cast: user.cast || "",
           motherTongue: user.motherTongue || "",
           company: user.company || "",
           college: user.college || "",

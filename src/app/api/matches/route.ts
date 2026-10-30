@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import mongoose from "mongoose";
@@ -6,10 +7,11 @@ import { connectDB } from "@/lib/mongodb";
 import { verifyAuthToken } from "@/lib/auth";
 
 type UserDocument = {
+  _id: mongoose.Types.ObjectId;
   mobile: string;
+
   isMobileVisible?: boolean;
   isActive?: boolean;
-  _id: mongoose.Types.ObjectId;
 
   firstName?: string;
   lastName?: string;
@@ -21,6 +23,7 @@ type UserDocument = {
   city?: string;
 
   religion?: string;
+  cast?: string;
   motherTongue?: string;
   maritalStatus?: string;
 
@@ -38,6 +41,7 @@ type UserDocument = {
   smoking?: string;
   drinking?: string;
 
+  aboutYourself?: string;
   about?: string;
 
   photos?: unknown[];
@@ -83,102 +87,50 @@ type UserDocument = {
   };
 };
 
-/*
- * ============================================
- * Normalize Text
- * ============================================
- */
+/* Normalize text */
 
 function normalize(value: unknown): string {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase();
+  return String(value ?? "").trim().toLowerCase();
 }
 
-/*
- * ============================================
- * Normalize Gender
- * ============================================
- *
- * Database may contain:
- *
- * male
- * Male
- * man
- *
- * female
- * Female
- * woman
- *
- * We convert everything to male/female.
- * ============================================
- */
+/* Normalize gender */
 
 function normalizeGender(
   gender: unknown,
 ): "male" | "female" | null {
   const value = normalize(gender);
 
-  if (
-    [
-      "male",
-      "man",
-      "boy",
-      "men",
-      "m",
-    ].includes(value)
-  ) {
+  if (["male", "man", "boy", "men", "m"].includes(value)) {
     return "male";
   }
 
-  if (
-    [
-      "female",
-      "woman",
-      "girl",
-      "women",
-      "f",
-    ].includes(value)
-  ) {
+  if (["female", "woman", "girl", "women", "f"].includes(value)) {
     return "female";
   }
 
   return null;
 }
 
-/*
- * ============================================
- * Calculate Age
- * ============================================
- */
+/* Calculate age */
 
 function calculateAge(
   dateOfBirth: string | Date | undefined,
 ): number | null {
-  if (!dateOfBirth) {
-    return null;
-  }
+  if (!dateOfBirth) return null;
 
   const dob = new Date(dateOfBirth);
 
-  if (Number.isNaN(dob.getTime())) {
-    return null;
-  }
+  if (Number.isNaN(dob.getTime())) return null;
 
   const today = new Date();
 
-  let age =
-    today.getFullYear() -
-    dob.getFullYear();
+  let age = today.getFullYear() - dob.getFullYear();
 
-  const monthDifference =
-    today.getMonth() -
-    dob.getMonth();
+  const monthDifference = today.getMonth() - dob.getMonth();
 
   if (
     monthDifference < 0 ||
-    (monthDifference === 0 &&
-      today.getDate() < dob.getDate())
+    (monthDifference === 0 && today.getDate() < dob.getDate())
   ) {
     age--;
   }
@@ -186,38 +138,22 @@ function calculateAge(
   return age;
 }
 
-/*
- * ============================================
- * Get Initials
- * ============================================
- */
+/* Get initials */
 
 function getInitials(
   firstName?: string,
   lastName?: string,
 ): string {
-  const first =
-    firstName?.trim()?.charAt(0) || "";
+  const first = firstName?.trim().charAt(0) || "";
+  const last = lastName?.trim().charAt(0) || "";
 
-  const last =
-    lastName?.trim()?.charAt(0) || "";
-
-  return (
-    `${first}${last}`.toUpperCase() || "U"
-  );
+  return `${first}${last}`.toUpperCase() || "U";
 }
 
-/*
- * ============================================
- * Get First Photo
- * ============================================
- */
+/* Get first photo */
 
-function getPhoto(photos: unknown) {
-  if (
-    !Array.isArray(photos) ||
-    photos.length === 0
-  ) {
+function getPhoto(photos: unknown): string | null {
+  if (!Array.isArray(photos) || photos.length === 0) {
     return null;
   }
 
@@ -227,38 +163,34 @@ function getPhoto(photos: unknown) {
     return firstPhoto;
   }
 
-  if (
-    firstPhoto &&
-    typeof firstPhoto === "object"
-  ) {
-    const photo =
-      firstPhoto as Record<string, unknown>;
+  if (firstPhoto && typeof firstPhoto === "object") {
+    const photo = firstPhoto as Record<string, unknown>;
 
-    if (typeof photo.url === "string") {
-      return photo.url;
-    }
-
-    if (
-      typeof photo.secure_url === "string"
-    ) {
-      return photo.secure_url;
-    }
-
-    if (
-      typeof photo.src === "string"
-    ) {
-      return photo.src;
-    }
+    if (typeof photo.url === "string") return photo.url;
+    if (typeof photo.secure_url === "string") return photo.secure_url;
+    if (typeof photo.src === "string") return photo.src;
   }
 
   return null;
 }
 
-/*
- * ============================================
- * Value Match
- * ============================================
- */
+/* Get About Yourself text */
+
+function getAboutYourself(user: UserDocument): string {
+  const aboutYourself =
+    typeof user.aboutYourself === "string"
+      ? user.aboutYourself.trim()
+      : "";
+
+  const about =
+    typeof user.about === "string"
+      ? user.about.trim()
+      : "";
+
+  return aboutYourself || about;
+}
+
+/* Match preference values */
 
 function valueMatches(
   candidateValue: unknown,
@@ -272,38 +204,28 @@ function valueMatches(
     return null;
   }
 
-  const candidate =
-    normalize(candidateValue);
+  const candidate = normalize(candidateValue);
 
-  if (!candidate) {
-    return false;
-  }
+  if (!candidate) return false;
 
   if (Array.isArray(preferredValue)) {
-    return preferredValue.some(
-      (value) => {
-        const preferred =
-          normalize(value);
+    return preferredValue.some((value) => {
+      const preferred = normalize(value);
 
-        if (!preferred) {
-          return false;
-        }
-
-        return (
+      return (
+        Boolean(preferred) &&
+        (
           candidate === preferred ||
           candidate.includes(preferred) ||
           preferred.includes(candidate)
-        );
-      },
-    );
+        )
+      );
+    });
   }
 
-  const preferred =
-    normalize(preferredValue);
+  const preferred = normalize(preferredValue);
 
-  if (!preferred) {
-    return null;
-  }
+  if (!preferred) return null;
 
   return (
     candidate === preferred ||
@@ -312,32 +234,11 @@ function valueMatches(
   );
 }
 
-/*
- * ============================================
- * Get Partner Preferences
- * ============================================
- *
- * IMPORTANT:
- *
- * We don't simply do:
- *
- * partnerPreferences || preferences
- *
- * because partnerPreferences may exist but
- * contain empty fields.
- *
- * Instead every field gets its own fallback.
- * ============================================
- */
+/* Get partner preferences, with field-by-field fallbacks */
 
-function getPartnerPreferences(
-  user: UserDocument,
-) {
-  const partner =
-    user.partnerPreferences || {};
-
-  const preferences =
-    user.preferences || {};
+function getPartnerPreferences(user: UserDocument) {
+  const partner = user.partnerPreferences || {};
+  const preferences = user.preferences || {};
 
   return {
     ageMin:
@@ -387,40 +288,16 @@ function getPartnerPreferences(
   };
 }
 
-/*
- * ============================================
- * LOCATION PRIORITY CHECK
- * ============================================
- *
- * State OR City must match.
- *
- * Example:
- *
- * Preference:
- * Haryana + Gurugram
- *
- * Haryana + Gurugram -> SHOW
- * Haryana + Delhi    -> SHOW
- * Punjab + Gurugram  -> SHOW
- * Punjab + Delhi     -> HIDE
- *
- * ============================================
- */
+/* State OR city must match */
 
 function matchesPreferredLocation(
   currentUser: UserDocument,
   candidate: UserDocument,
 ): boolean {
-  const preferences =
-    getPartnerPreferences(
-      currentUser,
-    );
+  const preferences = getPartnerPreferences(currentUser);
 
-  const preferredState =
-    preferences.state;
-
-  const preferredCity =
-    preferences.city;
+  const preferredState = preferences.state;
+  const preferredCity = preferences.city;
 
   const hasStatePreference =
     preferredState !== undefined &&
@@ -432,55 +309,28 @@ function matchesPreferredLocation(
     preferredCity !== null &&
     String(preferredCity).trim() !== "";
 
-  /*
-   * No location preference
-   */
-  if (
-    !hasStatePreference &&
-    !hasCityPreference
-  ) {
+  if (!hasStatePreference && !hasCityPreference) {
     return true;
   }
 
-  const stateMatched =
-    hasStatePreference
-      ? valueMatches(
-          candidate.state,
-          preferredState,
-        ) === true
-      : false;
+  const stateMatched = hasStatePreference
+    ? valueMatches(candidate.state, preferredState) === true
+    : false;
 
-  const cityMatched =
-    hasCityPreference
-      ? valueMatches(
-          candidate.city,
-          preferredCity,
-        ) === true
-      : false;
+  const cityMatched = hasCityPreference
+    ? valueMatches(candidate.city, preferredCity) === true
+    : false;
 
-  /*
-   * State OR City
-   */
-  return (
-    stateMatched ||
-    cityMatched
-  );
+  return stateMatched || cityMatched;
 }
 
-/*
- * ============================================
- * Compatibility Calculation
- * ============================================
- */
+/* Calculate compatibility score */
 
 function calculateCompatibility(
   currentUser: UserDocument,
   candidate: UserDocument,
 ): number {
-  const preferences =
-    getPartnerPreferences(
-      currentUser,
-    );
+  const preferences = getPartnerPreferences(currentUser);
 
   let totalWeight = 0;
   let matchedWeight = 0;
@@ -489,693 +339,298 @@ function calculateCompatibility(
     weight: number,
     matched: boolean | null,
   ) => {
-    if (matched === null) {
-      return;
-    }
+    if (matched === null) return;
 
     totalWeight += weight;
 
-    if (matched) {
-      matchedWeight += weight;
-    }
+    if (matched) matchedWeight += weight;
   };
 
-  /*
-   * ============================================
-   * Age - 30%
-   * ============================================
-   */
+  /* Age: 30% */
 
-  const ageMin =
-    preferences.ageMin;
+  const ageMin = preferences.ageMin;
+  const ageMax = preferences.ageMax;
 
-  const ageMax =
-    preferences.ageMax;
-
-  if (
-    ageMin !== undefined ||
-    ageMax !== undefined
-  ) {
-    const candidateAge =
-      calculateAge(
-        candidate.dateOfBirth,
-      );
+  if (ageMin !== undefined || ageMax !== undefined) {
+    const candidateAge = calculateAge(candidate.dateOfBirth);
 
     if (candidateAge !== null) {
       const min =
-        ageMin !== undefined &&
-        String(ageMin).trim() !== ""
+        ageMin !== undefined && String(ageMin).trim() !== ""
           ? Number(ageMin)
           : 0;
 
       const max =
-        ageMax !== undefined &&
-        String(ageMax).trim() !== ""
+        ageMax !== undefined && String(ageMax).trim() !== ""
           ? Number(ageMax)
           : 999;
 
-      addScore(
-        30,
-        candidateAge >= min &&
-          candidateAge <= max,
-      );
+      addScore(30, candidateAge >= min && candidateAge <= max);
     }
   }
 
-  /*
-   * ============================================
-   * State - 15%
-   * ============================================
-   */
+  /* State: 15% */
 
   addScore(
     15,
-    valueMatches(
-      candidate.state,
-      preferences.state,
-    ),
+    valueMatches(candidate.state, preferences.state),
   );
 
-  /*
-   * ============================================
-   * City - 10%
-   * ============================================
-   */
+  /* City: 10% */
 
   addScore(
     10,
-    valueMatches(
-      candidate.city,
-      preferences.city,
-    ),
+    valueMatches(candidate.city, preferences.city),
   );
 
-  /*
-   * ============================================
-   * Religion - 15%
-   * ============================================
-   */
+  /* Religion: 15% */
 
   addScore(
     15,
-    valueMatches(
-      candidate.religion,
-      preferences.religion,
-    ),
+    valueMatches(candidate.religion, preferences.religion),
   );
 
-  /*
-   * ============================================
-   * Education - 10%
-   * ============================================
-   */
+  /* Education: 10% */
 
   addScore(
     10,
-    valueMatches(
-      candidate.education,
-      preferences.education,
-    ),
+    valueMatches(candidate.education, preferences.education),
   );
 
-  /*
-   * ============================================
-   * Profession - 10%
-   * ============================================
-   */
+  /* Profession: 10% */
 
   addScore(
     10,
-    valueMatches(
-      candidate.profession,
-      preferences.profession,
-    ),
+    valueMatches(candidate.profession, preferences.profession),
   );
 
-  /*
-   * ============================================
-   * Marital Status - 5%
-   * ============================================
-   */
+  /* Marital status: 5% */
 
   addScore(
     5,
-    valueMatches(
-      candidate.maritalStatus,
-      preferences.maritalStatus,
-    ),
+    valueMatches(candidate.maritalStatus, preferences.maritalStatus),
   );
 
-  /*
-   * ============================================
-   * Lifestyle - 5%
-   * ============================================
-   */
+  /* Lifestyle: 5% */
 
   addScore(
     5,
-    valueMatches(
-      candidate.lifestyle,
-      preferences.lifestyle,
-    ),
+    valueMatches(candidate.lifestyle, preferences.lifestyle),
   );
 
-  /*
-   * ============================================
-   * No usable preferences
-   * ============================================
-   */
+  if (totalWeight === 0) return 0;
 
-  if (totalWeight === 0) {
-    return 0;
-  }
-
-  return Math.round(
-    (matchedWeight /
-      totalWeight) *
-      100,
-  );
+  return Math.round((matchedWeight / totalWeight) * 100);
 }
 
-/*
- * ============================================
- * GET MATCHES
- * ============================================
- */
+/* GET MATCHES */
 
 export async function GET() {
   try {
-    /*
-     * ============================================
-     * 1. Get Authentication Cookie
-     * ============================================
-     */
+    /* 1. Authentication cookie */
 
-    const cookieStore =
-      await cookies();
+    const cookieStore = await cookies();
 
-    const token =
-      cookieStore.get(
-        "matrimonial_session",
-      )?.value;
+    const token = cookieStore.get("matrimonial_session")?.value;
 
     if (!token) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Please login to view matches.",
+          message: "Please login to view matches.",
           users: [],
         },
-        {
-          status: 401,
-        },
+        { status: 401 },
       );
     }
 
-    /*
-     * ============================================
-     * 2. Verify JWT
-     * ============================================
-     */
+    /* 2. Verify JWT */
 
-    const session =
-      await verifyAuthToken(
-        token,
-      );
+    const session = await verifyAuthToken(token);
 
     if (!session) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Your session has expired. Please login again.",
+          message: "Your session has expired. Please login again.",
           users: [],
         },
-        {
-          status: 401,
-        },
+        { status: 401 },
       );
     }
 
-    /*
-     * ============================================
-     * 3. User ID From Session
-     * ============================================
-     */
+    /* 3. Validate user ID */
 
-    const userId =
-      session.userId;
+    const userId = session.userId;
 
-    if (
-      !mongoose.Types.ObjectId.isValid(
-        userId,
-      )
-    ) {
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Invalid authenticated user ID.",
+          message: "Invalid authenticated user ID.",
           users: [],
         },
-        {
-          status: 401,
-        },
+        { status: 401 },
       );
     }
 
-    /*
-     * ============================================
-     * 4. Connect Database
-     * ============================================
-     */
+    /* 4. Connect database */
 
     await connectDB();
 
-    const db =
-      mongoose.connection.db;
+    const db = mongoose.connection.db;
 
     if (!db) {
-      throw new Error(
-        "MongoDB database connection is not available",
-      );
+      throw new Error("MongoDB database connection is not available");
     }
 
-    const usersCollection =
-      db.collection<UserDocument>(
-        "users",
-      );
+    const usersCollection = db.collection<UserDocument>("users");
 
-    /*
-     * ============================================
-     * 5. Get Current User
-     * ============================================
-     */
+    /* 5. Get current user */
 
-    const currentUser =
-      (await usersCollection.findOne({
-        _id:
-          new mongoose.Types.ObjectId(
-            userId,
-          ),
-      })) as UserDocument | null;
+    const currentUser = await usersCollection.findOne({
+      _id: new mongoose.Types.ObjectId(userId),
+    });
 
     if (!currentUser) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Authenticated user was not found.",
+          message: "Authenticated user was not found.",
           users: [],
         },
-        {
-          status: 404,
-        },
+        { status: 404 },
       );
     }
 
-    /*
-     * ============================================
-     * 6. Normalize Current Gender
-     * ============================================
-     */
+    /* 6. Normalize current gender */
 
-    const currentGender =
-      normalizeGender(
-        currentUser.gender,
-      );
+    const currentGender = normalizeGender(currentUser.gender);
 
     if (!currentGender) {
       return NextResponse.json({
         success: true,
         users: [],
-        message:
-          "Please complete your gender information to find matches.",
+        message: "Please complete your gender information to find matches.",
       });
     }
 
-    /*
-     * ============================================
-     * 7. Opposite Gender
-     * ============================================
-     */
+    /* 7. Find opposite gender */
 
-    const targetGender =
-      currentGender === "male"
-        ? "female"
-        : "male";
+    const targetGender = currentGender === "male" ? "female" : "male";
 
-    console.log(
-      "====================================",
+    /* 8. Get active users, newest first */
+
+    const allCandidates = await usersCollection
+      .find({
+        _id: { $ne: new mongoose.Types.ObjectId(userId) },
+        isActive: true,
+      })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    /* 9. Filter by opposite gender */
+
+    const candidates = allCandidates.filter(
+      (candidate) => normalizeGender(candidate.gender) === targetGender,
     );
 
-    console.log(
-      "MATCHES CURRENT USER:",
-      currentUser.firstName,
-      currentUser.lastName,
+    /* 10. Filter by preferred state OR city */
+
+    const locationMatchedCandidates = candidates.filter(
+      (candidate) =>
+        matchesPreferredLocation(currentUser, candidate),
     );
 
-    console.log(
-      "MATCHES RAW GENDER:",
-      currentUser.gender,
-    );
+    /* 11. Build match profiles */
 
-    console.log(
-      "MATCHES NORMALIZED GENDER:",
-      currentGender,
-    );
+    const profiles = locationMatchedCandidates
+      .map((user) => {
+        const compatibility = calculateCompatibility(currentUser, user);
 
-    console.log(
-      "MATCHES TARGET GENDER:",
-      targetGender,
-    );
+        const firstName = user.firstName || "";
+        const lastName = user.lastName || "";
 
-    console.log(
-      "MATCHES PREFERENCE STATE:",
-      getPartnerPreferences(
-        currentUser,
-      ).state,
-    );
+        const age = calculateAge(user.dateOfBirth);
 
-    console.log(
-      "MATCHES PREFERENCE CITY:",
-      getPartnerPreferences(
-        currentUser,
-      ).city,
-    );
+        const name =
+          `${firstName} ${lastName}`.trim() || "Unnamed profile";
 
-    console.log(
-      "====================================",
-    );
+        const location = [user.city, user.state]
+          .filter(Boolean)
+          .join(", ");
 
-    /*
-     * ============================================
-     * 8. Get All Users
-     * ============================================
-     *
-     * We intentionally get users and normalize
-     * gender in JavaScript.
-     *
-     * This handles:
-     *
-     * male
-     * Male
-     * man
-     *
-     * female
-     * Female
-     * woman
-     *
-     * ============================================
-     */
+        const mobileVisible = user.isMobileVisible === true;
 
-    const allCandidates = (
-      await usersCollection
-        .find({
-          _id: {
-            $ne: new mongoose.Types.ObjectId(userId),
-          },
-          isActive: true,
-        })
-        .sort({
-          createdAt: -1,
-        })
-        .toArray()
-    ) as UserDocument[];
+        const aboutYourself = getAboutYourself(user);
 
-    /*
-     * ============================================
-     * 9. Opposite Gender Filter
-     * ============================================
-     */
+        return {
+          id: user._id.toString(),
+          name,
+          age: age ?? 0,
+          location: location || "Location not added",
 
-    const candidates =
-      allCandidates.filter(
-        (candidate) =>
-          normalizeGender(
-            candidate.gender,
-          ) === targetGender,
-      );
+          profession: user.profession || "",
+          education: user.education || "",
+          cast: user.cast?.trim() || "",
 
-    console.log(
-      "MATCHES ALL USERS:",
-      allCandidates.length,
-    );
+          compatibility,
 
-    console.log(
-      "MATCHES OPPOSITE GENDER USERS:",
-      candidates.length,
-    );
+          initials: getInitials(firstName, lastName),
+          photo: getPhoto(user.photos),
 
-    /*
-     * ============================================
-     * 10. Location Filter
-     * ============================================
-     */
+          verified:
+            Boolean(user.isEmailVerified) ||
+            Boolean(user.isMobileVerified),
 
-    const locationMatchedCandidates =
-      candidates.filter(
-        (candidate) => {
-          const matched =
-            matchesPreferredLocation(
-              currentUser,
-              candidate,
-            );
+          online: false,
 
-          console.log(
-            "------------------------------------",
-          );
+          height: user.height || "Not specified",
+          maritalStatus: user.maritalStatus || "Not specified",
 
-          console.log(
-            "CANDIDATE:",
-            candidate.firstName,
-            candidate.lastName,
-          );
+          mobile: mobileVisible ? String(user.mobile || "") : "",
+          isMobileVisible: mobileVisible,
 
-          console.log(
-            "GENDER:",
-            candidate.gender,
-          );
+          newMatch: user.createdAt
+            ? Date.now() -
+                new Date(user.createdAt).getTime() <
+              1000 * 60 * 60 * 24 * 7
+            : false,
 
-          console.log(
-            "NORMALIZED GENDER:",
-            normalizeGender(
-              candidate.gender,
-            ),
-          );
+          /* Actual About Yourself value from MongoDB */
+          aboutYourself,
 
-          console.log(
-            "CANDIDATE STATE:",
-            candidate.state,
-          );
+          /* Keep about consistent with the actual introduction */
+          about: aboutYourself,
 
-          console.log(
-            "CANDIDATE CITY:",
-            candidate.city,
-          );
+          religionabout: user.religion || "",
 
-          console.log(
-            "LOCATION MATCH:",
-            matched,
-          );
+          createdAt: user.createdAt || null,
+        };
+      })
 
-          return matched;
-        },
-      );
+      /* 12. Keep matches with at least 30% compatibility */
+      .filter((profile) => profile.compatibility >= 30)
 
-    console.log(
-      "MATCHES AFTER LOCATION:",
-      locationMatchedCandidates.length,
-    );
+      /* 13. Highest compatibility first */
+      .sort((a, b) => b.compatibility - a.compatibility);
 
-    /*
-     * ============================================
-     * 11. Calculate Profiles
-     * ============================================
-     */
-
-    const profiles =
-      locationMatchedCandidates
-        .map((user) => {
-          const compatibility =
-            calculateCompatibility(
-              currentUser,
-              user,
-            );
-
-          const firstName =
-            user.firstName || "";
-
-          const lastName =
-            user.lastName || "";
-
-          const age =
-            calculateAge(
-              user.dateOfBirth,
-            );
-
-          const name =
-            `${firstName} ${lastName}`.trim() ||
-            "Unnamed profile";
-
-          const location = [
-            user.city,
-            user.state,
-          ]
-            .filter(Boolean)
-            .join(", ");
-
-          return {
-            id:
-              user._id.toString(),
-
-            name,
-
-            age:
-              age ?? 0,
-
-            location:
-              location ||
-              "Location not added",
-
-            profession:
-              user.profession ||
-              "Profession not added",
-
-            education:
-              user.education ||
-              "Education not added",
-
-            compatibility,
-
-            initials:
-              getInitials(
-                firstName,
-                lastName,
-              ),
-
-            photo:
-              getPhoto(
-                user.photos,
-              ),
-
-            verified:
-              Boolean(
-                user.isEmailVerified,
-              ) ||
-              Boolean(
-                user.isMobileVerified,
-              ),
-
-            online: false,
-
-            height:
-              user.height ||
-              "Not specified",
-
-            maritalStatus:
-              user.maritalStatus ||
-              "Not specified",
-
-              mobile: user.isMobileVisible === true ? String(user.mobile || ""): "",
-
-              isMobileVisible: user.isMobileVisible === true,
-
-            newMatch:
-              user.createdAt
-                ? Date.now() -
-                    new Date(
-                      user.createdAt,
-                    ).getTime() <
-                  1000 *
-                    60 *
-                    60 *
-                    24 *
-                    7
-                : false,
-
-            about:
-              user.education ||
-              "Profile information has not been added yet.",
-              religionabout:
-              user.religion ||
-              "Profile information has not been added yet.",
-
-            createdAt:
-              user.createdAt ||
-              null,
-          };
-        })
-
-        /*
-         * ============================================
-         * 12. Minimum 30% Compatibility
-         * ============================================
-         */
-
-        .filter(
-          (profile) =>
-            profile.compatibility >= 30,
-        )
-
-        /*
-         * ============================================
-         * 13. Highest Match First
-         * ============================================
-         */
-
-        .sort(
-          (a, b) =>
-            b.compatibility -
-            a.compatibility,
-        );
-
-    console.log(
-      "MATCHES FINAL 30%+:",
-      profiles.length,
-    );
-
-    console.log(
-      "FINAL PROFILES:",
-      profiles.map(
-        (profile) => ({
-          name: profile.name,
-          age: profile.age,
-          location:
-            profile.location,
-          compatibility:
-            profile.compatibility,
-        }),
-      ),
-    );
-
-    /*
-     * ============================================
-     * 14. Response
-     * ============================================
-     */
+    /* 14. Return response */
 
     return NextResponse.json({
       success: true,
       users: profiles,
     });
   } catch (error) {
-    console.error(
-      "GET /api/matches error:",
-      error,
-    );
+    console.error("GET /api/matches error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message:
-          "Failed to calculate matches",
+        message: "Failed to calculate matches",
         users: [],
       },
-      {
-        status: 500,
-      },
+      { status: 500 },
     );
   }
 }

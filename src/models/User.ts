@@ -1,3 +1,4 @@
+
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IUser extends Document {
@@ -16,6 +17,7 @@ export interface IUser extends Document {
   city: string;
 
   religion: string;
+  cast: string;
   motherTongue: string;
   maritalStatus: string;
 
@@ -25,13 +27,10 @@ export interface IUser extends Document {
   company: string;
   income: string;
 
-  familyType: string;
-  familyValues: string;
   fatherOccupation: string;
   motherOccupation: string;
-  siblings: string;
+  aboutYourself: string;
 
-  lifestyle: string;
   diet: string;
   smoking: string;
   drinking: string;
@@ -46,15 +45,17 @@ export interface IUser extends Document {
   partnerEducation: string;
   partnerProfession: string;
   partnerMaritalStatus: string;
-  partnerLifestyle: string;
 
   photos: string[];
+
   isMobileVisible: boolean;
   isActive: boolean;
   favorites: mongoose.Types.ObjectId[];
+
   isEmailVerified: boolean;
   isMobileVerified: boolean;
   isProfileComplete: boolean;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,7 +83,7 @@ const UserSchema = new Schema<IUser>(
       lowercase: true,
       trim: true,
     },
-    
+
     mobile: {
       type: String,
       required: true,
@@ -91,9 +92,9 @@ const UserSchema = new Schema<IUser>(
     },
 
     password: {
-        type: String,
-        required: true,
-        select: false,
+      type: String,
+      required: true,
+      select: false,
     },
 
     firstName: {
@@ -131,86 +132,92 @@ const UserSchema = new Schema<IUser>(
     religion: {
       type: String,
       default: "",
+      trim: true,
+    },
+
+    cast: {
+      type: String,
+      default: "",
+      trim: true,
     },
 
     motherTongue: {
       type: String,
       default: "",
+      trim: true,
     },
 
     maritalStatus: {
       type: String,
       default: "",
+      trim: true,
     },
 
     education: {
       type: String,
       default: "",
+      trim: true,
     },
 
     college: {
       type: String,
       default: "",
+      trim: true,
     },
 
     profession: {
       type: String,
       default: "",
+      trim: true,
     },
 
     company: {
       type: String,
       default: "",
+      trim: true,
     },
 
     income: {
       type: String,
       default: "",
-    },
-
-    familyType: {
-      type: String,
-      default: "",
-    },
-
-    familyValues: {
-      type: String,
-      default: "",
+      trim: true,
     },
 
     fatherOccupation: {
       type: String,
       default: "",
+      trim: true,
     },
 
     motherOccupation: {
       type: String,
       default: "",
+      trim: true,
     },
 
-    siblings: {
+    aboutYourself: {
       type: String,
       default: "",
-    },
-
-    lifestyle: {
-      type: String,
-      default: "",
+      trim: true,
+      maxlength: 1000,
     },
 
     diet: {
       type: String,
       default: "",
+      trim: true,
     },
 
     smoking: {
       type: String,
       default: "",
+      trim: true,
     },
 
     drinking: {
       type: String,
       default: "",
+      trim: true,
     },
 
     partnerAgeMin: {
@@ -226,56 +233,60 @@ const UserSchema = new Schema<IUser>(
     partnerState: {
       type: String,
       default: "",
+      trim: true,
     },
 
     partnerCity: {
       type: String,
       default: "",
+      trim: true,
     },
 
     partnerReligion: {
       type: String,
       default: "",
+      trim: true,
     },
 
     partnerEducation: {
       type: String,
       default: "",
+      trim: true,
     },
 
     partnerProfession: {
       type: String,
       default: "",
+      trim: true,
     },
 
     partnerMaritalStatus: {
       type: String,
       default: "",
-    },
-
-    partnerLifestyle: {
-      type: String,
-      default: "",
+      trim: true,
     },
 
     photos: {
       type: [String],
       default: [],
     },
+
     isMobileVisible: {
       type: Boolean,
       default: true,
     },
-    
+
     isActive: {
       type: Boolean,
       default: true,
     },
+
     favorites: {
       type: [Schema.Types.ObjectId],
       ref: "User",
       default: [],
     },
+
     isEmailVerified: {
       type: Boolean,
       default: false,
@@ -293,11 +304,11 @@ const UserSchema = new Schema<IUser>(
   },
   {
     timestamps: true,
-  },
+  }
 );
 
 const User: Model<IUser> =
-  mongoose.models.User ||
+  (mongoose.models.User as Model<IUser>) ||
   mongoose.model<IUser>("User", UserSchema);
 
 export default User;

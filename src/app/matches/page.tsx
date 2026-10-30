@@ -27,6 +27,7 @@ type MatchProfile = {
   age: number;
   location: string;
   profession: string;
+  cast?: string;
   education: string;
   compatibility: number;
   initials: string;
@@ -562,12 +563,17 @@ useEffect(() => {
                       {/* Basic Information */}
                       <div className={styles.basicInfo}>
                         <span>{profile.age} years</span>
-                        <span>/</span>
                         {/* <span>{profile.height}</span> */}
                         {/* <span>•</span> */}
-                        <span>
+                        {/* <span>
                           {profile.maritalStatus}
-                        </span>
+                        </span> */}
+                          {profile.cast?.trim() && (
+                              <>
+                                <span>•</span>
+                                <span>{profile.cast}</span>
+                              </>
+                            )}
                       </div>
 
                       {/* Location */}
@@ -577,15 +583,26 @@ useEffect(() => {
                       </div>
 
                       {/* Profession */}
-                      <div className={styles.profession}>
+                      {/* <div className={styles.profession}>
                         <FiUser aria-hidden="true" />
                         <span>{profile.profession}</span>
-                      </div>
+                      </div> */}
 
                       {/* Education */}
                       <div className={styles.profileDetails}>
-                        <span>{profile.education}</span>
-                        <span>{profile.religionabout}</span>
+                       {/* Education & Religion */}
+                        {(profile.education?.trim() ||
+                          profile.religionabout?.trim()) && (
+                          <div className={styles.profileDetails}>
+                            {profile.education?.trim() && (
+                              <span>{profile.education}</span>
+                            )}
+
+                            {profile.religionabout?.trim() && (
+                              <span>{profile.religionabout}</span>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* About */}
