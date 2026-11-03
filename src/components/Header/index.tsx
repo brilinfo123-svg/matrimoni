@@ -1,8 +1,9 @@
+
 "use client";
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   FiBell,
   FiHeart,
@@ -52,23 +53,14 @@ export default function Header() {
   const { favoriteIds } = useFavorites();
 
   const favoriteCount = favoriteIds.length;
-
-  const formattedFavoriteCount =
-    favoriteCount > 99 ? "99+" : favoriteCount;
-
-  const formattedUnreadCount =
-    unreadCount > 99 ? "99+" : unreadCount;
-
+  const formattedFavoriteCount = favoriteCount > 99 ? "99+" : favoriteCount;
+  const formattedUnreadCount = unreadCount > 99 ? "99+" : unreadCount;
   const isLoggedIn = !isLoadingUser && Boolean(user);
 
-  const closeMenu = () => {
-    setIsMenuOpen(false);
-  };
+  const closeMenu = () => setIsMenuOpen(false);
 
-  const loadCurrentUser = async () => {
+  const loadCurrentUser = useCallback(async () => {
     try {
-      setIsLoadingUser(true);
-
       const response = await fetch("/api/auth/me", {
         method: "GET",
         credentials: "include",
@@ -81,7 +73,6 @@ export default function Header() {
       }
 
       const data: MeResponse = await response.json();
-
       setUser(data.success && data.user ? data.user : null);
     } catch (error) {
       console.error("HEADER_AUTH_ERROR:", error);
@@ -89,20 +80,30 @@ export default function Header() {
     } finally {
       setIsLoadingUser(false);
     }
-  };
+  }, []);
 
+  // Load the authenticated user and listen for login/register/logout changes.
   useEffect(() => {
     void loadCurrentUser();
-  }, []);
+
+    const handleAuthChange = () => {
+      setIsLoadingUser(true);
+      void loadCurrentUser();
+    };
+
+    window.addEventListener("auth-change", handleAuthChange);
+
+    return () => {
+      window.removeEventListener("auth-change", handleAuthChange);
+    };
+  }, [loadCurrentUser]);
 
   // Close the mobile drawer when the user presses Escape.
   useEffect(() => {
     if (!isMenuOpen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        closeMenu();
-      }
+      if (event.key === "Escape") closeMenu();
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -114,20 +115,13 @@ export default function Header() {
 
   // Close the drawer if the user logs out or is no longer authenticated.
   useEffect(() => {
-    if (!isLoggedIn) {
-      closeMenu();
-    }
+    if (!isLoggedIn) closeMenu();
   }, [isLoggedIn]);
 
   const firstName = user?.firstName?.trim() || "";
   const lastName = user?.lastName?.trim() || "";
-
-  const userName =
-    `${firstName} ${lastName}`.trim() || "My Account";
-
-  const userInitials =
-    `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() ||
-    "U";
+  const userName = `${firstName} ${lastName}`.trim() || "My Account";
+  const userInitials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "U";
 
   const profilePhoto = Array.isArray(user?.photos)
     ? user.photos[0] || ""
@@ -149,11 +143,10 @@ export default function Header() {
         credentials: "include",
       });
 
-      if (!response.ok) {
-        throw new Error("Logout request failed");
-      }
+      if (!response.ok) throw new Error("Logout request failed");
 
       setUser(null);
+      window.dispatchEvent(new Event("auth-change"));
       window.location.assign("/");
     } catch (error) {
       console.error("LOGOUT_ERROR:", error);
@@ -163,17 +156,9 @@ export default function Header() {
   };
 
   const renderAvatar = (mobile = false) => {
-    const avatarClass = mobile
-      ? styles.mobileAccountAvatar
-      : styles.userAvatar;
-
-    const imageClass = mobile
-      ? styles.mobileAccountAvatarImage
-      : styles.userAvatarImage;
-
-    const initialsClass = mobile
-      ? styles.mobileUserInitials
-      : styles.userInitials;
+    const avatarClass = mobile ? styles.mobileAccountAvatar : styles.userAvatar;
+    const imageClass = mobile ? styles.mobileAccountAvatarImage : styles.userAvatarImage;
+    const initialsClass = mobile ? styles.mobileUserInitials : styles.userInitials;
 
     if (profilePhoto && !imageError) {
       return (
@@ -195,8 +180,8 @@ export default function Header() {
     );
   };
 
-  const renderNavigationItems = (mobile = false) => {
-    return navigation.map((item) => {
+  const renderNavigationItems = (mobile = false) =>
+    navigation.map((item) => {
       const Icon = item.icon;
       const isMessages = item.href === "/messages";
       const isFavorites = item.href === "/favorites";
@@ -205,9 +190,7 @@ export default function Header() {
         (isMessages && unreadCount > 0) ||
         (isFavorites && favoriteCount > 0);
 
-      const badgeCount = isMessages
-        ? formattedUnreadCount
-        : formattedFavoriteCount;
+      const badgeCount = isMessages ? formattedUnreadCount : formattedFavoriteCount;
 
       return (
         <Link
@@ -216,20 +199,11 @@ export default function Header() {
           className={mobile ? styles.mobileNavLink : styles.navLink}
           onClick={mobile ? closeMenu : undefined}
         >
-          <span
-            className={
-              mobile ? styles.mobileNavIcon : styles.messageNavIcon
-            }
-          >
+          <span className={mobile ? styles.mobileNavIcon : styles.messageNavIcon}>
             <Icon aria-hidden="true" />
-
             {showBadge && (
               <span
-                className={
-                  mobile
-                    ? styles.mobileMessageBadge
-                    : styles.messageBadge
-                }
+                className={mobile ? styles.mobileMessageBadge : styles.messageBadge}
                 aria-label={
                   isMessages
                     ? `${unreadCount} unread messages`
@@ -240,16 +214,13 @@ export default function Header() {
               </span>
             )}
           </span>
-
           <span>{item.label}</span>
         </Link>
       );
     });
-  };
 
   return (
     <>
-      {/* Backdrop: appears behind the drawer on mobile */}
       {isMenuOpen && isLoggedIn && (
         <button
           type="button"
@@ -270,7 +241,7 @@ export default function Header() {
             aria-label="Matrimonial home"
           >
             <Image
-              src="/public/images/logo/EverMilan.png"
+              src="/images/logo/EverMilan.png"
               alt="Matrimonial Logo"
               width={200}
               height={100}
@@ -279,20 +250,14 @@ export default function Header() {
           </Link>
 
           {/* Desktop navigation */}
-          <nav
-            className={styles.desktopNav}
-            aria-label="Main navigation"
-          >
+          <nav className={styles.desktopNav} aria-label="Main navigation">
             {renderNavigationItems()}
           </nav>
 
           {/* Desktop actions */}
           <div className={styles.desktopActions}>
             {isLoadingUser ? (
-              <div
-                className={styles.authLoading}
-                aria-hidden="true"
-              />
+              <div className={styles.authLoading} aria-hidden="true" />
             ) : isLoggedIn ? (
               <>
                 <Link
@@ -301,10 +266,7 @@ export default function Header() {
                   aria-label={`Open ${userName}'s dashboard`}
                 >
                   {renderAvatar()}
-
-                  <span className={styles.userName}>
-                    {userName}
-                  </span>
+                  <span className={styles.userName}>{userName}</span>
                 </Link>
 
                 <button
@@ -314,25 +276,16 @@ export default function Header() {
                   disabled={isLoggingOut}
                 >
                   <FiLogOut aria-hidden="true" />
-                  <span>
-                    {isLoggingOut ? "Logging out..." : "Logout"}
-                  </span>
+                  <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
                 </button>
               </>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className={styles.loginButton}
-                >
+                <Link href="/login" className={styles.loginButton}>
                   <FiUser aria-hidden="true" />
                   <span>Login</span>
                 </Link>
-
-                <Link
-                  href="/register"
-                  className={styles.registerButton}
-                >
+                <Link href="/register" className={styles.registerButton}>
                   Create Profile
                 </Link>
               </>
@@ -342,10 +295,7 @@ export default function Header() {
           {/* Mobile header actions */}
           <div className={styles.mobileHeaderActions}>
             {isLoadingUser ? (
-              <div
-                className={styles.authLoading}
-                aria-hidden="true"
-              />
+              <div className={styles.authLoading} aria-hidden="true" />
             ) : isLoggedIn ? (
               <button
                 type="button"
@@ -359,17 +309,10 @@ export default function Header() {
               </button>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  className={styles.mobileHeaderLogin}
-                >
+                <Link href="/login" className={styles.mobileHeaderLogin}>
                   Login
                 </Link>
-
-                <Link
-                  href="/register"
-                  className={styles.mobileHeaderRegister}
-                >
+                <Link href="/register" className={styles.mobileHeaderRegister}>
                   Register
                 </Link>
               </>
@@ -380,21 +323,14 @@ export default function Header() {
         {/* Mobile slide-in navigation */}
         <div
           id="mobile-navigation"
-          className={`${styles.mobileMenu} ${
-            isMenuOpen && isLoggedIn ? styles.mobileMenuOpen : ""
-          }`}
+          className={`${styles.mobileMenu} ${isMenuOpen && isLoggedIn ? styles.mobileMenuOpen : ""}`}
           aria-hidden={!isMenuOpen || !isLoggedIn}
           inert={!isMenuOpen || !isLoggedIn}
         >
-          <nav
-            className={styles.mobileNav}
-            aria-label="Mobile navigation"
-          >
+          <nav className={styles.mobileNav} aria-label="Mobile navigation">
             {renderNavigationItems(true)}
-
             <div className={styles.mobileDivider} />
 
-            {/* Mobile account actions */}
             {isLoggedIn && (
               <>
                 <Link
@@ -403,7 +339,6 @@ export default function Header() {
                   onClick={closeMenu}
                 >
                   {renderAvatar(true)}
-
                   <span>
                     <strong>{userName}</strong>
                     <small>My Dashboard</small>
@@ -417,9 +352,7 @@ export default function Header() {
                   disabled={isLoggingOut}
                 >
                   <FiLogOut aria-hidden="true" />
-                  <span>
-                    {isLoggingOut ? "Logging out..." : "Logout"}
-                  </span>
+                  <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
                 </button>
               </>
             )}

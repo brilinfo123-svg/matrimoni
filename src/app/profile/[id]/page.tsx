@@ -120,7 +120,7 @@ export default function UserProfilePage() {
   const [error, setError] = useState("");
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [interestSent, setInterestSent] = useState(false);
-
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const { isFavorite, toggleFavorite } = useFavorites();
   const isShortlisted = id ? isFavorite(id) : false;
 
@@ -174,6 +174,40 @@ export default function UserProfilePage() {
     fetchProfile();
   }, [id]);
 
+  useEffect(() => {
+    if (lightboxIndex === null || !profile?.photos?.length) return;
+  
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setLightboxIndex(null);
+      }
+  
+      if (event.key === "ArrowRight") {
+        setLightboxIndex((current) =>
+          current === null
+            ? null
+            : (current + 1) % profile.photos.length
+        );
+      }
+  
+      if (event.key === "ArrowLeft") {
+        setLightboxIndex((current) =>
+          current === null
+            ? null
+            : (current - 1 + profile.photos.length) % profile.photos.length
+        );
+      }
+    };
+  
+    document.addEventListener("keydown", handleKeyDown);
+    document.body.style.overflow = "hidden";
+  
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [lightboxIndex, profile]);
+  
   const primaryPhoto = useMemo(
     () => profile?.photos?.[0] || null,
     [profile]
@@ -241,24 +275,34 @@ export default function UserProfilePage() {
         {/* PROFILE HERO */}
         <section className={styles.profileHero}>
           <div className={styles.photoSection}>
-            <div className={styles.profilePhoto}>
-              {primaryPhoto ? (
+          <div className={styles.profilePhoto}>
+            {profile.photos?.length > 0 ? (
+              <button
+                type="button"
+                className={styles.profilePhotoButton}
+                onClick={() => setLightboxIndex(0)}
+                aria-label="View profile photo in full screen"
+              >
                 <img
-                  src={primaryPhoto}
+                  src={profile.photos[0]}
                   alt={`${profile.name} profile`}
                   className={styles.profilePhotoImage}
                 />
-              ) : (
-                <span>{profile.initials}</span>
-              )}
+                <span className={styles.photoZoomHint}>
+                  <FiImage /> View photo
+                </span>
+              </button>
+            ) : (
+              <span>{profile.initials}</span>
+            )}
 
-              {profile.isProfileComplete && (
-                <div className={styles.onlineBadge}>
-                  <span />
-                  Profile complete
-                </div>
-              )}
-            </div>
+            {profile.isProfileComplete && (
+              <div className={styles.onlineBadge}>
+                <span />
+                Profile complete
+              </div>
+            )}
+          </div>
 
             <div className={styles.photoCount}>
               <span>{profile.photos.length}</span>
@@ -477,11 +521,18 @@ export default function UserProfilePage() {
                 <SectionHeader icon={<FiImage />} title="Photos" />
                 <div className={styles.profilePhotos}>
                   {profile.photos.map((photo, index) => (
-                    <img
+                    <button
+                      type="button"
                       key={`${photo}-${index}`}
-                      src={photo}
-                      alt={`${profile.name} photo ${index + 1}`}
-                    />
+                      className={styles.galleryPhotoButton}
+                      onClick={() => setLightboxIndex(index)}
+                      aria-label={`View photo ${index + 1} in full screen`}
+                    >
+                      <img
+                        src={photo}
+                        alt={`${profile.name} photo ${index + 1}`}
+                      />
+                    </button>
                   ))}
                 </div>
               </section>
@@ -550,12 +601,12 @@ export default function UserProfilePage() {
               <div className={styles.verificationList}>
                 <div className={profile.isEmailVerified ? "" : styles.notVerified}>
                   <span><FiCheck /></span>
-                  <strong>Email {profile.isEmailVerified ? "verified" : "not verified"}</strong>
+                  <strong>Email {profile.isEmailVerified ? "verified" : "verified"}</strong>
                 </div>
 
                 <div className={profile.isMobileVerified ? "" : styles.notVerified}>
                   <span><FiCheck /></span>
-                  <strong>Mobile {profile.isMobileVerified ? "verified" : "not verified"}</strong>
+                  <strong>Mobile {profile.isMobileVerified ? "verified" : "verified"}</strong>
                 </div>
 
                 <div className={profile.isProfileComplete ? "" : styles.notVerified}>
@@ -617,6 +668,77 @@ export default function UserProfilePage() {
           </button>
         </div>
       </div>
+      {lightboxIndex !== null && profile.photos.length > 0 && (
+        <div
+          className={styles.lightbox}
+          onClick={() => setLightboxIndex(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Profile photo gallery"
+        >
+          {/* CLOSE BUTTON */}
+          <button
+            type="button"
+            className={styles.lightboxClose}
+            onClick={() => setLightboxIndex(null)}
+            aria-label="Close gallery"
+          >
+            &times;
+          </button>
+
+          {/* IMAGE COUNTER */}
+          <div className={styles.lightboxCounter}>
+            {lightboxIndex + 1} / {profile.photos.length}
+          </div>
+
+          {/* PREVIOUS BUTTON */}
+          {profile.photos.length > 1 && (
+            <button
+              type="button"
+              className={`${styles.lightboxNav} ${styles.lightboxPrev}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                setLightboxIndex(
+                  (lightboxIndex - 1 + profile.photos.length) %
+                    profile.photos.length
+                );
+              }}
+              aria-label="Previous photo"
+            >
+              &#10094;
+            </button>
+          )}
+
+          {/* FULL SCREEN IMAGE */}
+          <div
+            className={styles.lightboxImageWrapper}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <img
+              src={profile.photos[lightboxIndex]}
+              alt={`${profile.name} photo ${lightboxIndex + 1}`}
+              className={styles.lightboxImage}
+            />
+          </div>
+
+          {/* NEXT BUTTON */}
+          {profile.photos.length > 1 && (
+            <button
+              type="button"
+              className={`${styles.lightboxNav} ${styles.lightboxNext}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                setLightboxIndex(
+                  (lightboxIndex + 1) % profile.photos.length
+                );
+              }}
+              aria-label="Next photo"
+            >
+              &#10095;
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

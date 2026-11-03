@@ -56,7 +56,7 @@ export default function LoginPage() {
    */
   const getCallbackUrl = () => {
     if (typeof window === "undefined") {
-      return "/dashboard";
+      return "/profile";
     }
 
     const params = new URLSearchParams(
@@ -74,7 +74,7 @@ export default function LoginPage() {
       return rawCallbackUrl;
     }
 
-    return "/dashboard";
+    return "/profile";
   };
 
   const handleSubmit = async (

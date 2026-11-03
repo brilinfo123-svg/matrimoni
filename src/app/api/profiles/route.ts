@@ -1,6 +1,8 @@
+
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { cookies } from "next/headers";
+import { v2 as cloudinary } from "cloudinary";
 
 import { connectDB } from "@/lib/mongodb";
 import {
@@ -8,89 +10,99 @@ import {
   verifyAuthToken,
 } from "@/lib/auth";
 
-type ProfileUpdateBody = {
-  name?: string;
-  age?: string;
-  location?: string;
-  height?: string;
-  maritalStatus?: string;
-  motherTongue?: string;
-  about?: string;
+const MAX_PHOTOS = 6;
 
-  education?: string;
-  fieldOfStudy?: string;
-  institute?: string;
+const stringLimits: Record<string, number> = {
+  profileFor: 50,
+  firstName: 100,
+  lastName: 100,
+  gender: 20,
+  dateOfBirth: 10,
 
-  profession?: string;
-  employment?: string;
-  industry?: string;
-  company?: string;
+  state: 100,
+  city: 100,
 
-  familyType?: string;
-  familyLocation?: string;
-  siblings?: string;
+  religion: 100,
+  cast: 100,
+  motherTongue: 100,
+  maritalStatus: 100,
 
-  diet?: string;
-  smoking?: string;
-  drinking?: string;
+  education: 150,
+  college: 200,
+  profession: 150,
+  company: 200,
+  income: 100,
 
-  interests?: string[];
+  fatherOccupation: 150,
+  motherOccupation: 150,
 
-  preferredAgeMin?: string;
-  preferredAgeMax?: string;
-  preferredLocation?: string;
-  preferredEducation?: string;
-  preferredProfession?: string;
-  preferredMaritalStatus?: string;
+  aboutYourself: 500,
+
+  diet: 100,
+  smoking: 100,
+  drinking: 100,
+
+  partnerAgeMin: 3,
+  partnerAgeMax: 3,
+  partnerState: 100,
+  partnerCity: 100,
+  partnerReligion: 100,
+  partnerCast: 100,
+  partnerEducation: 150,
+  partnerProfession: 150,
+  partnerMaritalStatus: 100,
 };
 
-function cleanString(value: unknown, maxLength = 300) {
-  if (typeof value !== "string") {
-    return "";
-  }
+const editableFields = Object.keys(stringLimits);
 
+function cleanString(value: unknown, maxLength: number): string {
+  if (typeof value !== "string") return "";
   return value.trim().slice(0, maxLength);
 }
 
-function normalizeArray(value: unknown) {
+function normalizePhotos(
+  value: unknown,
+  currentPhotos: unknown,
+): string[] {
   if (!Array.isArray(value)) {
-    return [];
+    return Array.isArray(currentPhotos)
+      ? currentPhotos
+          .filter(
+            (photo): photo is string =>
+              typeof photo === "string" &&
+              photo.startsWith("https://"),
+          )
+          .slice(0, MAX_PHOTOS)
+      : [];
   }
 
-  return value
-    .filter(
-      (item): item is string =>
-        typeof item === "string",
-    )
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 30);
+  const validPhotos = value.filter(
+    (photo): photo is string =>
+      typeof photo === "string" &&
+      photo.startsWith("https://") &&
+      photo.length <= 2000,
+  );
+
+  return [...new Set(validPhotos)].slice(0, MAX_PHOTOS);
 }
 
-function calculateAge(dateOfBirth: unknown) {
-  if (!dateOfBirth) {
-    return "";
-  }
+function calculateAge(dateOfBirth: unknown): string {
+  if (!dateOfBirth) return "";
 
   const dob = new Date(String(dateOfBirth));
 
-  if (Number.isNaN(dob.getTime())) {
-    return "";
-  }
+  if (Number.isNaN(dob.getTime())) return "";
 
   const today = new Date();
 
-  let age =
-    today.getFullYear() -
-    dob.getFullYear();
-
-  const monthDifference =
-    today.getMonth() - dob.getMonth();
+  let age = today.getFullYear() - dob.getFullYear();
 
   if (
-    monthDifference < 0 ||
-    (monthDifference === 0 &&
-      today.getDate() < dob.getDate())
+    today.getMonth() < dob.getMonth() ||
+    (
+      today.getMonth() === dob.getMonth() &&
+      today.getDate() < dob.getDate()
+    )
   ) {
     age--;
   }
@@ -98,267 +110,125 @@ function calculateAge(dateOfBirth: unknown) {
   return age >= 0 ? String(age) : "";
 }
 
-function getFullName(
-  firstName: unknown,
-  lastName: unknown,
-) {
-  return [
-    cleanString(firstName, 100),
-    cleanString(lastName, 100),
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
-function getLocation(
-  city: unknown,
-  state: unknown,
-) {
-  return [
-    cleanString(city, 100),
-    cleanString(state, 100),
-  ]
-    .filter(Boolean)
-    .join(", ");
-}
-
-function getProfileImage(photos: unknown) {
-  if (!Array.isArray(photos)) {
-    return null;
-  }
-
-  const validPhoto = photos.find(
-    (photo) =>
-      typeof photo === "string" &&
-      photo.trim().length > 0,
-  );
-
-  return validPhoto || null;
-}
-
-function calculateCompletion(user: any) {
+function calculateCompletion(user: Record<string, any>): number {
   const checks = [
-    Boolean(user.firstName),
-    Boolean(user.lastName),
-    Boolean(user.gender),
-    Boolean(user.dateOfBirth),
-    Boolean(user.state),
-    Boolean(user.city),
-    Boolean(user.religion),
-    Boolean(user.motherTongue),
-    Boolean(user.maritalStatus),
+    user.profileFor,
+    user.firstName,
+    user.lastName,
+    user.gender,
+    user.dateOfBirth,
 
-    Boolean(user.height),
-    Boolean(user.about),
+    user.state,
+    user.city,
 
-    Boolean(user.education),
-    Boolean(user.fieldOfStudy),
-    Boolean(user.college),
+    user.religion,
+    user.cast,
+    user.motherTongue,
+    user.maritalStatus,
 
-    Boolean(user.profession),
-    Boolean(user.employment),
-    Boolean(user.industry),
+    user.education,
+    user.college,
+    user.profession,
+    user.company,
+    user.income,
 
-    Boolean(user.familyType),
-    Boolean(user.familyLocation),
-    Boolean(user.siblings),
+    user.fatherOccupation,
+    user.motherOccupation,
 
-    Boolean(user.diet),
-    Boolean(user.smoking),
-    Boolean(user.drinking),
+    user.aboutYourself,
 
-    Array.isArray(user.interests) &&
-      user.interests.length > 0,
+    user.diet,
+    user.smoking,
+    user.drinking,
 
-    Boolean(user.partnerAgeMin),
-    Boolean(user.partnerAgeMax),
-    Boolean(user.partnerState),
-    Boolean(user.partnerCity),
-    Boolean(user.partnerEducation),
-    Boolean(user.partnerProfession),
-    Boolean(user.partnerMaritalStatus),
+    user.partnerAgeMin,
+    user.partnerAgeMax,
+    user.partnerState,
+    user.partnerCity,
+    user.partnerReligion,
+    user.partnerCast,
+    user.partnerEducation,
+    user.partnerProfession,
+    user.partnerMaritalStatus,
 
-    Array.isArray(user.photos) &&
-      user.photos.length > 0,
+    Array.isArray(user.photos) && user.photos.length > 0,
   ];
 
-  const completed = checks.filter(Boolean).length;
+  const completed = checks.filter((value) =>
+    typeof value === "boolean" ? value : Boolean(value),
+  ).length;
 
-  return Math.round(
-    (completed / checks.length) * 100,
-  );
+  return Math.round((completed / checks.length) * 100);
 }
 
-function buildProfile(user: any) {
-  const partnerState =
-    cleanString(user.partnerState, 100);
+function buildProfile(user: Record<string, any>) {
+  const completion = calculateCompletion(user);
 
-  const partnerCity =
-    cleanString(user.partnerCity, 100);
-
-  const preferredLocation = [
-    partnerCity,
-    partnerState,
-  ]
-    .filter(Boolean)
-    .join(", ");
-
-  const completion =
-    calculateCompletion(user);
+  const photos = Array.isArray(user.photos)
+    ? user.photos
+    : [];
 
   return {
     id: user._id?.toString(),
 
-    name: getFullName(
-      user.firstName,
-      user.lastName,
-    ),
+    profileFor: user.profileFor || "",
 
-    age: calculateAge(
-      user.dateOfBirth,
-    ),
+    email: user.email || "",
+    mobile: user.mobile || "",
 
-    location: getLocation(
-      user.city,
-      user.state,
-    ),
+    firstName: user.firstName || "",
+    lastName: user.lastName || "",
+    gender: user.gender || "",
+    dateOfBirth: user.dateOfBirth || "",
+    age: calculateAge(user.dateOfBirth),
 
-    height: cleanString(
-      user.height,
-      30,
-    ),
+    state: user.state || "",
+    city: user.city || "",
 
-    maritalStatus: cleanString(
-      user.maritalStatus,
-      100,
-    ),
+    religion: user.religion || "",
+    cast: user.cast || "",
+    motherTongue: user.motherTongue || "",
+    maritalStatus: user.maritalStatus || "",
 
-    motherTongue: cleanString(
-      user.motherTongue,
-      100,
-    ),
+    education: user.education || "",
+    college: user.college || "",
+    profession: user.profession || "",
+    company: user.company || "",
+    income: user.income || "",
 
-    about: cleanString(
-      user.about,
-      500,
-    ),
+    fatherOccupation: user.fatherOccupation || "",
+    motherOccupation: user.motherOccupation || "",
 
-    education: cleanString(
-      user.education,
-      150,
-    ),
+    aboutYourself: user.aboutYourself || "",
 
-    fieldOfStudy: cleanString(
-      user.fieldOfStudy,
-      150,
-    ),
+    diet: user.diet || "",
+    smoking: user.smoking || "",
+    drinking: user.drinking || "",
 
-    institute: cleanString(
-      user.college,
-      200,
-    ),
-
-    profession: cleanString(
-      user.profession,
-      150,
-    ),
-
-    employment: cleanString(
-      user.employment,
-      100,
-    ),
-
-    industry: cleanString(
-      user.industry,
-      150,
-    ),
-
-    company: cleanString(
-      user.company,
-      200,
-    ),
-
-    familyType: cleanString(
-      user.familyType,
-      100,
-    ),
-
-    familyLocation: cleanString(
-      user.familyLocation,
-      150,
-    ),
-
-    siblings: cleanString(
-      user.siblings,
-      100,
-    ),
-
-    diet: cleanString(
-      user.diet,
-      100,
-    ),
-
-    smoking: cleanString(
-      user.smoking,
-      100,
-    ),
-
-    drinking: cleanString(
-      user.drinking,
-      100,
-    ),
-
-    interests:
-      Array.isArray(user.interests)
-        ? user.interests
-        : [],
-
-    preferredAgeMin:
+    partnerAgeMin:
       user.partnerAgeMin != null
         ? String(user.partnerAgeMin)
         : "",
 
-    preferredAgeMax:
+    partnerAgeMax:
       user.partnerAgeMax != null
         ? String(user.partnerAgeMax)
         : "",
 
-    preferredLocation,
+    partnerState: user.partnerState || "",
+    partnerCity: user.partnerCity || "",
+    partnerReligion: user.partnerReligion || "",
+    partnerCast: user.partnerCast || "",
+    partnerEducation: user.partnerEducation || "",
+    partnerProfession: user.partnerProfession || "",
+    partnerMaritalStatus: user.partnerMaritalStatus || "",
 
-    preferredEducation:
-      cleanString(
-        user.partnerEducation,
-        150,
-      ),
+    photos,
+    profileImage: photos[0] || null,
 
-    preferredProfession:
-      cleanString(
-        user.partnerProfession,
-        150,
-      ),
-
-    preferredMaritalStatus:
-      cleanString(
-        user.partnerMaritalStatus,
-        100,
-      ),
-
-    profileImage:
-      getProfileImage(user.photos),
-
-    photos:
-      Array.isArray(user.photos)
-        ? user.photos
-        : [],
-
-    isEmailVerified:
-      Boolean(user.isEmailVerified),
-
-    isMobileVerified:
-      Boolean(user.isMobileVerified),
-
-    isProfileComplete:
-      Boolean(user.isProfileComplete),
+    isEmailVerified: Boolean(user.isEmailVerified),
+    isMobileVerified: Boolean(user.isMobileVerified),
+    isProfileComplete: Boolean(user.isProfileComplete),
 
     completion,
   };
@@ -366,58 +236,98 @@ function buildProfile(user: any) {
 
 async function getAuthenticatedUserId() {
   const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
-  const token =
-    cookieStore.get(
-      AUTH_COOKIE_NAME,
-    )?.value;
+  if (!token) return null;
 
-  if (!token) {
-    return null;
-  }
-
-  const session =
-    await verifyAuthToken(token);
+  const session = await verifyAuthToken(token);
 
   return session?.userId ?? null;
 }
 
-function parseLocation(
-  location: string,
-  currentCity: string,
-  currentState: string,
-) {
-  if (!location) {
-    return {
-      city: currentCity,
-      state: currentState,
-    };
+async function getUserCollection() {
+  await connectDB();
+
+  const db = mongoose.connection.db;
+
+  if (!db) {
+    throw new Error("Database connection is not available.");
   }
 
-  const parts = location
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-  if (parts.length >= 2) {
-    return {
-      city: parts[0],
-      state: parts.slice(1).join(", "),
-    };
-  }
-
-  return {
-    city: parts[0],
-    state: currentState,
-  };
+  return db.collection("users");
 }
 
+// Extract a Cloudinary public ID from its secure URL.
+function getCloudinaryPublicId(url: string): string | null {
+  try {
+    const parsedUrl = new URL(url);
+
+    if (parsedUrl.hostname !== "res.cloudinary.com") {
+      return null;
+    }
+
+    const parts = parsedUrl.pathname.split("/").filter(Boolean);
+    const uploadIndex = parts.indexOf("upload");
+
+    if (uploadIndex === -1) return null;
+
+    const afterUpload = parts.slice(uploadIndex + 1);
+
+    // Remove transformations and version, if present.
+    const versionIndex = afterUpload.findIndex((part) =>
+      /^v\d+$/.test(part),
+    );
+
+    if (versionIndex === -1) return null;
+
+    const publicIdParts = afterUpload.slice(versionIndex + 1);
+
+    if (!publicIdParts.length) return null;
+
+    const lastPart = publicIdParts[publicIdParts.length - 1];
+
+    publicIdParts[publicIdParts.length - 1] =
+      lastPart.replace(/\.[^.]+$/, "");
+
+    return publicIdParts.join("/");
+  } catch {
+    return null;
+  }
+}
+
+// Delete only Cloudinary images belonging to the authenticated user's folders.
+async function deleteCloudinaryImage(
+  publicId: string,
+  allowedFolder: string,
+): Promise<boolean> {
+  if (!publicId.startsWith(allowedFolder)) {
+    return false;
+  }
+
+  try {
+    const result = await cloudinary.uploader.destroy(publicId, {
+      resource_type: "image",
+      invalidate: true,
+    });
+
+    return result.result === "ok" || result.result === "not found";
+  } catch (error) {
+    console.error(
+      "CLOUDINARY_DELETE_ERROR:",
+      publicId,
+      error,
+    );
+
+    return false;
+  }
+}
+
+// GET PROFILE
 export async function GET() {
   try {
-    const userId =
-      await getAuthenticatedUserId();
+    const userId = await getAuthenticatedUserId();
 
-    if (!userId) {
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return NextResponse.json(
         {
           success: false,
@@ -427,48 +337,11 @@ export async function GET() {
       );
     }
 
-    if (
-      !mongoose.Types.ObjectId.isValid(
-        userId,
-      )
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid user session.",
-        },
-        { status: 401 },
-      );
-    }
+    const users = await getUserCollection();
 
-    await connectDB();
-
-    const db = mongoose.connection.db;
-
-    if (!db) {
-      throw new Error(
-        "Database connection is not available.",
-      );
-    }
-
-    const user =
-      await db
-        .collection("users")
-        .findOne(
-          {
-            _id:
-              new mongoose.Types.ObjectId(
-                userId,
-              ),
-          },
-          {
-            projection: {
-              password: 0,
-              email: 0,
-              mobile: 0,
-            },
-          },
-        );
+    const user = await users.findOne({
+      _id: new mongoose.Types.ObjectId(userId),
+    });
 
     if (!user) {
       return NextResponse.json(
@@ -485,30 +358,24 @@ export async function GET() {
       profile: buildProfile(user),
     });
   } catch (error) {
-    console.error(
-      "GET /api/profile error:",
-      error,
-    );
+    console.error("GET /api/profiles error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message:
-          "Unable to load profile.",
+        message: "Unable to load profile.",
       },
       { status: 500 },
     );
   }
 }
 
-export async function PATCH(
-  request: Request,
-) {
+// UPDATE PROFILE
+export async function PATCH(request: Request) {
   try {
-    const userId =
-      await getAuthenticatedUserId();
+    const userId = await getAuthenticatedUserId();
 
-    if (!userId) {
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return NextResponse.json(
         {
           success: false,
@@ -518,44 +385,28 @@ export async function PATCH(
       );
     }
 
+    const body = await request.json();
+
     if (
-      !mongoose.Types.ObjectId.isValid(
-        userId,
-      )
+      !body ||
+      typeof body !== "object" ||
+      Array.isArray(body)
     ) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Invalid user session.",
+          message: "Invalid request body.",
         },
-        { status: 401 },
+        { status: 400 },
       );
     }
 
-    const body =
-      (await request.json()) as ProfileUpdateBody;
+    const users = await getUserCollection();
+    const objectId = new mongoose.Types.ObjectId(userId);
 
-    await connectDB();
-
-    const db = mongoose.connection.db;
-
-    if (!db) {
-      throw new Error(
-        "Database connection is not available.",
-      );
-    }
-
-    const users =
-      db.collection("users");
-
-    const currentUser =
-      await users.findOne({
-        _id:
-          new mongoose.Types.ObjectId(
-            userId,
-          ),
-      });
+    const currentUser = await users.findOne({
+      _id: objectId,
+    });
 
     if (!currentUser) {
       return NextResponse.json(
@@ -567,381 +418,152 @@ export async function PATCH(
       );
     }
 
-    /*
-     * ------------------------------------------
-     * NAME
-     * ------------------------------------------
-     */
+    const updateData: Record<string, unknown> = {};
 
-    const fullName =
-      cleanString(
-        body.name,
-        150,
-      );
-
-    const nameParts =
-      fullName
-        .split(/\s+/)
-        .filter(Boolean);
-
-    const firstName =
-      nameParts.shift() ||
-      cleanString(
-        currentUser.firstName,
-        100,
-      );
-
-    const lastName =
-      nameParts.join(" ") ||
-      cleanString(
-        currentUser.lastName,
-        100,
-      );
-
-    /*
-     * ------------------------------------------
-     * LOCATION
-     * ------------------------------------------
-     */
-
-    const currentCity =
-      cleanString(
-        currentUser.city,
-        100,
-      );
-
-    const currentState =
-      cleanString(
-        currentUser.state,
-        100,
-      );
-
-    const location =
-      cleanString(
-        body.location,
-        150,
-      );
-
-    const parsedLocation =
-      parseLocation(
-        location,
-        currentCity,
-        currentState,
-      );
-
-    /*
-     * ------------------------------------------
-     * PARTNER LOCATION
-     * ------------------------------------------
-     *
-     * Existing UI uses:
-     *
-     * "Gurugram, Haryana"
-     *
-     * We convert that to:
-     *
-     * partnerCity = Gurugram
-     * partnerState = Haryana
-     *
-     * ------------------------------------------
-     */
-
-    const existingPartnerCity =
-      cleanString(
-        currentUser.partnerCity,
-        100,
-      );
-
-    const existingPartnerState =
-      cleanString(
-        currentUser.partnerState,
-        100,
-      );
-
-    const preferredLocation =
-      cleanString(
-        body.preferredLocation,
-        150,
-      );
-
-    let partnerCity =
-      existingPartnerCity;
-
-    let partnerState =
-      existingPartnerState;
-
-    if (preferredLocation) {
-      const preferredParts =
-        preferredLocation
-          .split(",")
-          .map(
-            (item) => item.trim(),
-          )
-          .filter(Boolean);
-
+    // Update editable text fields.
+    for (const field of editableFields) {
       if (
-        preferredParts.length >= 2
+        Object.prototype.hasOwnProperty.call(body, field)
       ) {
-        partnerCity =
-          preferredParts[0];
-
-        partnerState =
-          preferredParts
-            .slice(1)
-            .join(", ");
-      } else {
-        /*
-         * If only one value is entered,
-         * preserve the existing city and
-         * update the state.
-         */
-        partnerState =
-          preferredParts[0];
+        updateData[field] = cleanString(
+          body[field],
+          stringLimits[field],
+        );
       }
     }
 
-    /*
-     * ------------------------------------------
-     * INTERESTS
-     * ------------------------------------------
-     */
+    let removedPhotoUrls: string[] = [];
+    let removedTempPublicIds: string[] = [];
 
-    const interests =
-      normalizeArray(
-        body.interests,
+    // Update gallery photos and preserve matching temp public IDs.
+    if (
+      Object.prototype.hasOwnProperty.call(body, "photos")
+    ) {
+      const oldPhotos = Array.isArray(currentUser.photos)
+        ? currentUser.photos.filter(
+            (photo: unknown): photo is string =>
+              typeof photo === "string",
+          )
+        : [];
+
+      const oldTempIds = Array.isArray(currentUser.photoPublicIds)
+        ? currentUser.photoPublicIds
+        : [];
+
+      const newPhotos = normalizePhotos(
+        body.photos,
+        currentUser.photos,
       );
 
-    /*
-     * ------------------------------------------
-     * UPDATE
-     * ------------------------------------------
-     */
+      removedPhotoUrls = oldPhotos.filter(
+        (photo) => !newPhotos.includes(photo),
+      );
 
-    const updateData = {
-      firstName,
-      lastName,
+      const retainedTempIds = newPhotos.map((photo) => {
+        const oldIndex = oldPhotos.indexOf(photo);
 
-      city: parsedLocation.city,
-      state: parsedLocation.state,
+        if (oldIndex === -1) return "";
 
-      height: cleanString(
-        body.height,
-        30,
-      ),
+        const publicId = oldTempIds[oldIndex];
 
-      maritalStatus:
-        cleanString(
-          body.maritalStatus,
-          100,
-        ),
+        return typeof publicId === "string" ? publicId : "";
+      });
 
-      motherTongue:
-        cleanString(
-          body.motherTongue,
-          100,
-        ),
+      removedTempPublicIds = removedPhotoUrls
+        .map((photo) => {
+          const oldIndex = oldPhotos.indexOf(photo);
+          const publicId = oldTempIds[oldIndex];
 
-      about: cleanString(
-        body.about,
-        500,
-      ),
+          return typeof publicId === "string" &&
+            publicId.startsWith("matrimonial/registration-temp/")
+            ? publicId
+            : "";
+        })
+        .filter(Boolean);
 
-      education:
-        cleanString(
-          body.education,
-          150,
-        ),
-
-      fieldOfStudy:
-        cleanString(
-          body.fieldOfStudy,
-          150,
-        ),
-
-      college:
-        cleanString(
-          body.institute,
-          200,
-        ),
-
-      profession:
-        cleanString(
-          body.profession,
-          150,
-        ),
-
-      employment:
-        cleanString(
-          body.employment,
-          100,
-        ),
-
-      industry:
-        cleanString(
-          body.industry,
-          150,
-        ),
-
-      company:
-        cleanString(
-          body.company,
-          200,
-        ),
-
-      familyType:
-        cleanString(
-          body.familyType,
-          100,
-        ),
-
-      familyLocation:
-        cleanString(
-          body.familyLocation,
-          150,
-        ),
-
-      siblings:
-        cleanString(
-          body.siblings,
-          100,
-        ),
-
-      diet:
-        cleanString(
-          body.diet,
-          100,
-        ),
-
-      smoking:
-        cleanString(
-          body.smoking,
-          100,
-        ),
-
-      drinking:
-        cleanString(
-          body.drinking,
-          100,
-        ),
-
-      interests,
-
-      partnerAgeMin:
-        cleanString(
-          body.preferredAgeMin,
-          10,
-        ),
-
-      partnerAgeMax:
-        cleanString(
-          body.preferredAgeMax,
-          10,
-        ),
-
-      partnerState,
-
-      partnerCity,
-
-      partnerEducation:
-        cleanString(
-          body.preferredEducation,
-          150,
-        ),
-
-      partnerProfession:
-        cleanString(
-          body.preferredProfession,
-          150,
-        ),
-
-      partnerMaritalStatus:
-        cleanString(
-          body.preferredMaritalStatus,
-          100,
-        ),
-
-      updatedAt: new Date(),
-    };
-
-    /*
-     * ------------------------------------------
-     * PROFILE COMPLETION
-     * ------------------------------------------
-     */
+      updateData.photos = newPhotos;
+      updateData.photoPublicIds = retainedTempIds;
+    }
 
     const updatedUser = {
       ...currentUser,
       ...updateData,
     };
 
-    const completion =
-      calculateCompletion(
-        updatedUser,
-      );
+    const completion = calculateCompletion(updatedUser);
 
-    updateData[
-      "isProfileComplete" as keyof typeof updateData
-    ] = completion >= 80 as never;
+    updateData.isProfileComplete = completion >= 80;
+    updateData.updatedAt = new Date();
 
-    /*
-     * ------------------------------------------
-     * SAVE TO MONGODB
-     * ------------------------------------------
-     */
-
-    await users.updateOne(
-      {
-        _id:
-          new mongoose.Types.ObjectId(
-            userId,
-          ),
-      },
+    const updateResult = await users.updateOne(
+      { _id: objectId },
       {
         $set: updateData,
       },
     );
 
-    const savedUser =
-      await users.findOne(
-        {
-          _id:
-            new mongoose.Types.ObjectId(
-              userId,
-            ),
-        },
-        {
-          projection: {
-            password: 0,
-            email: 0,
-            mobile: 0,
-          },
-        },
-      );
+    if (!updateResult.matchedCount) {
+      throw new Error("Unable to update profile.");
+    }
+
+    // Delete removed images after the database update succeeds.
+    const allowedProfileFolder = `matrimonial/profiles/${userId}/`;
+
+    const deletionResults = await Promise.all(
+      removedPhotoUrls.map(async (photoUrl) => {
+        const profilePublicId = getCloudinaryPublicId(photoUrl);
+
+        let profileDeleted = true;
+
+        if (
+          profilePublicId &&
+          profilePublicId.startsWith(allowedProfileFolder)
+        ) {
+          profileDeleted = await deleteCloudinaryImage(
+            profilePublicId,
+            allowedProfileFolder,
+          );
+        }
+
+        return profileDeleted;
+      }),
+    );
+
+    const tempDeletionResults = await Promise.all(
+      removedTempPublicIds.map((publicId) =>
+        deleteCloudinaryImage(
+          publicId,
+          "matrimonial/registration-temp/",
+        ),
+      ),
+    );
+
+    const cloudinaryDeleteFailed = [
+      ...deletionResults,
+      ...tempDeletionResults,
+    ].some((result) => !result);
+
+    const savedUser = await users.findOne({
+      _id: objectId,
+    });
 
     if (!savedUser) {
-      throw new Error(
-        "Unable to load updated profile.",
-      );
+      throw new Error("Unable to load updated profile.");
     }
 
     return NextResponse.json({
       success: true,
-      message:
-        "Profile updated successfully.",
-      profile:
-        buildProfile(savedUser),
+      message: "Profile updated successfully.",
+      cloudinaryDeleteFailed,
+      profile: buildProfile(savedUser),
     });
   } catch (error) {
-    console.error(
-      "PATCH /api/profile error:",
-      error,
-    );
+    console.error("PATCH /api/profiles error:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message:
-          "Unable to update profile.",
+        message: "Unable to update profile.",
       },
       { status: 500 },
     );

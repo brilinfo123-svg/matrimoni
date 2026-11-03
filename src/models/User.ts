@@ -37,6 +37,7 @@ export interface IUser extends Document {
   partnerProfession: string;
   partnerMaritalStatus: string;
   photos: string[];
+  photoPublicIds: string[];
   isMobileVisible: boolean;
   isActive: boolean;
   favorites: mongoose.Types.ObjectId[];
@@ -218,6 +219,10 @@ const UserSchema = new Schema<IUser>(
       trim: true,
     },
     photos: {
+      type: [String],
+      default: [],
+    },
+    photoPublicIds: {
       type: [String],
       default: [],
     },

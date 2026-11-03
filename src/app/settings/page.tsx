@@ -300,21 +300,72 @@ const activateAccount = async () => {
   
     if (!result.isConfirmed) return;
   
-    const finalConfirmation = await Swal.fire({
-      title: "Are you absolutely sure?",
-      text: "Please confirm that you want to permanently delete your EverMilan account.",
-      icon: "error",
-      input: "checkbox",
-      inputPlaceholder: "I understand this action is permanent",
-      inputValidator: (value) =>
-        value ? undefined : "Please confirm before continuing.",
-      showCancelButton: true,
-      confirmButtonText: "Delete Permanently",
-      cancelButtonText: "Keep My Account",
-      confirmButtonColor: "#b42336",
-      cancelButtonColor: "#777178",
-      reverseButtons: true,
-    });
+ 
+const finalConfirmation = await Swal.fire({
+  html: `
+    <div class="evermilan-delete-modal">
+      <div class="evermilan-delete-icon">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 9V13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M12 16.5V16.51" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M10.3 3.9L2.8 17C2 18.4 3 20.1 4.6 20.1H19.4C21 20.1 22 18.4 21.2 17L13.7 3.9C12.9 2.5 11.1 2.5 10.3 3.9Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <span class="evermilan-delete-eyebrow">FINAL CONFIRMATION</span>
+
+      <h2>Are you absolutely sure?</h2>
+
+      <p>
+        You are about to permanently delete your EverMilan account.
+        Your profile information and associated photos will be removed.
+      </p>
+
+      <div class="evermilan-delete-warning">
+        <span class="evermilan-warning-dot"></span>
+        <span>This action cannot be undone.</span>
+      </div>
+
+      <label class="evermilan-confirm-check">
+        <input type="checkbox" id="delete-confirm-checkbox" />
+        <span class="evermilan-custom-check"></span>
+        <span class="evermilan-check-text">
+          I understand this action is permanent
+        </span>
+      </label>
+    </div>
+  `,
+  showCancelButton: true,
+  confirmButtonText: "Delete Permanently",
+  cancelButtonText: "Keep My Account",
+  confirmButtonColor: "#a83268",
+  cancelButtonColor: "#777178",
+  reverseButtons: true,
+  focusConfirm: false,
+  customClass: {
+    popup: "evermilan-delete-popup",
+    htmlContainer: "evermilan-delete-html",
+    confirmButton: "evermilan-delete-confirm",
+    cancelButton: "evermilan-delete-cancel",
+  },
+  buttonsStyling: false,
+  preConfirm: () => {
+    const checkbox = document.getElementById(
+      "delete-confirm-checkbox"
+    ) as HTMLInputElement | null;
+
+    if (!checkbox?.checked) {
+      Swal.showValidationMessage(
+        "Please confirm that you understand this action is permanent."
+      );
+      return false;
+    }
+
+    return true;
+  },
+});
+
+if (!finalConfirmation.isConfirmed) return;
   
     if (!finalConfirmation.isConfirmed) return;
   

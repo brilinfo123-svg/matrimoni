@@ -715,6 +715,209 @@
   }
 }
 
+
+:global(.evermilan-delete-popup) {
+  width: min(440px, calc(100% - 28px)) !important;
+  padding: 30px 28px 26px !important;
+  border-radius: 25px !important;
+  border: 1px solid rgba(168, 50, 104, 0.12);
+  background: linear-gradient(145deg, #fff 0%, #fff8fb 100%);
+  box-shadow: 0 24px 80px rgba(65, 20, 42, 0.2) !important;
+}
+
+:global(.evermilan-delete-html) {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+:global(.evermilan-delete-modal) {
+  text-align: center;
+  color: #35232c;
+}
+
+:global(.evermilan-delete-icon) {
+  width: 66px;
+  height: 66px;
+  margin: 0 auto 17px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  color: #b42336;
+  background: linear-gradient(145deg, #fff0f1, #ffe1e5);
+  box-shadow: inset 0 0 0 1px rgba(180, 35, 54, 0.1);
+
+  svg {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+:global(.evermilan-delete-eyebrow) {
+  display: inline-block;
+  color: #a83268;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  margin-bottom: 9px;
+}
+
+:global(.evermilan-delete-modal h2) {
+  margin: 0 0 11px;
+  color: #54243a;
+  font-size: 23px;
+  font-weight: 750;
+  letter-spacing: -0.6px;
+}
+
+:global(.evermilan-delete-modal p) {
+  max-width: 330px;
+  margin: 0 auto;
+  color: #786873;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+:global(.evermilan-delete-warning) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 20px 0;
+  padding: 11px 13px;
+  border: 1px solid #f4d9dd;
+  border-radius: 12px;
+  background: #fff4f4;
+  color: #a12b40;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+:global(.evermilan-warning-dot) {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #c4314c;
+  box-shadow: 0 0 0 4px rgba(196, 49, 76, 0.1);
+}
+
+:global(.evermilan-confirm-check) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #ead8e0;
+  border-radius: 14px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+:global(.evermilan-confirm-check:has(input:checked)) {
+  border-color: #a83268;
+  background: #fff6fa;
+}
+
+:global(.evermilan-confirm-check input) {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+
+:global(.evermilan-custom-check) {
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #cbb6c0;
+  border-radius: 6px;
+  background: #fff;
+  transition: all 0.2s;
+
+  &::after {
+    content: "";
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) scale(0);
+    margin-top: -2px;
+    transition: transform 0.2s;
+  }
+}
+
+:global(.evermilan-confirm-check input:checked + .evermilan-custom-check) {
+  background: #a83268;
+  border-color: #a83268;
+}
+
+:global(.evermilan-confirm-check input:checked + .evermilan-custom-check::after) {
+  transform: rotate(45deg) scale(1);
+}
+
+:global(.evermilan-check-text) {
+  color: #593b49;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+:global(.evermilan-delete-confirm),
+:global(.evermilan-delete-cancel) {
+  min-height: 44px;
+  padding: 0 17px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+:global(.evermilan-delete-confirm) {
+  color: #fff;
+  background: linear-gradient(135deg, #a83268, #7e2648);
+  box-shadow: 0 5px 15px rgba(126, 38, 72, 0.2);
+}
+
+:global(.evermilan-delete-cancel) {
+  color: #634d58;
+  background: #f4edf1;
+  margin-right: 10px;
+}
+
+:global(.evermilan-delete-confirm:hover),
+:global(.evermilan-delete-cancel:hover) {
+  transform: translateY(-2px);
+}
+
+:global(.evermilan-delete-popup .swal2-validation-message) {
+  border-radius: 9px;
+  font-size: 11px;
+  background: #fff0f1;
+  color: #a42339;
+}
+
+@media (max-width: 480px) {
+  :global(.evermilan-delete-popup) {
+    padding: 25px 18px 20px !important;
+  }
+
+  :global(.evermilan-delete-modal h2) {
+    font-size: 21px;
+  }
+
+  :global(.evermilan-delete-confirm),
+  :global(.evermilan-delete-cancel) {
+    padding: 0 12px;
+    font-size: 11px;
+  }
+}
+
+
 @media (max-width: 640px) {
   .accountAction {
     flex-wrap: wrap;

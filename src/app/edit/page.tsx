@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import {
-  ChangeEvent,
   FormEvent,
+  ReactNode,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -14,7 +15,6 @@ import {
   FiCheck,
   FiChevronDown,
   FiHeart,
-  FiImage,
   FiInfo,
   FiLock,
   FiMapPin,
@@ -22,23 +22,136 @@ import {
   FiShield,
   FiTrash2,
   FiUser,
+  FiUpload,
+  FiStar,
+  FiX,
 } from "react-icons/fi";
 
 import styles from "./edit-profile.module.scss";
 
-const interestOptions = [
-  "Travel",
-  "Photography",
-  "Design",
-  "Music",
-  "Movies",
-  "Cooking",
-  "Fitness",
-  "Reading",
-  "Technology",
-  "Nature",
-  "Food",
-  "Art",
+type FormState = {
+  profileFor: string;
+  firstName: string;
+  lastName: string;
+  gender: string;
+  dateOfBirth: string;
+  state: string;
+  city: string;
+  religion: string;
+  cast: string;
+  motherTongue: string;
+  maritalStatus: string;
+  education: string;
+  college: string;
+  profession: string;
+  company: string;
+  income: string;
+  fatherOccupation: string;
+  motherOccupation: string;
+  aboutYourself: string;
+  diet: string;
+  smoking: string;
+  drinking: string;
+  partnerAgeMin: string;
+  partnerAgeMax: string;
+  partnerState: string;
+  partnerCity: string;
+  partnerReligion: string;
+  partnerCast: string;
+  partnerEducation: string;
+  partnerProfession: string;
+  partnerMaritalStatus: string;
+};
+
+type ProfileData = Partial<FormState> & {
+  id?: string;
+  _id?: string;
+  email?: string;
+  mobile?: string;
+  photos?: string[];
+  profileImage?: string | null;
+  isEmailVerified?: boolean;
+  isMobileVerified?: boolean;
+  isProfileComplete?: boolean;
+  completion?: number;
+};
+
+type CloudinarySignature = {
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  folder: string;
+  signature: string;
+};
+
+const MAX_PHOTOS = 6;
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
+const emptyForm: FormState = {
+  profileFor: "",
+  firstName: "",
+  lastName: "",
+  gender: "",
+  dateOfBirth: "",
+  state: "",
+  city: "",
+  religion: "",
+  cast: "",
+  motherTongue: "",
+  maritalStatus: "",
+  education: "",
+  college: "",
+  profession: "",
+  company: "",
+  income: "",
+  fatherOccupation: "",
+  motherOccupation: "",
+  aboutYourself: "",
+  diet: "",
+  smoking: "",
+  drinking: "",
+  partnerAgeMin: "",
+  partnerAgeMax: "",
+  partnerState: "",
+  partnerCity: "",
+  partnerReligion: "",
+  partnerCast: "",
+  partnerEducation: "",
+  partnerProfession: "",
+  partnerMaritalStatus: "",
+};
+
+const religionOptions = [
+  "Hindu",
+  "Muslim",
+  "Sikh",
+  "Christian",
+  "Jain",
+  "Buddhist",
+  "Parsi",
+  "Other",
+];
+
+const maritalStatusOptions = [
+  "Never married",
+  "Divorced",
+  "Widowed",
+  "Separated",
+];
+
+const educationOptions = [
+  "High school",
+  "Diploma",
+  "Bachelor's Degree",
+  "Master's Degree",
+  "Doctorate",
+  "Other",
 ];
 
 const lifestyleOptions = {
@@ -48,376 +161,266 @@ const lifestyleOptions = {
     "Vegan",
     "Occasionally non-vegetarian",
   ],
-  smoking: [
-    "Never",
-    "Occasionally",
-    "Regularly",
-  ],
-  drinking: [
-    "Never",
-    "Occasionally",
-    "Regularly",
-  ],
+  smoking: ["Never", "Occasionally", "Regularly"],
+  drinking: ["Never", "Occasionally", "Regularly"],
 };
 
-type FormState = {
-  name: string;
-  age: string;
-  location: string;
-  height: string;
-  maritalStatus: string;
-  motherTongue: string;
-  about: string;
+const profileForOptions = [
+  "Self",
+  "Son",
+  "Daughter",
+  "Brother",
+  "Sister",
+  "Relative",
+  "Friend",
+];
 
-  education: string;
-  fieldOfStudy: string;
-  institute: string;
-
-  profession: string;
-  employment: string;
-  industry: string;
-  company: string;
-
-  familyType: string;
-  familyLocation: string;
-  siblings: string;
-
-  diet: string;
-  smoking: string;
-  drinking: string;
-
-  preferredAgeMin: string;
-  preferredAgeMax: string;
-  preferredLocation: string;
-  preferredEducation: string;
-  preferredProfession: string;
-  preferredMaritalStatus: string;
-};
-
-type ProfileData = {
-  id: string;
-
-  name: string;
-  age: string;
-  location: string;
-  height: string;
-  maritalStatus: string;
-  motherTongue: string;
-  about: string;
-
-  education: string;
-  fieldOfStudy: string;
-  institute: string;
-
-  profession: string;
-  employment: string;
-  industry: string;
-  company: string;
-
-  familyType: string;
-  familyLocation: string;
-  siblings: string;
-
-  diet: string;
-  smoking: string;
-  drinking: string;
-
-  interests: string[];
-
-  preferredAgeMin: string;
-  preferredAgeMax: string;
-  preferredLocation: string;
-  preferredEducation: string;
-  preferredProfession: string;
-  preferredMaritalStatus: string;
-
-  profileImage: string | null;
-  photos: string[];
-
-  isEmailVerified: boolean;
-  isMobileVerified: boolean;
-  isProfileComplete: boolean;
-
-  completion: number;
-};
-
-const emptyForm: FormState = {
-  name: "",
-  age: "",
-  location: "",
-  height: "",
-  maritalStatus: "",
-  motherTongue: "",
-  about: "",
-
-  education: "",
-  fieldOfStudy: "",
-  institute: "",
-
-  profession: "",
-  employment: "",
-  industry: "",
-  company: "",
-
-  familyType: "",
-  familyLocation: "",
-  siblings: "",
-
-  diet: "",
-  smoking: "",
-  drinking: "",
-
-  preferredAgeMin: "",
-  preferredAgeMax: "",
-  preferredLocation: "",
-  preferredEducation: "",
-  preferredProfession: "",
-  preferredMaritalStatus: "",
-};
-
-const defaultInterests: string[] = [];
-
-function profileToForm(
-  profile: ProfileData,
-): FormState {
+function profileToForm(profile: ProfileData): FormState {
   return {
-    name: profile.name || "",
-    age: profile.age || "",
-    location: profile.location || "",
-    height: profile.height || "",
-    maritalStatus:
-      profile.maritalStatus || "",
-    motherTongue:
-      profile.motherTongue || "",
-    about: profile.about || "",
-
-    education:
-      profile.education || "",
-    fieldOfStudy:
-      profile.fieldOfStudy || "",
-    institute:
-      profile.institute || "",
-
-    profession:
-      profile.profession || "",
-    employment:
-      profile.employment || "",
-    industry:
-      profile.industry || "",
-    company:
-      profile.company || "",
-
-    familyType:
-      profile.familyType || "",
-    familyLocation:
-      profile.familyLocation || "",
-    siblings:
-      profile.siblings || "",
-
+    profileFor: profile.profileFor || "",
+    firstName: profile.firstName || "",
+    lastName: profile.lastName || "",
+    gender: profile.gender || "",
+    dateOfBirth: profile.dateOfBirth
+      ? String(profile.dateOfBirth).slice(0, 10)
+      : "",
+    state: profile.state || "",
+    city: profile.city || "",
+    religion: profile.religion || "",
+    cast: profile.cast || "",
+    motherTongue: profile.motherTongue || "",
+    maritalStatus: profile.maritalStatus || "",
+    education: profile.education || "",
+    college: profile.college || "",
+    profession: profile.profession || "",
+    company: profile.company || "",
+    income: profile.income || "",
+    fatherOccupation: profile.fatherOccupation || "",
+    motherOccupation: profile.motherOccupation || "",
+    aboutYourself: profile.aboutYourself || "",
     diet: profile.diet || "",
-    smoking:
-      profile.smoking || "",
-    drinking:
-      profile.drinking || "",
-
-    preferredAgeMin:
-      profile.preferredAgeMin || "",
-    preferredAgeMax:
-      profile.preferredAgeMax || "",
-    preferredLocation:
-      profile.preferredLocation || "",
-    preferredEducation:
-      profile.preferredEducation || "",
-    preferredProfession:
-      profile.preferredProfession || "",
-    preferredMaritalStatus:
-      profile.preferredMaritalStatus || "",
+    smoking: profile.smoking || "",
+    drinking: profile.drinking || "",
+    partnerAgeMin: String(profile.partnerAgeMin ?? ""),
+    partnerAgeMax: String(profile.partnerAgeMax ?? ""),
+    partnerState: profile.partnerState || "",
+    partnerCity: profile.partnerCity || "",
+    partnerReligion: profile.partnerReligion || "",
+    partnerCast: profile.partnerCast || "",
+    partnerEducation: profile.partnerEducation || "",
+    partnerProfession: profile.partnerProfession || "",
+    partnerMaritalStatus: profile.partnerMaritalStatus || "",
   };
 }
 
-export default function EditProfilePage() {
-  const [form, setForm] =
-    useState<FormState>(emptyForm);
+function calculateAge(dateOfBirth: string): string {
+  if (!dateOfBirth) return "";
 
+  const birthDate = new Date(dateOfBirth);
+
+  if (Number.isNaN(birthDate.getTime())) return "";
+
+  const today = new Date();
+
+  let age = today.getFullYear() - birthDate.getFullYear();
+
+  const monthDifference = today.getMonth() - birthDate.getMonth();
+
+  if (
+    monthDifference < 0 ||
+    (monthDifference === 0 &&
+      today.getDate() < birthDate.getDate())
+  ) {
+    age--;
+  }
+
+  return age >= 0 ? String(age) : "";
+}
+
+function getInitials(firstName: string, lastName: string): string {
+  const initials =
+    firstName.trim().charAt(0) +
+    lastName.trim().charAt(0);
+
+  return initials.toUpperCase() || "U";
+}
+
+function revokePreviewUrls(urls: string[]) {
+  urls.forEach((url) => {
+    if (url.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+    }
+  });
+}
+
+async function uploadPhotosToCloudinary(
+  files: File[],
+): Promise<string[]> {
+  if (files.length === 0) return [];
+
+  const signatureResponse = await fetch("/api/cloudinary/sign", {
+    method: "POST",
+    credentials: "include",
+  });
+
+  const signatureData = await signatureResponse.json();
+
+  if (!signatureResponse.ok) {
+    throw new Error(
+      signatureData?.message ||
+        "Unable to prepare image upload.",
+    );
+  }
+
+  const signature =
+    signatureData as CloudinarySignature;
+
+  if (
+    !signature.cloudName ||
+    !signature.apiKey ||
+    !signature.timestamp ||
+    !signature.folder ||
+    !signature.signature
+  ) {
+    throw new Error("Invalid Cloudinary upload signature.");
+  }
+
+  const uploadedUrls: string[] = [];
+
+  for (const file of files) {
+    const uploadData = new FormData();
+
+    uploadData.append("file", file);
+    uploadData.append("api_key", signature.apiKey);
+    uploadData.append(
+      "timestamp",
+      String(signature.timestamp),
+    );
+    uploadData.append("folder", signature.folder);
+    uploadData.append("signature", signature.signature);
+
+    const uploadResponse = await fetch(
+      `https://api.cloudinary.com/v1_1/${signature.cloudName}/image/upload`,
+      {
+        method: "POST",
+        body: uploadData,
+      },
+    );
+
+    const uploadResult = await uploadResponse.json();
+
+    if (
+      !uploadResponse.ok ||
+      !uploadResult.secure_url
+    ) {
+      throw new Error(
+        uploadResult?.error?.message ||
+          "Unable to upload one of your photos.",
+      );
+    }
+
+    const optimizedUrl = String(
+      uploadResult.secure_url,
+    ).replace(
+      "/upload/",
+      "/upload/f_auto,q_auto,c_limit,w_1600/",
+    );
+
+    uploadedUrls.push(optimizedUrl);
+  }
+
+  return uploadedUrls;
+}
+
+export default function EditProfilePage() {
+  const [form, setForm] = useState<FormState>(emptyForm);
   const [savedForm, setSavedForm] =
     useState<FormState>(emptyForm);
 
-  const [
-    selectedInterests,
-    setSelectedInterests,
-  ] = useState<string[]>(
-    defaultInterests,
-  );
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [savedPhotos, setSavedPhotos] = useState<string[]>([]);
 
-  const [
-    savedInterests,
-    setSavedInterests,
-  ] = useState<string[]>(
-    defaultInterests,
-  );
+  // New files are stored against their blob preview URL.
+  const [pendingFiles, setPendingFiles] = useState<
+    Record<string, File>
+  >({});
 
-  const [
-    profileImage,
-    setProfileImage,
-  ] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingFilesRef = useRef<Record<string, File>>({});
 
-  const [
-    savedProfileImage,
-    setSavedProfileImage,
-  ] = useState<string | null>(
-    null,
-  );
 
-  const [
-    completion,
-    setCompletion,
-  ] = useState(0);
+  const [completion, setCompletion] = useState(0);
+  const [activeSection, setActiveSection] = useState("basic");
 
-  const [
-    isLoading,
-    setIsLoading,
-  ] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const [
-    loadError,
-    setLoadError,
-  ] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [saveError, setSaveError] = useState("");
 
-  const [
-    saveError,
-    setSaveError,
-  ] = useState("");
+  const age = calculateAge(form.dateOfBirth);
 
-  const [
-    isSaving,
-    setIsSaving,
-  ] = useState(false);
-
-  const [
-    isSaved,
-    setIsSaved,
-  ] = useState(false);
-
-  const [
-    showSuccess,
-    setShowSuccess,
-  ] = useState(false);
-
-  const [
-    activeSection,
-    setActiveSection,
-  ] = useState("basic");
-
-  const [
-    hasChanges,
-    setHasChanges,
-  ] = useState(false);
-
-  /*
-   * ------------------------------------------
-   * LOAD PROFILE
-   * ------------------------------------------
-   */
-
+  // LOAD PROFILE
   useEffect(() => {
     let mounted = true;
 
-    const loadProfile =
-      async () => {
-        try {
-          setIsLoading(true);
-          setLoadError("");
+    const loadProfile = async () => {
+      try {
+        setIsLoading(true);
+        setLoadError("");
 
-          const response =
-            await fetch(
-              "/api/profiles",
-              {
-                method: "GET",
-                credentials:
-                  "include",
-                cache: "no-store",
-              },
-            );
+        const response = await fetch("/api/profiles", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
 
-          const data =
-            await response.json();
+        const data = await response.json();
 
-          if (!response.ok) {
-            throw new Error(
-              data?.message ||
-                "Unable to load profile.",
-            );
-          }
-
-          if (!mounted) {
-            return;
-          }
-
-          const profile =
-            data.profile as ProfileData;
-
-          const loadedForm =
-            profileToForm(
-              profile,
-            );
-
-          const loadedInterests =
-            Array.isArray(
-              profile.interests,
-            )
-              ? profile.interests
-              : [];
-
-          setForm(loadedForm);
-          setSavedForm(
-            loadedForm,
+        if (!response.ok) {
+          throw new Error(
+            data?.message || "Unable to load profile.",
           );
-
-          setSelectedInterests(
-            loadedInterests,
-          );
-          setSavedInterests(
-            loadedInterests,
-          );
-
-          setProfileImage(
-            profile.profileImage ||
-              null,
-          );
-          setSavedProfileImage(
-            profile.profileImage ||
-              null,
-          );
-
-          setCompletion(
-            Number(
-              profile.completion || 0,
-            ),
-          );
-
-          setHasChanges(false);
-        } catch (error) {
-          console.error(
-            "Load profile error:",
-            error,
-          );
-
-          if (
-            mounted
-          ) {
-            setLoadError(
-              error instanceof
-                Error
-                ? error.message
-                : "Unable to load profile.",
-            );
-          }
-        } finally {
-          if (mounted) {
-            setIsLoading(false);
-          }
         }
-      };
+
+        if (!mounted) return;
+
+        const profile = data.profile as ProfileData;
+        const loadedForm = profileToForm(profile);
+
+        const loadedPhotos = Array.isArray(profile.photos)
+          ? profile.photos.filter(
+              (photo): photo is string =>
+                typeof photo === "string",
+            ).slice(0, MAX_PHOTOS)
+          : profile.profileImage
+            ? [profile.profileImage]
+            : [];
+
+        setForm(loadedForm);
+        setSavedForm(loadedForm);
+        setPhotos(loadedPhotos);
+        setSavedPhotos(loadedPhotos);
+        setCompletion(Number(profile.completion || 0));
+        setHasChanges(false);
+      } catch (error) {
+        console.error("Load profile error:", error);
+
+        if (mounted) {
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load profile.",
+          );
+        }
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
 
     loadProfile();
 
@@ -426,347 +429,376 @@ export default function EditProfilePage() {
     };
   }, []);
 
-  /*
-   * ------------------------------------------
-   * UPDATE FIELD
-   * ------------------------------------------
-   */
+  // CLEAN UP PENDING PREVIEWS ON UNMOUNT
+  useEffect(() => {
+    pendingFilesRef.current = pendingFiles;
+  }, [pendingFiles]);
+  
+  // Clean up previews only when component unmounts.
+  useEffect(() => {
+    return () => {
+      Object.keys(pendingFilesRef.current).forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
+    };
+  }, []);
 
+  // UPDATE FIELD
   const updateField = (
     field: keyof FormState,
     value: string,
   ) => {
-    setForm((current) => ({
+    setForm((current) => {
+      const updated = {
+        ...current,
+        [field]: value,
+      };
+
+      if (field === "religion") {
+        updated.cast = "";
+      }
+
+      if (field === "partnerReligion") {
+        updated.partnerCast = "";
+      }
+
+      return updated;
+    });
+
+    setHasChanges(true);
+    setIsSaved(false);
+    setSaveError("");
+  };
+
+  // SELECT NEW PHOTOS
+  const handlePhotoChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const selectedFiles = Array.from(
+      event.target.files || [],
+    );
+
+    // Reset input so the same file can be selected again.
+    event.target.value = "";
+
+    if (selectedFiles.length === 0) return;
+
+    const remainingSlots = MAX_PHOTOS - photos.length;
+
+    if (remainingSlots <= 0) {
+      setSaveError(
+        `You can upload a maximum of ${MAX_PHOTOS} photos.`,
+      );
+      return;
+    }
+
+    const filesToAdd = selectedFiles.slice(
+      0,
+      remainingSlots,
+    );
+
+    if (selectedFiles.length > remainingSlots) {
+      setSaveError(
+        `Only ${remainingSlots} more photo(s) can be added. Maximum ${MAX_PHOTOS} photos allowed.`,
+      );
+    } else {
+      setSaveError("");
+    }
+
+    const newPreviews: string[] = [];
+    const newPendingFiles: Record<string, File> = {};
+
+    for (const file of filesToAdd) {
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        setSaveError(
+          "Only JPG, PNG and WebP images are allowed.",
+        );
+        continue;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        setSaveError(
+          `${file.name} is larger than 5 MB.`,
+        );
+        continue;
+      }
+
+      const previewUrl = URL.createObjectURL(file);
+
+      newPreviews.push(previewUrl);
+      newPendingFiles[previewUrl] = file;
+    }
+
+    if (newPreviews.length === 0) return;
+
+    setPhotos((current) => [
       ...current,
-      [field]: value,
+      ...newPreviews,
+    ]);
+
+    setPendingFiles((current) => ({
+      ...current,
+      ...newPendingFiles,
     }));
 
     setHasChanges(true);
     setIsSaved(false);
-    setSaveError("");
   };
 
-  /*
-   * ------------------------------------------
-   * INTERESTS
-   * ------------------------------------------
-   */
-
-  const toggleInterest = (
-    interest: string,
-  ) => {
-    setSelectedInterests(
-      (current) =>
-        current.includes(interest)
-          ? current.filter(
-              (item) =>
-                item !== interest,
-            )
-          : [
-              ...current,
-              interest,
-            ],
+  // REMOVE PHOTO
+  const removePhoto = (photoToRemove: string) => {
+    setPhotos((current) =>
+      current.filter((photo) => photo !== photoToRemove),
     );
 
-    setHasChanges(true);
-    setIsSaved(false);
-    setSaveError("");
-  };
+    setPendingFiles((current) => {
+      const updated = { ...current };
 
-  /*
-   * ------------------------------------------
-   * IMAGE
-   * ------------------------------------------
-   */
-
-  const handleImageChange = (
-    event: ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file =
-      event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    if (
-      file.size >
-      5 * 1024 * 1024
-    ) {
-      setSaveError(
-        "Image size must be less than 5 MB.",
-      );
-
-      event.target.value = "";
-
-      return;
-    }
-
-    if (
-      ![
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-      ].includes(file.type)
-    ) {
-      setSaveError(
-        "Please select a JPG, PNG or WebP image.",
-      );
-
-      event.target.value = "";
-
-      return;
-    }
-
-    const imageUrl =
-      URL.createObjectURL(file);
-
-    setProfileImage(imageUrl);
-    setHasChanges(true);
-    setIsSaved(false);
-    setSaveError("");
-  };
-
-  /*
-   * ------------------------------------------
-   * SAVE PROFILE
-   * ------------------------------------------
-   */
-
-  const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
-
-    if (isSaving) {
-      return;
-    }
-
-    setIsSaving(true);
-    setIsSaved(false);
-    setSaveError("");
-
-    try {
-      const response =
-        await fetch(
-          "/api/profiles",
-          {
-            method: "PATCH",
-            credentials:
-              "include",
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-            body: JSON.stringify({
-              ...form,
-              interests:
-                selectedInterests,
-            }),
-          },
-        );
-
-      const data =
-        await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data?.message ||
-            "Unable to update profile.",
-        );
+      if (updated[photoToRemove]) {
+        URL.revokeObjectURL(photoToRemove);
+        delete updated[photoToRemove];
       }
 
-      const profile =
-        data.profile as ProfileData;
+      return updated;
+    });
 
-      const updatedForm =
-        profileToForm(
-          profile,
-        );
-
-      const updatedInterests =
-        Array.isArray(
-          profile.interests,
-        )
-          ? profile.interests
-          : [];
-
-      setForm(updatedForm);
-      setSavedForm(
-        updatedForm,
-      );
-
-      setSelectedInterests(
-        updatedInterests,
-      );
-      setSavedInterests(
-        updatedInterests,
-      );
-
-      setProfileImage(
-        profile.profileImage ||
-          null,
-      );
-      setSavedProfileImage(
-        profile.profileImage ||
-          null,
-      );
-
-      setCompletion(
-        Number(
-          profile.completion || 0,
-        ),
-      );
-
-      setIsSaving(false);
-      setIsSaved(true);
-      setHasChanges(false);
-      setShowSuccess(true);
-
-      window.setTimeout(() => {
-        setShowSuccess(false);
-      }, 3000);
-    } catch (error) {
-      console.error(
-        "Save profile error:",
-        error,
-      );
-
-      setIsSaving(false);
-
-      setSaveError(
-        error instanceof Error
-          ? error.message
-          : "Unable to update profile.",
-      );
-    }
+    setHasChanges(true);
+    setIsSaved(false);
+    setSaveError("");
   };
 
-  /*
-   * ------------------------------------------
-   * DISCARD CHANGES
-   * ------------------------------------------
-   */
+  // MAKE PHOTO PRIMARY
+  const makeMainPhoto = (photoToMakeMain: string) => {
+    setPhotos((current) => {
+      const selectedPhoto = current.find(
+        (photo) => photo === photoToMakeMain,
+      );
 
+      if (!selectedPhoto || current[0] === selectedPhoto) {
+        return current;
+      }
+
+      return [
+        selectedPhoto,
+        ...current.filter(
+          (photo) => photo !== selectedPhoto,
+        ),
+      ];
+    });
+
+    setHasChanges(true);
+    setIsSaved(false);
+    setSaveError("");
+  };
+
+  // SAVE PROFILE
+ 
+// SAVE PROFILE
+const handleSubmit = async (
+  event: FormEvent<HTMLFormElement>,
+) => {
+  event.preventDefault();
+
+  if (isSaving) return;
+
+  const minAge = Number(form.partnerAgeMin);
+  const maxAge = Number(form.partnerAgeMax);
+
+  if (
+    form.partnerAgeMin &&
+    form.partnerAgeMax &&
+    minAge > maxAge
+  ) {
+    setSaveError(
+      "Minimum partner age cannot be greater than maximum age.",
+    );
+    return;
+  }
+
+  if (
+    (form.partnerAgeMin && (minAge < 18 || minAge > 99)) ||
+    (form.partnerAgeMax && (maxAge < 18 || maxAge > 99))
+  ) {
+    setSaveError(
+      "Partner age must be between 18 and 99.",
+    );
+    return;
+  }
+
+  setIsSaving(true);
+  setIsSaved(false);
+  setSaveError("");
+
+  try {
+    let finalPhotos = [...photos];
+
+    // Upload only newly added photos.
+    const newPhotoEntries = photos.filter(
+      (photo) => Boolean(pendingFiles[photo]),
+    );
+
+    if (newPhotoEntries.length > 0) {
+      setIsUploading(true);
+
+      const filesToUpload = newPhotoEntries.map(
+        (previewUrl) => pendingFiles[previewUrl],
+      );
+
+      const uploadedUrls =
+        await uploadPhotosToCloudinary(filesToUpload);
+
+      const uploadedMap: Record<string, string> = {};
+
+      newPhotoEntries.forEach((previewUrl, index) => {
+        uploadedMap[previewUrl] = uploadedUrls[index];
+      });
+
+      finalPhotos = photos.map(
+        (photo) => uploadedMap[photo] || photo,
+      );
+
+      setIsUploading(false);
+    }
+
+    // Save profile and delete removed Cloudinary images
+    // through the PATCH API.
+    const response = await fetch("/api/profiles", {
+      method: "PATCH",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...form,
+        photos: finalPhotos,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.message || "Unable to update profile.",
+      );
+    }
+
+    const profile = data.profile as ProfileData;
+    const updatedForm = profileToForm(profile);
+
+    const updatedPhotos = Array.isArray(profile.photos)
+      ? profile.photos
+      : finalPhotos;
+
+    // Release temporary preview URLs after successful save.
+    revokePreviewUrls(Object.keys(pendingFiles));
+
+    setPendingFiles({});
+    setForm(updatedForm);
+    setSavedForm(updatedForm);
+    setPhotos(updatedPhotos);
+    setSavedPhotos(updatedPhotos);
+    setCompletion(Number(profile.completion || 0));
+
+    setIsSaved(true);
+    setHasChanges(false);
+    setShowSuccess(true);
+
+    // The API handles Cloudinary deletion.
+    if (data.cloudinaryDeleteFailed) {
+      setSaveError(
+        "Your profile was saved, but some removed photos could not be deleted from Cloudinary. Please check your server logs.",
+      );
+    }
+  } catch (error) {
+    console.error("Save profile error:", error);
+
+    setSaveError(
+      error instanceof Error
+        ? error.message
+        : "Unable to update profile.",
+    );
+  } finally {
+    setIsUploading(false);
+    setIsSaving(false);
+  }
+};
+
+
+
+  // HIDE SUCCESS MESSAGE
+  useEffect(() => {
+    if (!showSuccess) return;
+
+    const timeout = window.setTimeout(() => {
+      setShowSuccess(false);
+    }, 3000);
+
+    return () => window.clearTimeout(timeout);
+  }, [showSuccess]);
+
+  // DISCARD CHANGES
   const handleCancel = () => {
+    revokePreviewUrls(Object.keys(pendingFiles));
+
+    setPendingFiles({});
     setForm(savedForm);
-
-    setSelectedInterests(
-      savedInterests,
-    );
-
-    setProfileImage(
-      savedProfileImage,
-    );
-
+    setPhotos(savedPhotos);
     setHasChanges(false);
     setIsSaved(false);
     setSaveError("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
-  /*
-   * ------------------------------------------
-   * NAVIGATION
-   * ------------------------------------------
-   */
-
+  // PROFILE SECTIONS
   const sections = [
     {
       id: "basic",
       label: "Basic details",
-      icon: (
-        <FiUser aria-hidden="true" />
-      ),
+      icon: <FiUser aria-hidden="true" />,
     },
     {
       id: "about",
       label: "About me",
-      icon: (
-        <FiHeart aria-hidden="true" />
-      ),
+      icon: <FiHeart aria-hidden="true" />,
     },
     {
       id: "education",
       label: "Education & career",
-      icon: (
-        <FiInfo aria-hidden="true" />
-      ),
+      icon: <FiInfo aria-hidden="true" />,
     },
     {
       id: "family",
       label: "Family",
-      icon: (
-        <FiUser aria-hidden="true" />
-      ),
+      icon: <FiUser aria-hidden="true" />,
     },
     {
       id: "lifestyle",
       label: "Lifestyle",
-      icon: (
-        <FiShield aria-hidden="true" />
-      ),
-    },
-    {
-      id: "interests",
-      label: "Interests",
-      icon: (
-        <FiHeart aria-hidden="true" />
-      ),
+      icon: <FiShield aria-hidden="true" />,
     },
     {
       id: "preferences",
       label: "Partner preferences",
-      icon: (
-        <FiHeart aria-hidden="true" />
-      ),
+      icon: <FiHeart aria-hidden="true" />,
     },
   ];
 
-  /*
-   * ------------------------------------------
-   * LOADING
-   * ------------------------------------------
-   */
-
+  // LOADING STATE
   if (isLoading) {
     return (
       <main className={styles.page}>
-        <div
-          className={
-            styles.backgroundGlow
-          }
-        />
+        <div className={styles.backgroundGlow} />
+        <div className={styles.backgroundGlowTwo} />
 
-        <div
-          className={
-            styles.backgroundGlowTwo
-          }
-        />
-
-        <div
-          className={
-            styles.container
-          }
-        >
-          <div
-            className={
-              styles.loadingState
-            }
-          >
-            <span
-              className={
-                styles.spinner
-              }
-            />
-
-            <strong>
-              Loading your profile...
-            </strong>
-
+        <div className={styles.container}>
+          <div className={styles.loadingState}>
+            <span className={styles.spinner} />
+            <strong>Loading your profile...</strong>
             <p>
-              Please wait while we
-              fetch your profile
-              details.
+              Please wait while we fetch your profile details.
             </p>
           </div>
         </div>
@@ -774,54 +806,25 @@ export default function EditProfilePage() {
     );
   }
 
-  /*
-   * ------------------------------------------
-   * ERROR
-   * ------------------------------------------
-   */
-
+  // ERROR STATE
   if (loadError) {
     return (
       <main className={styles.page}>
-        <div
-          className={
-            styles.backgroundGlow
-          }
-        />
+        <div className={styles.backgroundGlow} />
+        <div className={styles.backgroundGlowTwo} />
 
-        <div
-          className={
-            styles.backgroundGlowTwo
-          }
-        />
-
-        <div
-          className={
-            styles.container
-          }
-        >
-          <div
-            className={
-              styles.errorState
-            }
-          >
+        <div className={styles.container}>
+          <div className={styles.errorState}>
             <span>
               <FiInfo aria-hidden="true" />
             </span>
 
-            <h1>
-              Unable to load profile
-            </h1>
-
-            <p>
-              {loadError}
-            </p>
+            <h1>Unable to load profile</h1>
+            <p>{loadError}</p>
 
             <button
               type="button"
-              onClick={() =>
-                window.location.reload()
-              }
+              onClick={() => window.location.reload()}
             >
               Try again
             </button>
@@ -833,60 +836,29 @@ export default function EditProfilePage() {
 
   return (
     <main className={styles.page}>
-      <div
-        className={
-          styles.backgroundGlow
-        }
-      />
+      <div className={styles.backgroundGlow} />
+      <div className={styles.backgroundGlowTwo} />
 
-      <div
-        className={
-          styles.backgroundGlowTwo
-        }
-      />
-
-      <div
-        className={
-          styles.container
-        }
-      >
-        {/* Top bar */}
-
+      <div className={styles.container}>
+        {/* TOP BAR */}
         <div className={styles.topBar}>
           <Link
             href="/dashboard/profile"
-            className={
-              styles.backButton
-            }
+            className={styles.backButton}
           >
             <FiArrowLeft aria-hidden="true" />
-
-            <span>
-              Back to profile
-            </span>
+            <span>Back to profile</span>
           </Link>
 
-          <div
-            className={
-              styles.topActions
-            }
-          >
+          <div className={styles.topActions}>
             {hasChanges && (
-              <span
-                className={
-                  styles.unsaved
-                }
-              >
+              <span className={styles.unsaved}>
                 Unsaved changes
               </span>
             )}
 
             {isSaved && (
-              <span
-                className={
-                  styles.saved
-                }
-              >
+              <span className={styles.saved}>
                 <FiCheck aria-hidden="true" />
                 Saved
               </span>
@@ -894,64 +866,36 @@ export default function EditProfilePage() {
 
             <Link
               href="/preview"
-              className={
-                styles.previewButton
-              }
+              className={styles.previewButton}
             >
               Preview profile
             </Link>
           </div>
         </div>
 
-        {/* Page header */}
-
-        <section
-          className={
-            styles.pageHeader
-          }
-        >
+        {/* PAGE HEADER */}
+        <section className={styles.pageHeader}>
           <div>
-            <span
-              className={
-                styles.eyebrow
-              }
-            >
+            <span className={styles.eyebrow}>
               <FiUser aria-hidden="true" />
-
               Profile settings
             </span>
 
-            <h1>
-              Edit your profile
-            </h1>
+            <h1>Edit your profile</h1>
 
             <p>
-              Keep your profile up to date
-              so people can get to know
-              the real you.
+              Keep your profile up to date so people can get to
+              know the real you.
             </p>
           </div>
 
-          <div
-            className={
-              styles.completionCard
-            }
-          >
-            <div
-              className={
-                styles.completionCircle
-              }
-            >
-              <strong>
-                {completion}%
-              </strong>
+          <div className={styles.completionCard}>
+            <div className={styles.completionCircle}>
+              <strong>{completion}%</strong>
             </div>
 
             <div>
-              <strong>
-                Profile completion
-              </strong>
-
+              <strong>Profile completion</strong>
               <span>
                 {completion >= 80
                   ? "Your profile looks great."
@@ -962,102 +906,61 @@ export default function EditProfilePage() {
         </section>
 
         {saveError && (
-          <div
-            className={
-              styles.errorBanner
-            }
-          >
+          <div className={styles.errorBanner}>
             <FiInfo aria-hidden="true" />
-
-            <span>
-              {saveError}
-            </span>
+            <span>{saveError}</span>
           </div>
         )}
 
         <div className={styles.layout}>
-          {/* Sidebar */}
-
-          <aside
-            className={
-              styles.sidebar
-            }
-          >
-            <div
-              className={
-                styles.sidebarInner
-              }
-            >
-              <span
-                className={
-                  styles.sidebarTitle
-                }
-              >
+          {/* SIDEBAR */}
+          <aside className={styles.sidebar}>
+            <div className={styles.sidebarInner}>
+              <span className={styles.sidebarTitle}>
                 Profile sections
               </span>
 
               <nav>
-                {sections.map(
-                  (section) => (
-                    <button
-                      type="button"
-                      key={
-                        section.id
-                      }
-                      className={
-                        activeSection ===
-                        section.id
-                          ? styles.activeNav
-                          : ""
-                      }
-                      onClick={() =>
-                        setActiveSection(
-                          section.id,
-                        )
-                      }
-                    >
-                      <span
-                        className={
-                          styles.navIcon
-                        }
-                      >
-                        {
-                          section.icon
-                        }
-                      </span>
+                {sections.map((section) => (
+                  <button
+                    type="button"
+                    key={section.id}
+                    className={
+                      activeSection === section.id
+                        ? styles.activeNav
+                        : ""
+                    }
+                    onClick={() => {
+                      setActiveSection(section.id);
 
-                      <span>
-                        {
-                          section.label
-                        }
-                      </span>
+                      document
+                        .getElementById(section.id)
+                        ?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
+                    }}
+                  >
+                    <span className={styles.navIcon}>
+                      {section.icon}
+                    </span>
 
-                      {activeSection ===
-                        section.id && (
-                        <FiCheck
-                          aria-hidden="true"
-                        />
-                      )}
-                    </button>
-                  ),
-                )}
+                    <span>{section.label}</span>
+
+                    {activeSection === section.id && (
+                      <FiCheck aria-hidden="true" />
+                    )}
+                  </button>
+                ))}
               </nav>
 
-              <div
-                className={
-                  styles.sidebarPrivacy
-                }
-              >
+              <div className={styles.sidebarPrivacy}>
                 <FiLock aria-hidden="true" />
 
                 <div>
-                  <strong>
-                    Your privacy
-                  </strong>
-
+                  <strong>Your privacy</strong>
                   <span>
-                    Only information you
-                    choose to share appears
+                    Only information you choose to share appears
                     on your profile.
                   </span>
                 </div>
@@ -1065,330 +968,388 @@ export default function EditProfilePage() {
             </div>
           </aside>
 
-          {/* Main form */}
-
+          {/* MAIN FORM */}
           <form
             className={styles.form}
-            onSubmit={
-              handleSubmit
-            }
+            onSubmit={handleSubmit}
           >
-            {/* Profile photo */}
-
-            <section
-              className={
-                styles.card
-              }
-            >
-              <div
-                className={
-                  styles.sectionHeader
-                }
-              >
+            {/* PROFILE PHOTOS */}
+            <section className={styles.card}>
+              <div className={styles.sectionHeader}>
                 <div>
-                  <span
-                    className={
-                      styles.sectionIcon
-                    }
-                  >
+                  <span className={styles.sectionIcon}>
                     <FiCamera aria-hidden="true" />
                   </span>
 
                   <div>
-                    <h2>
-                      Profile photo
-                    </h2>
-
+                    <h2>Profile photos</h2>
                     <p>
-                      A clear profile photo
-                      helps people connect
-                      with you.
+                      Manage the photos displayed on your profile.
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div
-                className={
-                  styles.photoEditor
-                }
-              >
-                <div
-                  className={
-                    styles.profilePhoto
-                  }
-                >
-                  {profileImage ? (
+              {/* MAIN PHOTO PREVIEW */}
+              <div className={styles.photoEditor}>
+                <div className={styles.profilePhoto}>
+                  {photos[0] ? (
                     <img
-                      src={
-                        profileImage
-                      }
-                      alt="Profile preview"
+                      src={photos[0]}
+                      alt="Primary profile photo"
                     />
                   ) : (
                     <span>
                       {getInitials(
-                        form.name,
+                        form.firstName,
+                        form.lastName,
                       )}
                     </span>
                   )}
-
-                  <label
-                    htmlFor="profile-image"
-                    className={
-                      styles.cameraButton
-                    }
-                    title="Change profile photo"
-                  >
-                    <FiCamera aria-hidden="true" />
-
-                    <input
-                      id="profile-image"
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={
-                        handleImageChange
-                      }
-                    />
-                  </label>
                 </div>
 
-                <div
-                  className={
-                    styles.photoInfo
-                  }
-                >
-                  <strong>
-                    Choose a profile photo
-                  </strong>
+                <div className={styles.photoInfo}>
+                  <strong>Primary profile photo</strong>
 
                   <p>
-                    Use a recent, clear photo
-                    where your face is visible.
+                    Your first photo is used as your main
+                    profile picture.
                   </p>
 
                   <span>
-                    JPG, PNG or WebP · Maximum
-                    5 MB
+                    Select any gallery photo as your main photo.
+                    You can also remove photos you no longer want.
                   </span>
-
-                  <label
-                    htmlFor="profile-image"
-                    className={
-                      styles.uploadButton
-                    }
-                  >
-                    <FiImage aria-hidden="true" />
-
-                    Change photo
-                  </label>
                 </div>
               </div>
 
+              {/* PHOTO COUNT */}
               <div
-                className={
-                  styles.photoPrivacy
-                }
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 12,
+                  margin: "20px 0 12px",
+                  flexWrap: "wrap",
+                }}
               >
-                <FiShield aria-hidden="true" />
+                <strong>
+                  Your photo gallery
+                </strong>
 
+                <span style={{ fontSize: 13, opacity: 0.7 }}>
+                  {photos.length}/{MAX_PHOTOS} photos
+                </span>
+              </div>
+
+              {/* GALLERY */}
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 14,
+                }}
+              >
+                {photos.map((photo, index) => (
+                  <div
+                    key={photo}
+                    style={{
+                      position: "relative",
+                      width: 120,
+                      height: 150,
+                      overflow: "hidden",
+                      borderRadius: 14,
+                      border:
+                        index === 0
+                          ? "2px solid #7E2648"
+                          : "1px solid #eadde2",
+                      background: "#faf7f8",
+                    }}
+                  >
+                    <img
+                      src={photo}
+                      alt={`Profile photo ${index + 1}`}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+
+                    {index === 0 && (
+                      <span
+                        style={{
+                          position: "absolute",
+                          left: 5,
+                          right: 5,
+                          bottom: 5,
+                          padding: "5px 4px",
+                          borderRadius: 7,
+                          background: "#7E2648",
+                          color: "#fff",
+                          fontSize: 10,
+                          textAlign: "center",
+                          fontWeight: 700,
+                        }}
+                      >
+                        <FiStar
+                          style={{
+                            display: "inline",
+                            marginRight: 3,
+                            verticalAlign: "middle",
+                          }}
+                        />
+                        MAIN PHOTO
+                      </span>
+                    )}
+
+                    {index !== 0 && (
+                      <button
+                        type="button"
+                        title="Make main photo"
+                        disabled={isSaving}
+                        onClick={() => makeMainPhoto(photo)}
+                        style={{
+                          position: "absolute",
+                          left: 5,
+                          right: 5,
+                          bottom: 5,
+                          padding: "6px 4px",
+                          border: 0,
+                          borderRadius: 7,
+                          background: "rgba(255,255,255,0.95)",
+                          color: "#7E2648",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Make main
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      title="Remove photo"
+                      disabled={isSaving}
+                      onClick={() => removePhoto(photo)}
+                      style={{
+                        position: "absolute",
+                        top: 6,
+                        right: 6,
+                        display: "grid",
+                        placeItems: "center",
+                        width: 28,
+                        height: 28,
+                        border: 0,
+                        borderRadius: "50%",
+                        background: "#fff",
+                        color: "#b42345",
+                        cursor: "pointer",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                      }}
+                    >
+                      <FiX aria-hidden="true" />
+                    </button>
+                  </div>
+                ))}
+
+                {/* ADD PHOTO */}
+                {photos.length < MAX_PHOTOS && (
+                  <button
+                    type="button"
+                    disabled={isSaving}
+                    onClick={() =>
+                      fileInputRef.current?.click()
+                    }
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      gap: 8,
+                      width: 120,
+                      height: 150,
+                      border: "2px dashed #d9bac7",
+                      borderRadius: 14,
+                      background: "#fff9fb",
+                      color: "#7E2648",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <FiUpload size={24} />
+                    <strong style={{ fontSize: 12 }}>
+                      Add photos
+                    </strong>
+                    <span style={{ fontSize: 10 }}>
+                      {MAX_PHOTOS - photos.length} remaining
+                    </span>
+                  </button>
+                )}
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                hidden
+                onChange={handlePhotoChange}
+              />
+
+              <p
+                style={{
+                  marginTop: 12,
+                  fontSize: 12,
+                  color: "#777",
+                }}
+              >
+                JPG, PNG or WebP · Maximum 5 MB per photo ·
+                Up to 6 photos
+              </p>
+
+              <div className={styles.photoPrivacy}>
+                <FiShield aria-hidden="true" />
                 <span>
-                  Your photo visibility can
-                  be controlled from your
-                  privacy settings.
+                  Your photo visibility can be controlled from
+                  your privacy settings.
                 </span>
               </div>
             </section>
 
-            {/* Basic details */}
+            {/* BASIC DETAILS */}
+            <section id="basic" className={styles.card}>
+              <SectionHeader
+                icon={<FiUser aria-hidden="true" />}
+                title="Basic details"
+                description="Update your personal and basic information."
+              />
 
-            <section
-              id="basic"
-              className={
-                styles.card
-              }
-            >
-              <div
-                className={
-                  styles.sectionHeader
-                }
-              >
-                <div>
-                  <span
-                    className={
-                      styles.sectionIcon
-                    }
-                  >
-                    <FiUser aria-hidden="true" />
-                  </span>
-
-                  <div>
-                    <h2>
-                      Basic details
-                    </h2>
-
-                    <p>
-                      Tell people a little
-                      about who you are.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className={
-                  styles.fieldsGrid
-                }
-              >
-                <Field
-                  label="Full name"
-                  value={form.name}
+              <div className={styles.fieldsGrid}>
+                <SelectField
+                  label="Profile created for"
+                  value={form.profileFor}
+                  options={profileForOptions}
                   onChange={(value) =>
-                    updateField(
-                      "name",
-                      value,
-                    )
+                    updateField("profileFor", value)
+                  }
+                />
+
+                <SelectField
+                  label="Gender"
+                  value={form.gender}
+                  options={["Male", "Female", "Other"]}
+                  onChange={(value) =>
+                    updateField("gender", value)
+                  }
+                />
+
+                <Field
+                  label="First name"
+                  value={form.firstName}
+                  onChange={(value) =>
+                    updateField("firstName", value)
+                  }
+                  required
+                />
+
+                <Field
+                  label="Last name"
+                  value={form.lastName}
+                  onChange={(value) =>
+                    updateField("lastName", value)
+                  }
+                />
+
+                <Field
+                  label="Date of birth"
+                  type="date"
+                  value={form.dateOfBirth}
+                  onChange={(value) =>
+                    updateField("dateOfBirth", value)
                   }
                   required
                 />
 
                 <Field
                   label="Age"
-                  value={form.age}
-                  type="number"
-                  onChange={() => {
-                    /*
-                     * Age is calculated from
-                     * date of birth and is not
-                     * saved independently.
-                     */
-                  }}
+                  value={age}
+                  readOnly
+                  onChange={() => {}}
+                />
+
+                <Field
+                  label="State"
+                  value={form.state}
+                  icon={<FiMapPin aria-hidden="true" />}
+                  onChange={(value) =>
+                    updateField("state", value)
+                  }
                   required
                 />
 
                 <Field
-                  label="Location"
-                  value={
-                    form.location
-                  }
-                  icon={
-                    <FiMapPin aria-hidden="true" />
-                  }
+                  label="City"
+                  value={form.city}
+                  icon={<FiMapPin aria-hidden="true" />}
                   onChange={(value) =>
-                    updateField(
-                      "location",
-                      value,
-                    )
+                    updateField("city", value)
                   }
                   required
                 />
 
                 <SelectField
-                  label="Height"
-                  value={
-                    form.height
-                  }
-                  options={[
-                    `5'0"`,
-                    `5'2"`,
-                    `5'4"`,
-                    `5'6"`,
-                    `5'8"`,
-                    `5'9"`,
-                    `5'10"`,
-                    `6'0"`,
-                  ]}
+                  label="Religion"
+                  value={form.religion}
+                  options={religionOptions}
                   onChange={(value) =>
-                    updateField(
-                      "height",
-                      value,
-                    )
+                    updateField("religion", value)
                   }
                 />
 
-                <SelectField
-                  label="Marital status"
-                  value={
-                    form.maritalStatus
-                  }
-                  options={[
-                    "Never married",
-                    "Divorced",
-                    "Widowed",
-                    "Separated",
-                  ]}
+                <Field
+                  label="Caste"
+                  value={form.cast}
                   onChange={(value) =>
-                    updateField(
-                      "maritalStatus",
-                      value,
-                    )
+                    updateField("cast", value)
                   }
                 />
 
                 <Field
                   label="Mother tongue"
-                  value={
-                    form.motherTongue
-                  }
+                  value={form.motherTongue}
                   onChange={(value) =>
-                    updateField(
-                      "motherTongue",
-                      value,
-                    )
+                    updateField("motherTongue", value)
+                  }
+                />
+
+                <SelectField
+                  label="Marital status"
+                  value={form.maritalStatus}
+                  options={maritalStatusOptions}
+                  onChange={(value) =>
+                    updateField("maritalStatus", value)
                   }
                 />
               </div>
             </section>
 
-            {/* About */}
+            {/* ABOUT ME */}
+            <section id="about" className={styles.card}>
+              <SectionHeader
+                icon={<FiHeart aria-hidden="true" />}
+                title="About me"
+                description="Share what makes you unique."
+              />
 
-            <section
-              id="about"
-              className={
-                styles.card
-              }
-            >
-              <div
-                className={
-                  styles.sectionHeader
-                }
-              >
-                <div>
-                  <span
-                    className={
-                      styles.sectionIcon
-                    }
-                  >
-                    <FiHeart aria-hidden="true" />
-                  </span>
-
-                  <div>
-                    <h2>
-                      About me
-                    </h2>
-
-                    <p>
-                      Share what makes you
-                      unique.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className={
-                  styles.textareaWrapper
-                }
-              >
+              <div className={styles.textareaWrapper}>
                 <textarea
-                  value={
-                    form.about
-                  }
+                  value={form.aboutYourself}
                   onChange={(event) =>
                     updateField(
-                      "about",
-                      event.target
-                        .value,
+                      "aboutYourself",
+                      event.target.value,
                     )
                   }
                   maxLength={500}
@@ -1397,772 +1358,314 @@ export default function EditProfilePage() {
                 />
 
                 <span>
-                  {
-                    form.about
-                      .length
-                  }
-                  /500
+                  {form.aboutYourself.length}/500
                 </span>
               </div>
 
-              <div
-                className={
-                  styles.tip
-                }
-              >
+              <div className={styles.tip}>
                 <FiInfo aria-hidden="true" />
-
                 <span>
-                  Talk about your personality,
-                  interests, values and what
-                  matters to you. Avoid sharing
-                  phone numbers, email addresses
-                  or other private information.
+                  Talk about your personality, interests, values
+                  and what matters to you. Avoid sharing phone
+                  numbers or email addresses.
                 </span>
               </div>
             </section>
 
-            {/* Education and career */}
+            {/* EDUCATION & CAREER */}
+            <section id="education" className={styles.card}>
+              <SectionHeader
+                icon={<FiInfo aria-hidden="true" />}
+                title="Education & career"
+                description="Add your academic and professional background."
+              />
 
-            <section
-              id="education"
-              className={
-                styles.card
-              }
-            >
-              <div
-                className={
-                  styles.sectionHeader
-                }
-              >
-                <div>
-                  <span
-                    className={
-                      styles.sectionIcon
-                    }
-                  >
-                    <FiInfo aria-hidden="true" />
-                  </span>
+              <h3 className={styles.subTitle}>Education</h3>
 
-                  <div>
-                    <h2>
-                      Education & career
-                    </h2>
-
-                    <p>
-                      Add your academic and
-                      professional background.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <h3
-                className={
-                  styles.subTitle
-                }
-              >
-                Education
-              </h3>
-
-              <div
-                className={
-                  styles.fieldsGrid
-                }
-              >
+              <div className={styles.fieldsGrid}>
                 <SelectField
                   label="Highest education"
-                  value={
-                    form.education
-                  }
-                  options={[
-                    "High school",
-                    "Diploma",
-                    "Bachelor's Degree",
-                    "Master's Degree",
-                    "Doctorate",
-                    "Other",
-                  ]}
+                  value={form.education}
+                  options={educationOptions}
                   onChange={(value) =>
-                    updateField(
-                      "education",
-                      value,
-                    )
-                  }
-                />
-
-                <Field
-                  label="Field of study"
-                  value={
-                    form.fieldOfStudy
-                  }
-                  onChange={(value) =>
-                    updateField(
-                      "fieldOfStudy",
-                      value,
-                    )
+                    updateField("education", value)
                   }
                 />
 
                 <Field
                   label="College / Institute"
-                  value={
-                    form.institute
-                  }
+                  value={form.college}
                   onChange={(value) =>
-                    updateField(
-                      "institute",
-                      value,
-                    )
+                    updateField("college", value)
                   }
                 />
               </div>
 
-              <div
-                className={
-                  styles.divider
-                }
-              />
+              <div className={styles.divider} />
 
-              <h3
-                className={
-                  styles.subTitle
-                }
-              >
-                Career
-              </h3>
+              <h3 className={styles.subTitle}>Career</h3>
 
-              <div
-                className={
-                  styles.fieldsGrid
-                }
-              >
+              <div className={styles.fieldsGrid}>
                 <Field
                   label="Profession"
-                  value={
-                    form.profession
-                  }
+                  value={form.profession}
                   onChange={(value) =>
-                    updateField(
-                      "profession",
-                      value,
-                    )
-                  }
-                />
-
-                <SelectField
-                  label="Employment type"
-                  value={
-                    form.employment
-                  }
-                  options={[
-                    "Full-time",
-                    "Part-time",
-                    "Self-employed",
-                    "Business owner",
-                    "Freelancer",
-                    "Not working",
-                  ]}
-                  onChange={(value) =>
-                    updateField(
-                      "employment",
-                      value,
-                    )
-                  }
-                />
-
-                <Field
-                  label="Industry"
-                  value={
-                    form.industry
-                  }
-                  onChange={(value) =>
-                    updateField(
-                      "industry",
-                      value,
-                    )
+                    updateField("profession", value)
                   }
                 />
 
                 <Field
                   label="Company"
-                  value={
-                    form.company
-                  }
+                  value={form.company}
                   onChange={(value) =>
-                    updateField(
-                      "company",
-                      value,
-                    )
+                    updateField("company", value)
                   }
-                  optional
+                />
+
+                <Field
+                  label="Annual income"
+                  value={form.income}
+                  onChange={(value) =>
+                    updateField("income", value)
+                  }
                 />
               </div>
             </section>
 
-            {/* Family */}
+            {/* FAMILY */}
+            <section id="family" className={styles.card}>
+              <SectionHeader
+                icon={<FiUser aria-hidden="true" />}
+                title="Family details"
+                description="Add general information about your family."
+              />
 
-            <section
-              id="family"
-              className={
-                styles.card
-              }
-            >
-              <div
-                className={
-                  styles.sectionHeader
-                }
-              >
-                <div>
-                  <span
-                    className={
-                      styles.sectionIcon
-                    }
-                  >
-                    <FiUser aria-hidden="true" />
-                  </span>
-
-                  <div>
-                    <h2>
-                      Family
-                    </h2>
-
-                    <p>
-                      Add general family
-                      information.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className={
-                  styles.fieldsGrid
-                }
-              >
-                <SelectField
-                  label="Family type"
-                  value={
-                    form.familyType
-                  }
-                  options={[
-                    "Nuclear family",
-                    "Joint family",
-                    "Extended family",
-                  ]}
+              <div className={styles.fieldsGrid}>
+                <Field
+                  label="Father's occupation"
+                  value={form.fatherOccupation}
                   onChange={(value) =>
-                    updateField(
-                      "familyType",
-                      value,
-                    )
+                    updateField("fatherOccupation", value)
                   }
                 />
 
                 <Field
-                  label="Family location"
-                  value={
-                    form.familyLocation
-                  }
+                  label="Mother's occupation"
+                  value={form.motherOccupation}
                   onChange={(value) =>
-                    updateField(
-                      "familyLocation",
-                      value,
-                    )
-                  }
-                />
-
-                <Field
-                  label="Siblings"
-                  value={
-                    form.siblings
-                  }
-                  onChange={(value) =>
-                    updateField(
-                      "siblings",
-                      value,
-                    )
+                    updateField("motherOccupation", value)
                   }
                 />
               </div>
 
-              <div
-                className={
-                  styles.tip
-                }
-              >
+              <div className={styles.tip}>
                 <FiLock aria-hidden="true" />
-
                 <span>
-                  Keep sensitive family details
-                  private. Only share information
-                  you are comfortable displaying.
+                  Keep sensitive family details private. Only
+                  share information you are comfortable displaying.
                 </span>
               </div>
             </section>
 
-            {/* Lifestyle */}
+            {/* LIFESTYLE */}
+            <section id="lifestyle" className={styles.card}>
+              <SectionHeader
+                icon={<FiShield aria-hidden="true" />}
+                title="Lifestyle"
+                description="Share lifestyle choices that may matter to you."
+              />
 
-            <section
-              id="lifestyle"
-              className={
-                styles.card
-              }
-            >
-              <div
-                className={
-                  styles.sectionHeader
-                }
-              >
-                <div>
-                  <span
-                    className={
-                      styles.sectionIcon
-                    }
-                  >
-                    <FiShield aria-hidden="true" />
-                  </span>
-
-                  <div>
-                    <h2>
-                      Lifestyle
-                    </h2>
-
-                    <p>
-                      Share lifestyle choices
-                      that may matter to you.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className={
-                  styles.fieldsGrid
-                }
-              >
+              <div className={styles.fieldsGrid}>
                 <SelectField
                   label="Diet"
-                  value={
-                    form.diet
-                  }
-                  options={
-                    lifestyleOptions.diet
-                  }
+                  value={form.diet}
+                  options={lifestyleOptions.diet}
                   onChange={(value) =>
-                    updateField(
-                      "diet",
-                      value,
-                    )
+                    updateField("diet", value)
                   }
                 />
 
                 <SelectField
                   label="Smoking"
-                  value={
-                    form.smoking
-                  }
-                  options={
-                    lifestyleOptions.smoking
-                  }
+                  value={form.smoking}
+                  options={lifestyleOptions.smoking}
                   onChange={(value) =>
-                    updateField(
-                      "smoking",
-                      value,
-                    )
+                    updateField("smoking", value)
                   }
                 />
 
                 <SelectField
                   label="Drinking"
-                  value={
-                    form.drinking
-                  }
-                  options={
-                    lifestyleOptions.drinking
-                  }
+                  value={form.drinking}
+                  options={lifestyleOptions.drinking}
                   onChange={(value) =>
-                    updateField(
-                      "drinking",
-                      value,
-                    )
+                    updateField("drinking", value)
                   }
                 />
               </div>
             </section>
 
-            {/* Interests */}
+            {/* PARTNER PREFERENCES */}
+            <section id="preferences" className={styles.card}>
+              <SectionHeader
+                icon={<FiHeart aria-hidden="true" />}
+                title="Partner preferences"
+                description="Tell us what you are looking for in a partner."
+              />
 
-            <section
-              id="interests"
-              className={
-                styles.card
-              }
-            >
-              <div
-                className={
-                  styles.sectionHeader
-                }
-              >
-                <div>
-                  <span
-                    className={
-                      styles.sectionIcon
-                    }
-                  >
-                    <FiHeart aria-hidden="true" />
-                  </span>
-
-                  <div>
-                    <h2>
-                      Interests & hobbies
-                    </h2>
-
-                    <p>
-                      Select things you
-                      genuinely enjoy.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className={
-                  styles.interestList
-                }
-              >
-                {interestOptions.map(
-                  (interest) => {
-                    const selected =
-                      selectedInterests.includes(
-                        interest,
-                      );
-
-                    return (
-                      <button
-                        type="button"
-                        key={
-                          interest
-                        }
-                        className={
-                          selected
-                            ? styles.selectedInterest
-                            : ""
-                        }
-                        onClick={() =>
-                          toggleInterest(
-                            interest,
-                          )
-                        }
-                      >
-                        {selected && (
-                          <FiCheck
-                            aria-hidden="true"
-                          />
-                        )}
-
-                        <span>
-                          {
-                            interest
-                          }
-                        </span>
-                      </button>
-                    );
-                  },
-                )}
-              </div>
-
-              <span
-                className={
-                  styles.selectionCount
-                }
-              >
-                {
-                  selectedInterests.length
-                }{" "}
-                interests selected
-              </span>
-            </section>
-
-            {/* Partner preferences */}
-
-            <section
-              id="preferences"
-              className={
-                styles.card
-              }
-            >
-              <div
-                className={
-                  styles.sectionHeader
-                }
-              >
-                <div>
-                  <span
-                    className={
-                      styles.sectionIcon
-                    }
-                  >
-                    <FiHeart aria-hidden="true" />
-                  </span>
-
-                  <div>
-                    <h2>
-                      Partner preferences
-                    </h2>
-
-                    <p>
-                      Tell us what you are
-                      looking for.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className={
-                  styles.ageRange
-                }
-              >
-                <div
-                  className={
-                    styles.ageLabel
-                  }
-                >
-                  <span>
-                    Preferred age range
-                  </span>
-
+              <div className={styles.ageRange}>
+                <div className={styles.ageLabel}>
+                  <span>Preferred age range</span>
                   <strong>
-                    {form.preferredAgeMin ||
-                      "—"}{" "}
-                    –{" "}
-                    {form.preferredAgeMax ||
-                      "—"}{" "}
-                    years
+                    {form.partnerAgeMin || "—"} –{" "}
+                    {form.partnerAgeMax || "—"} years
                   </strong>
                 </div>
 
-                <div
-                  className={
-                    styles.ageFields
-                  }
-                >
+                <div className={styles.ageFields}>
                   <Field
                     label="Minimum age"
-                    value={
-                      form.preferredAgeMin
-                    }
                     type="number"
+                    value={form.partnerAgeMin}
                     onChange={(value) =>
-                      updateField(
-                        "preferredAgeMin",
-                        value,
-                      )
+                      updateField("partnerAgeMin", value)
                     }
                   />
 
-                  <span
-                    className={
-                      styles.ageDash
-                    }
-                  >
-                    —
-                  </span>
+                  <span className={styles.ageDash}>—</span>
 
                   <Field
                     label="Maximum age"
-                    value={
-                      form.preferredAgeMax
-                    }
                     type="number"
+                    value={form.partnerAgeMax}
                     onChange={(value) =>
-                      updateField(
-                        "preferredAgeMax",
-                        value,
-                      )
+                      updateField("partnerAgeMax", value)
                     }
                   />
                 </div>
               </div>
 
-              <div
-                className={
-                  styles.fieldsGrid
-                }
-              >
+              <div className={styles.fieldsGrid}>
                 <Field
-                  label="Preferred location"
-                  value={
-                    form.preferredLocation
-                  }
-                  icon={
-                    <FiMapPin aria-hidden="true" />
-                  }
+                  label="Preferred state"
+                  value={form.partnerState}
+                  icon={<FiMapPin aria-hidden="true" />}
                   onChange={(value) =>
-                    updateField(
-                      "preferredLocation",
-                      value,
-                    )
-                  }
-                />
-
-                <SelectField
-                  label="Education"
-                  value={
-                    form.preferredEducation
-                  }
-                  options={[
-                    "Any",
-                    "Bachelor's or above",
-                    "Master's or above",
-                    "Doctorate",
-                  ]}
-                  onChange={(value) =>
-                    updateField(
-                      "preferredEducation",
-                      value,
-                    )
+                    updateField("partnerState", value)
                   }
                 />
 
                 <Field
-                  label="Profession"
-                  value={
-                    form.preferredProfession
-                  }
+                  label="Preferred city"
+                  value={form.partnerCity}
+                  icon={<FiMapPin aria-hidden="true" />}
                   onChange={(value) =>
-                    updateField(
-                      "preferredProfession",
-                      value,
-                    )
+                    updateField("partnerCity", value)
                   }
                 />
 
                 <SelectField
-                  label="Marital status"
-                  value={
-                    form.preferredMaritalStatus
-                  }
-                  options={[
-                    "Any",
-                    "Never married",
-                    "Divorced",
-                    "Widowed",
-                  ]}
+                  label="Preferred religion"
+                  value={form.partnerReligion}
+                  options={religionOptions}
                   onChange={(value) =>
-                    updateField(
-                      "preferredMaritalStatus",
-                      value,
-                    )
+                    updateField("partnerReligion", value)
+                  }
+                />
+
+                <Field
+                  label="Preferred caste"
+                  value={form.partnerCast}
+                  onChange={(value) =>
+                    updateField("partnerCast", value)
+                  }
+                />
+
+                <SelectField
+                  label="Preferred education"
+                  value={form.partnerEducation}
+                  options={["Any", ...educationOptions]}
+                  onChange={(value) =>
+                    updateField("partnerEducation", value)
+                  }
+                />
+
+                <Field
+                  label="Preferred profession"
+                  value={form.partnerProfession}
+                  onChange={(value) =>
+                    updateField("partnerProfession", value)
+                  }
+                />
+
+                <SelectField
+                  label="Preferred marital status"
+                  value={form.partnerMaritalStatus}
+                  options={["Any", ...maritalStatusOptions]}
+                  onChange={(value) =>
+                    updateField("partnerMaritalStatus", value)
                   }
                 />
               </div>
 
-              <div
-                className={
-                  styles.preferenceNote
-                }
-              >
+              <div className={styles.preferenceNote}>
                 <FiInfo aria-hidden="true" />
-
                 <span>
-                  Preferences help us personalize
-                  your recommendations. They do
-                  not guarantee a specific match.
+                  Preferences help us personalize your recommendations.
+                  They do not guarantee a specific match.
                 </span>
               </div>
             </section>
 
-            {/* Verification */}
-
-            <section
-              className={
-                styles.verificationCard
-              }
-            >
-              <div
-                className={
-                  styles.verificationIcon
-                }
-              >
+            {/* VERIFICATION */}
+            <section className={styles.verificationCard}>
+              <div className={styles.verificationIcon}>
                 <FiShield aria-hidden="true" />
               </div>
 
               <div>
-                <strong>
-                  Want to build more trust?
-                </strong>
-
+                <strong>Want to build more trust?</strong>
                 <p>
-                  Complete your profile
-                  verification to show verified
-                  information where applicable.
+                  Complete your profile verification to show
+                  verified information where applicable.
                 </p>
               </div>
 
-              <Link
-                href="/dashboard/verification"
-              >
+              <Link href="/dashboard/verification">
                 Verification
               </Link>
             </section>
 
-            {/* Form actions */}
-
-            <div
-              className={
-                styles.formActions
-              }
-            >
+            {/* FORM ACTIONS */}
+            <div className={styles.formActions}>
               <button
                 type="button"
-                className={
-                  styles.cancelButton
-                }
-                onClick={
-                  handleCancel
-                }
-                disabled={
-                  isSaving ||
-                  !hasChanges
-                }
+                className={styles.cancelButton}
+                onClick={handleCancel}
+                disabled={isSaving || !hasChanges}
               >
                 <FiTrash2 aria-hidden="true" />
-
-                <span>
-                  Discard changes
-                </span>
+                <span>Discard changes</span>
               </button>
 
               <button
                 type="submit"
-                className={
-                  styles.saveButton
-                }
-                disabled={
-                  isSaving ||
-                  !hasChanges
-                }
+                className={styles.saveButton}
+                disabled={isSaving || !hasChanges}
               >
                 {isSaving ? (
                   <>
-                    <span
-                      className={
-                        styles.spinner
-                      }
-                    />
-
+                    <span className={styles.spinner} />
                     <span>
-                      Saving changes...
+                      {isUploading
+                        ? "Uploading photos..."
+                        : "Saving changes..."}
                     </span>
                   </>
                 ) : (
                   <>
                     <FiSave aria-hidden="true" />
-
-                    <span>
-                      Save changes
-                    </span>
+                    <span>Save changes</span>
                   </>
                 )}
               </button>
@@ -2170,26 +1673,17 @@ export default function EditProfilePage() {
           </form>
         </div>
 
-        {/* Success toast */}
-
+        {/* SUCCESS MESSAGE */}
         {showSuccess && (
-          <div
-            className={
-              styles.successToast
-            }
-          >
+          <div className={styles.successToast}>
             <span>
               <FiCheck aria-hidden="true" />
             </span>
 
             <div>
-              <strong>
-                Profile updated
-              </strong>
-
+              <strong>Profile updated</strong>
               <p>
-                Your changes have been saved
-                successfully.
+                Your changes have been saved successfully.
               </p>
             </div>
           </div>
@@ -2199,43 +1693,31 @@ export default function EditProfilePage() {
   );
 }
 
-/*
- * ------------------------------------------
- * INITIALS
- * ------------------------------------------
- */
-
-function getInitials(
-  name: string,
-) {
-  const parts =
-    name
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
-
-  if (!parts.length) {
-    return "U";
-  }
-
-  if (parts.length === 1) {
-    return parts[0]
-      .slice(0, 2)
-      .toUpperCase();
-  }
-
+// REUSABLE SECTION HEADER
+function SectionHeader({
+  icon,
+  title,
+  description,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+}) {
   return (
-    parts[0][0] +
-    parts[parts.length - 1][0]
-  ).toUpperCase();
+    <div className={styles.sectionHeader}>
+      <div>
+        <span className={styles.sectionIcon}>{icon}</span>
+
+        <div>
+          <h2>{title}</h2>
+          <p>{description}</p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-/*
- * ------------------------------------------
- * REUSABLE FIELD
- * ------------------------------------------
- */
-
+// REUSABLE INPUT FIELD
 function Field({
   label,
   value,
@@ -2243,86 +1725,43 @@ function Field({
   type = "text",
   icon,
   required = false,
-  optional = false,
+  readOnly = false,
 }: {
   label: string;
   value: string;
-  onChange: (
-    value: string,
-  ) => void;
+  onChange: (value: string) => void;
   type?: string;
-  icon?: React.ReactNode;
+  icon?: ReactNode;
   required?: boolean;
-  optional?: boolean;
+  readOnly?: boolean;
 }) {
-  const isReadOnly =
-    label === "Age";
-
   return (
-    <div
-      className={
-        styles.field
-      }
-    >
+    <div className={styles.field}>
       <label>
-        <span>
-          {label}
-        </span>
-
-        {required && (
-          <small>
-            Required
-          </small>
-        )}
-
-        {optional && (
-          <small>
-            Optional
-          </small>
-        )}
+        <span>{label}</span>
+        {required && <small>Required</small>}
       </label>
 
-      <div
-        className={
-          styles.inputWrapper
-        }
-      >
+      <div className={styles.inputWrapper}>
         {icon && (
-          <span
-            className={
-              styles.fieldIcon
-            }
-          >
-            {icon}
-          </span>
+          <span className={styles.fieldIcon}>{icon}</span>
         )}
 
         <input
           type={type}
           value={value}
           onChange={(event) =>
-            onChange(
-              event.target.value,
-            )
+            onChange(event.target.value)
           }
-          required={
-            required
-          }
-          readOnly={
-            isReadOnly
-          }
+          required={required}
+          readOnly={readOnly}
         />
       </div>
     </div>
   );
 }
 
-/*
- * ------------------------------------------
- * REUSABLE SELECT
- * ------------------------------------------
- */
-
+// REUSABLE SELECT FIELD
 function SelectField({
   label,
   value,
@@ -2332,70 +1771,36 @@ function SelectField({
   label: string;
   value: string;
   options: string[];
-  onChange: (
-    value: string,
-  ) => void;
+  onChange: (value: string) => void;
 }) {
-  /*
-   * If database contains a value
-   * that isn't currently in our
-   * options, keep it visible.
-   */
   const selectOptions =
-    value &&
-    !options.includes(value)
+    value && !options.includes(value)
       ? [value, ...options]
       : options;
 
   return (
-    <div
-      className={
-        styles.field
-      }
-    >
+    <div className={styles.field}>
       <label>
-        <span>
-          {label}
-        </span>
+        <span>{label}</span>
       </label>
 
-      <div
-        className={
-          styles.selectWrapper
-        }
-      >
+      <div className={styles.selectWrapper}>
         <select
           value={value}
           onChange={(event) =>
-            onChange(
-              event.target.value,
-            )
+            onChange(event.target.value)
           }
         >
-          {!value && (
-            <option
-              value=""
-              disabled
-            >
-              Select {label}
-            </option>
-          )}
+          <option value="">Select {label}</option>
 
-          {selectOptions.map(
-            (option) => (
-              <option
-                key={option}
-                value={option}
-              >
-                {option}
-              </option>
-            ),
-          )}
+          {selectOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
         </select>
 
-        <FiChevronDown
-          aria-hidden="true"
-        />
+        <FiChevronDown aria-hidden="true" />
       </div>
     </div>
   );
