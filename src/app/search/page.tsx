@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 
 import {
   FiCheck,
@@ -9,8 +8,8 @@ import {
   FiFilter,
   FiSearch,
   FiShield,
+  FiLoader,
   FiSliders,
-  FiUser,
   FiX,
 } from "react-icons/fi";
 
@@ -70,6 +69,17 @@ function getAgeRange(value: string) {
   };
 }
 
+type ContactBalance = {
+  freeTotal: number;
+  freeUsed: number;
+  freeRemaining: number;
+  contactCredits: number;
+  premiumActive: boolean;
+  premiumUntil: string | null;
+  totalAvailable: number | "unlimited";
+  unlockedCount: number;
+};
+
 let profilesCache: Profile[] | null = null;
 let profilesRequest: Promise<Profile[]> | null = null;
 
@@ -103,6 +113,7 @@ async function getCachedProfiles(
       : [];
 
     profilesCache = users;
+
     return users;
   })();
 
@@ -118,15 +129,23 @@ async function getCachedProfiles(
 }
 
 export default function SearchPage() {
+  // --------------------------------------------------
+  // PROFILES
+  // --------------------------------------------------
+
   const [profiles, setProfiles] = useState<Profile[]>(
     () => profilesCache ?? [],
   );
-  
+
   const [loading, setLoading] = useState(
     () => profilesCache === null,
   );
-  
+
   const [error, setError] = useState("");
+
+  // --------------------------------------------------
+  // FILTERS
+  // --------------------------------------------------
 
   const [search, setSearch] = useState("");
   const [location, setLocation] = useState("Any location");
@@ -135,37 +154,120 @@ export default function SearchPage() {
   const [profession, setProfession] = useState("Any profession");
   const [maritalStatus, setMaritalStatus] = useState("Any status");
   const [sort, setSort] = useState("Newest");
+  const [showUnlockLoader, setShowUnlockLoader] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+
   const [shortlisted, setShortlisted] = useState<string[]>([]);
 
-  /*
-   * Fetch users from MongoDB API
-   */
+  // --------------------------------------------------
+  // DYNAMIC CONTACT SYSTEM
+  // --------------------------------------------------
+
+  const [contactBalance, setContactBalance] =
+    useState<ContactBalance | null>(null);
+
+  const [unlockedContacts, setUnlockedContacts] =
+    useState<string[]>([]);
+
+  const [showContactPlans, setShowContactPlans] =
+    useState(false);
+
+  const [contactLoading, setContactLoading] = useState(true);
+  const [planLoading, setPlanLoading] = useState(false);
+
+  const premiumActive = contactBalance?.premiumActive ?? false;
+
+  const contactsRemaining = premiumActive
+    ? "Unlimited"
+    : contactBalance
+      ? contactBalance.freeRemaining +
+        contactBalance.contactCredits
+      : "...";
+
+  // --------------------------------------------------
+  // LOAD CONTACT BALANCE + UNLOCKED PROFILES
+  // --------------------------------------------------
+
+  const loadContactData = async () => {
+    try {
+      setContactLoading(true);
+
+      const [balanceResponse, unlockedResponse] =
+        await Promise.all([
+          fetch("/api/contacts/balance", {
+            method: "GET",
+            cache: "no-store",
+          }),
+
+          fetch("/api/contacts/unlocked", {
+            method: "GET",
+            cache: "no-store",
+          }),
+        ]);
+
+      const balanceData = await balanceResponse.json();
+      const unlockedData = await unlockedResponse.json();
+
+      if (!balanceResponse.ok || !balanceData.success) {
+        throw new Error(
+          balanceData.message || "Unable to load contact balance",
+        );
+      }
+
+      if (!unlockedResponse.ok || !unlockedData.success) {
+        throw new Error(
+          unlockedData.message || "Unable to load unlocked contacts",
+        );
+      }
+
+      setContactBalance(balanceData.balance);
+
+      const unlockedIds = Array.isArray(unlockedData.profiles)
+        ? unlockedData.profiles
+            .map((profile: Profile) => profile.id)
+            .filter((id: string) => Boolean(id))
+        : [];
+
+      setUnlockedContacts(unlockedIds);
+    } catch (error) {
+      console.error("CONTACT_DATA_ERROR:", error);
+    } finally {
+      setContactLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadContactData();
+  }, []);
+
+  // --------------------------------------------------
+  // LOAD PROFILES
+  // --------------------------------------------------
 
   useEffect(() => {
     let active = true;
-  
+
     async function loadProfiles() {
       try {
         setError("");
-  
+
         if (profilesCache !== null) {
           setProfiles(profilesCache);
           setLoading(false);
           return;
         }
-  
+
         setLoading(true);
-  
+
         const users = await getCachedProfiles();
-  
+
         if (active) {
           setProfiles(users);
         }
       } catch (error) {
         console.error("FETCH_PROFILES_ERROR:", error);
-  
+
         if (active) {
           setError(
             "Unable to load profiles. Please try again.",
@@ -177,31 +279,170 @@ export default function SearchPage() {
         }
       }
     }
-  
+
     void loadProfiles();
-  
+
     return () => {
       active = false;
     };
   }, []);
+
   const handleRetry = async () => {
     try {
       setLoading(true);
       setError("");
-  
+
       const users = await getCachedProfiles(true);
+
       setProfiles(users);
     } catch (error) {
       console.error("RETRY_PROFILES_ERROR:", error);
+
       setError("Unable to load profiles. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  /*
-   * Generate filter options from actual MongoDB data.
-   */
+  // --------------------------------------------------
+  // UNLOCK CONTACT
+  // --------------------------------------------------
+
+  const handleUnlockContact = async (
+    profile: Profile,
+  ): Promise<string | null> => {
+    let loaderStartTime = 0;
+  
+    try {
+      const response = await fetch("/api/contacts/unlock", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          profileId: profile.id,
+        }),
+      });
+  
+      const data = await response.json();
+  
+      // Limit khatam: direct Upgrade dialog, no loader
+      if (response.status === 402) {
+        await loadContactData();
+        setShowContactPlans(true);
+        return null;
+      }
+  
+      if (!response.ok || !data.success) {
+        if (response.status === 401) {
+          alert("Please login to unlock contact details.");
+        } else {
+          alert(data.message || "Unable to unlock contact details.");
+        }
+  
+        return null;
+      }
+  
+      const mobile = data.profile?.mobile;
+  
+      if (!mobile) {
+        alert("Contact number is not available for this profile.");
+        return null;
+      }
+  
+      // Successful unlock: show loader for minimum 2 seconds
+      loaderStartTime = Date.now();
+      setShowUnlockLoader(true);
+  
+      setUnlockedContacts((current) =>
+        current.includes(profile.id)
+          ? current
+          : [...current, profile.id],
+      );
+  
+      await loadContactData();
+  
+      return String(mobile);
+    } catch (error) {
+      console.error("UNLOCK_CONTACT_ERROR:", error);
+      alert("Something went wrong while unlocking this contact.");
+      return null;
+    } finally {
+      // Only wait and hide loader if it was actually started
+      if (loaderStartTime > 0) {
+        const elapsed = Date.now() - loaderStartTime;
+        const remainingTime = Math.max(0, 2000 - elapsed);
+  
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, remainingTime);
+        });
+  
+        setShowUnlockLoader(false);
+      }
+    }
+  };
+  
+
+  // --------------------------------------------------
+  // DEMO PLAN ACTIVATION
+  // --------------------------------------------------
+
+  const activatePlan = async (
+    plan: "contact_pack" | "monthly",
+  ) => {
+    try {
+      setPlanLoading(true);
+
+      const response = await fetch("/api/contacts/activate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          plan,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        alert(
+          data.message || "Unable to activate this plan.",
+        );
+        return;
+      }
+
+      // Refresh MongoDB balance
+      await loadContactData();
+
+      setShowContactPlans(false);
+
+      alert(
+        plan === "contact_pack"
+          ? "20 contact credits added successfully!"
+          : "Monthly Premium activated successfully!",
+      );
+    } catch (error) {
+      console.error("ACTIVATE_PLAN_ERROR:", error);
+
+      alert("Something went wrong while activating your plan.");
+    } finally {
+      setPlanLoading(false);
+    }
+  };
+
+  const buyContactPackDemo = () => {
+    void activatePlan("contact_pack");
+  };
+
+  const buyPremiumDemo = () => {
+    void activatePlan("monthly");
+  };
+
+  // --------------------------------------------------
+  // FILTER OPTIONS FROM DATABASE
+  // --------------------------------------------------
+
   const locationOptions = useMemo(() => {
     const locations = profiles
       .map((profile) => profile.city)
@@ -246,17 +487,12 @@ export default function SearchPage() {
     ];
   }, [profiles]);
 
-  /*
-   * Dynamic age options based on actual database profiles.
-   */
-  console.log(profiles);
-
   const ageOptions = useMemo(() => {
     const ages = profiles
       .map((profile) => profile.age)
       .filter(
-        (age): age is number =>
-          typeof age === "number"
+        (profileAge): profileAge is number =>
+          typeof profileAge === "number",
       );
 
     if (ages.length === 0) {
@@ -282,15 +518,14 @@ export default function SearchPage() {
     return options;
   }, [profiles]);
 
-  /*
-   * Filtering
-   */
+  // --------------------------------------------------
+  // FILTER PROFILES
+  // --------------------------------------------------
+
   const filteredProfiles = useMemo(() => {
     let result = [...profiles];
 
-    /*
-     * Search
-     */
+    // Search
     if (search.trim()) {
       const query = search.toLowerCase().trim();
 
@@ -313,18 +548,14 @@ export default function SearchPage() {
       });
     }
 
-    /*
-     * Location
-     */
+    // Location
     if (location !== "Any location") {
       result = result.filter(
-        (profile) => profile.city === location
+        (profile) => profile.city === location,
       );
     }
 
-    /*
-     * Age
-     */
+    // Age
     const selectedAgeRange = getAgeRange(age);
 
     if (selectedAgeRange) {
@@ -340,48 +571,35 @@ export default function SearchPage() {
       });
     }
 
-    /*
-     * Education
-     */
+    // Education
     if (education !== "Any education") {
       result = result.filter(
-        (profile) =>
-          profile.education === education
+        (profile) => profile.education === education,
       );
     }
 
-    /*
-     * Profession
-     */
+    // Profession
     if (profession !== "Any profession") {
       result = result.filter(
-        (profile) =>
-          profile.profession === profession
+        (profile) => profile.profession === profession,
       );
     }
 
-    /*
-     * Marital status
-     */
+    // Marital status
     if (maritalStatus !== "Any status") {
       result = result.filter(
-        (profile) =>
-          profile.maritalStatus === maritalStatus
+        (profile) => profile.maritalStatus === maritalStatus,
       );
     }
 
-    /*
-     * Verified
-     */
+    // Verified profiles
     if (verifiedOnly) {
       result = result.filter(
-        (profile) => profile.verified
+        (profile) => profile.verified,
       );
     }
 
-    /*
-     * Sorting
-     */
+    // Sorting
     if (sort === "Newest") {
       result.sort((a, b) => {
         const dateA = a.createdAt
@@ -409,13 +627,21 @@ export default function SearchPage() {
     sort,
   ]);
 
+  // --------------------------------------------------
+  // SHORTLIST
+  // --------------------------------------------------
+
   const toggleShortlist = (id: string) => {
     setShortlisted((current) =>
       current.includes(id)
         ? current.filter((item) => item !== id)
-        : [...current, id]
+        : [...current, id],
     );
   };
+
+  // --------------------------------------------------
+  // RESET FILTERS
+  // --------------------------------------------------
 
   const resetFilters = () => {
     setSearch("");
@@ -428,6 +654,10 @@ export default function SearchPage() {
     setVerifiedOnly(false);
   };
 
+  // --------------------------------------------------
+  // UI
+  // --------------------------------------------------
+
   return (
     <div className={styles.page}>
       <div className={styles.backgroundGlow} />
@@ -436,28 +666,48 @@ export default function SearchPage() {
       <div className="container">
         <header className={styles.pageHeader}>
           <div>
-            {/* <span className={styles.eyebrow}>
-              Discover
-            </span> */}
-
             <h1>Find meaningful connections</h1>
 
             <p>
               Explore profiles based on your preferences,
               compatibility, and shared interests.
             </p>
+
+            <div className={styles.contactBalance}>
+              <div>
+                <span>
+                  {contactLoading
+                    ? "Loading contact balance..."
+                    : "Contact balance"}
+                </span>
+
+                <strong>
+                  {premiumActive
+                    ? "Unlimited contacts"
+                    : `${contactsRemaining} contacts remaining`}
+                </strong>
+
+                {contactBalance?.premiumUntil && (
+                  <small>
+                    Premium expiry:{" "}
+                    {new Date(
+                      contactBalance.premiumUntil,
+                    ).toLocaleDateString("en-IN")}
+                  </small>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowContactPlans(true)}
+              >
+                Get more contacts
+              </button>
+            </div>
           </div>
-
-          {/* <Link
-            href="/profile"
-            className={styles.profileButton}
-          >
-            <FiUser aria-hidden="true" />
-
-            <span>My profile</span>
-          </Link> */}
         </header>
 
+        {/* SEARCH */}
         <section className={styles.searchPanel}>
           <div className={styles.searchBox}>
             <FiSearch
@@ -493,12 +743,12 @@ export default function SearchPage() {
             onClick={() => setShowFilters(true)}
           >
             <FiSliders aria-hidden="true" />
-
             <span>Filters</span>
           </button>
         </section>
 
         <div className={styles.contentLayout}>
+          {/* FILTER SIDEBAR */}
           <aside
             className={`${styles.filtersSidebar} ${
               showFilters ? styles.filtersOpen : ""
@@ -507,7 +757,6 @@ export default function SearchPage() {
             <div className={styles.filterMobileHeader}>
               <div>
                 <span>Refine results</span>
-
                 <strong>Filters</strong>
               </div>
 
@@ -523,7 +772,6 @@ export default function SearchPage() {
             <div className={styles.filterHeading}>
               <div>
                 <FiFilter aria-hidden="true" />
-
                 <h2>Refine your search</h2>
               </div>
 
@@ -576,9 +824,7 @@ export default function SearchPage() {
                   type="checkbox"
                   checked={verifiedOnly}
                   onChange={(event) =>
-                    setVerifiedOnly(
-                      event.target.checked
-                    )
+                    setVerifiedOnly(event.target.checked)
                   }
                 />
 
@@ -587,9 +833,7 @@ export default function SearchPage() {
                 </span>
 
                 <span>
-                  <strong>
-                    Verified profiles only
-                  </strong>
+                  <strong>Verified profiles only</strong>
 
                   <small>
                     Show profiles with verification
@@ -603,8 +847,7 @@ export default function SearchPage() {
                 <FiShield aria-hidden="true" />
 
                 <span>
-                  You control what information you
-                  share.
+                  You control what information you share.
                 </span>
               </div>
 
@@ -626,6 +869,7 @@ export default function SearchPage() {
             />
           )}
 
+          {/* PROFILE RESULTS */}
           <main className={styles.results}>
             <div className={styles.resultsHeader}>
               <div>
@@ -658,9 +902,7 @@ export default function SearchPage() {
                     <option>Best match</option>
                   </select>
 
-                  <FiChevronDown
-                    aria-hidden="true"
-                  />
+                  <FiChevronDown aria-hidden="true" />
                 </div>
               </div>
             </div>
@@ -674,8 +916,7 @@ export default function SearchPage() {
                 <h2>Loading profiles...</h2>
 
                 <p>
-                  Please wait while we find profiles
-                  for you.
+                  Please wait while we find profiles for you.
                 </p>
               </div>
             ) : error ? (
@@ -688,7 +929,12 @@ export default function SearchPage() {
 
                 <p>{error}</p>
 
-                <button type="button" onClick={handleRetry}>Try again</button>
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                >
+                  Try again
+                </button>
               </div>
             ) : filteredProfiles.length > 0 ? (
               <>
@@ -697,12 +943,14 @@ export default function SearchPage() {
                     <ProfileCard
                       key={profile.id}
                       profile={profile}
-                      shortlisted={shortlisted.includes(
-                        profile.id
-                      )}
+                      shortlisted={shortlisted.includes(profile.id)}
                       onShortlist={() =>
                         toggleShortlist(profile.id)
                       }
+                      contactUnlocked={unlockedContacts.includes(
+                        profile.id,
+                      )}
+                      onUnlockContact={handleUnlockContact}
                     />
                   ))}
                 </div>
@@ -713,8 +961,7 @@ export default function SearchPage() {
                   </button>
 
                   <span>
-                    Showing{" "}
-                    {filteredProfiles.length} of{" "}
+                    Showing {filteredProfiles.length} of{" "}
                     {profiles.length} profiles
                   </span>
                 </div>
@@ -728,8 +975,8 @@ export default function SearchPage() {
                 <h2>No profiles found</h2>
 
                 <p>
-                  Try changing your filters or search
-                  for something different.
+                  Try changing your filters or search for
+                  something different.
                 </p>
 
                 <button
@@ -743,6 +990,123 @@ export default function SearchPage() {
           </main>
         </div>
       </div>
+
+      {/* CONTACT UNLOCK LOADING MODAL */}
+      {showUnlockLoader && (
+        <div className={styles.unlockModalOverlay}>
+          <div
+            className={styles.unlockModal}
+            role="status"
+            aria-live="polite"
+          >
+            <div className={styles.unlockLoaderIcon}>
+              <FiLoader className={styles.unlockSpinner} />
+              <span className={styles.unlockLoaderCheck}>
+                <FiCheck />
+              </span>
+            </div>
+
+            <h2>Unlocking Contact</h2>
+
+            <p>
+              Please wait while we securely retrieve the contact details.
+            </p>
+
+            <div className={styles.unlockProgress}>
+              <span />
+            </div>
+
+            <small>Preparing your connection...</small>
+          </div>
+        </div>
+      )}
+
+      {/* CONTACT PLANS MODAL */}
+      {showContactPlans && (
+        <div className={styles.contactModalOverlay}>
+          <div
+            className={styles.contactModal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="contactModalTitle"
+          >
+            <button
+              type="button"
+              className={styles.contactModalClose}
+              onClick={() => setShowContactPlans(false)}
+              aria-label="Close plans"
+              disabled={planLoading}
+            >
+              <FiX />
+            </button>
+
+            <span className={styles.contactModalEyebrow}>
+              EverMilan Membership
+            </span>
+
+            <h2 id="contactModalTitle">
+              Connect with the right people
+            </h2>
+
+            <p>
+              Unlock contact details and take the next step
+              towards a meaningful connection.
+            </p>
+
+            {/* CONTACT PACK */}
+            <div className={styles.contactPlan}>
+              <div>
+                <h3>Contact Pack</h3>
+
+                <strong>₹50</strong>
+
+                <p>20 additional contact unlocks</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={buyContactPackDemo}
+                disabled={planLoading}
+              >
+                {planLoading
+                  ? "Activating..."
+                  : "Get 20 contacts"}
+              </button>
+            </div>
+
+            {/* PREMIUM */}
+            <div
+              className={`${styles.contactPlan} ${styles.premiumPlan}`}
+            >
+              <div>
+                <span className={styles.premiumLabel}>
+                  BEST VALUE
+                </span>
+
+                <h3>Monthly Premium</h3>
+
+                <strong>₹100</strong>
+
+                <p>Unlimited contacts for 30 days</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={buyPremiumDemo}
+                disabled={planLoading}
+              >
+                {planLoading
+                  ? "Activating..."
+                  : "Get Premium"}
+              </button>
+            </div>
+
+            <small className={styles.demoNotice}>
+              Demo mode: No real payment will be charged.
+            </small>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

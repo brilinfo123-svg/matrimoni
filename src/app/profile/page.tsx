@@ -88,6 +88,30 @@ type MeResponse = {
   message?: string;
 };
 
+type ContactBalance = {
+  freeTotal: number;
+  freeUsed: number;
+  freeRemaining: number;
+  contactCredits: number;
+  premiumActive: boolean;
+  premiumUntil: string | null;
+  totalAvailable: number | "unlimited";
+  unlockedCount: number;
+};
+
+type ContactBalanceResponse = {
+  success: boolean;
+  balance?: ContactBalance;
+  message?: string;
+};
+
+type PremiumRemaining = {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+};
+
 function calculateAge(dateOfBirth?: string) {
   if (!dateOfBirth) return null;
 
@@ -193,10 +217,6 @@ function getInitials(
   return `${first}${last}`.toUpperCase() || "U";
 }
 
-/**
- * Calculate completion from the profile fields
- * actually available in the User model.
- */
 function calculateProfileCompletion(
   profile: UserProfile,
 ) {
@@ -227,6 +247,46 @@ function calculateProfileCompletion(
   const completed = checks.filter(Boolean).length;
 
   return Math.round((completed / checks.length) * 100);
+}
+
+function getPremiumRemaining(
+  premiumUntil?: string | null,
+  currentTime = Date.now(),
+): PremiumRemaining | null {
+  if (!premiumUntil) return null;
+
+  const expiryTime = new Date(premiumUntil).getTime();
+
+  if (Number.isNaN(expiryTime)) return null;
+
+  const difference = expiryTime - currentTime;
+
+  if (difference <= 0) return null;
+
+  const days = Math.floor(
+    difference / (1000 * 60 * 60 * 24),
+  );
+
+  const hours = Math.floor(
+    (difference % (1000 * 60 * 60 * 24)) /
+      (1000 * 60 * 60),
+  );
+
+  const minutes = Math.floor(
+    (difference % (1000 * 60 * 60)) /
+      (1000 * 60),
+  );
+
+  const seconds = Math.floor(
+    (difference % (1000 * 60)) / 1000,
+  );
+
+  return {
+    days,
+    hours,
+    minutes,
+    seconds,
+  };
 }
 
 function DetailItem({
@@ -296,9 +356,16 @@ export default function ProfilePage() {
   const [profile, setProfile] =
     useState<UserProfile | null>(null);
 
+  const [contactBalance, setContactBalance] =
+    useState<ContactBalance | null>(null);
+
+  const [currentTime, setCurrentTime] =
+    useState(Date.now());
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // LOAD PROFILE
   useEffect(() => {
     let cancelled = false;
 
@@ -350,6 +417,61 @@ export default function ProfilePage() {
     };
   }, []);
 
+  // LOAD CONTACT BALANCE
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadContactBalance() {
+      try {
+        const response = await fetch(
+          "/api/contacts/balance",
+          {
+            method: "GET",
+            credentials: "include",
+            cache: "no-store",
+          },
+        );
+
+        const data: ContactBalanceResponse =
+          await response.json();
+
+        if (
+          !response.ok ||
+          !data.success ||
+          !data.balance
+        ) {
+          return;
+        }
+
+        if (!cancelled) {
+          setContactBalance(data.balance);
+        }
+      } catch (err) {
+        console.error(
+          "CONTACT_BALANCE_ERROR:",
+          err,
+        );
+      }
+    }
+
+    loadContactBalance();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // LIVE PREMIUM COUNTDOWN
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
   const age = useMemo(
     () => calculateAge(profile?.dateOfBirth),
     [profile?.dateOfBirth],
@@ -365,8 +487,26 @@ export default function ProfilePage() {
   );
 
   const location = useMemo(
-    () => formatLocation(profile?.city, profile?.state),
+    () =>
+      formatLocation(
+        profile?.city,
+        profile?.state,
+      ),
     [profile?.city, profile?.state],
+  );
+
+  const premiumRemaining = useMemo(
+    () =>
+      getPremiumRemaining(
+        contactBalance?.premiumUntil,
+        currentTime,
+      ),
+    [contactBalance?.premiumUntil, currentTime],
+  );
+
+  const premiumIsActive = Boolean(
+    contactBalance?.premiumActive &&
+      premiumRemaining,
   );
 
   if (loading) {
@@ -437,7 +577,10 @@ export default function ProfilePage() {
     },
     {
       label: "Age",
-      value: age !== null ? `${age} years` : "Not specified",
+      value:
+        age !== null
+          ? `${age} years`
+          : "Not specified",
     },
     {
       label: "Gender",
@@ -449,7 +592,9 @@ export default function ProfilePage() {
     },
     {
       label: "Marital status",
-      value: formatMaritalStatus(profile.maritalStatus),
+      value: formatMaritalStatus(
+        profile.maritalStatus,
+      ),
     },
     {
       label: "Religion",
@@ -705,6 +850,140 @@ export default function ProfilePage() {
 
         <div className={styles.layout}>
           <main className={styles.mainContent}>
+
+            {/* ACTIVE PLAN */}
+
+            {contactBalance && (
+              <section className={styles.card}>
+                <SectionHeader
+                  icon={<FiStar aria-hidden="true" />}
+                  title="My Active Plan"
+                />
+
+                {/* MONTHLY PREMIUM */}
+
+                {premiumIsActive &&
+                premiumRemaining ? (
+                  <div className={styles.premiumPlan}>
+                    <div className={styles.planTitleRow}>
+                      <div>
+                        <span className={styles.planType}>
+                          MONTHLY PREMIUM
+                        </span>
+
+                        <h3>Premium Membership</h3>
+                      </div>
+
+                      <span className={styles.activeStatus}>
+                      <span className={styles.activeDot} />
+                      Active
+                    </span>
+                    </div>
+
+                    <p className={styles.planDescription}>
+                      Enjoy unlimited contact unlocks while
+                      your Premium plan is active.
+                    </p>
+
+                    <div className={styles.countdownGrid}>
+                      <div>
+                        <strong>
+                          {premiumRemaining.days}
+                        </strong>
+                        <span>Days</span>
+                      </div>
+
+                      <div>
+                        <strong>
+                          {premiumRemaining.hours}
+                        </strong>
+                        <span>Hours</span>
+                      </div>
+
+                      <div>
+                        <strong>
+                          {premiumRemaining.minutes}
+                        </strong>
+                        <span>Minutes</span>
+                      </div>
+
+                      <div>
+                        <strong>
+                          {premiumRemaining.seconds}
+                        </strong>
+                        <span>Seconds</span>
+                      </div>
+                    </div>
+
+                    <p className={styles.expiryText}>
+                      Expires on:{" "}
+                      {new Date(
+                        contactBalance.premiumUntil!,
+                      ).toLocaleString("en-IN", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </p>
+                  </div>
+                ) : (
+                  <div className={styles.noPremiumPlan}>
+                    <h3>No Active Monthly Premium</h3>
+
+                    <p>
+                      You are currently using your
+                      available contact unlock balance.
+                    </p>
+                  </div>
+                )}
+
+                {/* CONTACT PACK CREDITS */}
+
+                <div className={styles.creditPlan}>
+                  <div>
+                    <span className={styles.planType}>
+                      CONTACT PACK
+                    </span>
+
+                    <h3>Available Contact Credits</h3>
+                  </div>
+
+                  <strong className={styles.creditCount}>
+                    {contactBalance.contactCredits}
+                    <span> Credits</span>
+                  </strong>
+                </div>
+
+                {/* FREE UNLOCK BALANCE */}
+
+                <div className={styles.freeBalance}>
+                  <span>Free Unlocks</span>
+
+                  <strong>
+                    {contactBalance.freeRemaining} /{" "}
+                    {contactBalance.freeTotal}
+                  </strong>
+                </div>
+
+                {/* UNLOCKED PROFILES */}
+
+                <div className={styles.unlockStats}>
+                  <span>Total Profiles Unlocked</span>
+
+                  <strong>
+                    {contactBalance.unlockedCount}
+                  </strong>
+                </div>
+
+                <Link
+                  href="/contact-plans"
+                  className={styles.preferenceButton}
+                >
+                  View contact plans
+                  <FiChevronRight aria-hidden="true" />
+                </Link>
+              </section>
+            )}
+
             {/* BASIC DETAILS */}
 
             <section className={styles.card}>

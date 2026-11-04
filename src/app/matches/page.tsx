@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useFavorites } from "@/components/FavoritesProvider/FavoritesProvider";
 
@@ -10,12 +9,14 @@ import {
   FiChevronDown,
   FiHeart,
   FiMapPin,
-  FiMessageCircle,
   FiPhone,
   FiSearch,
   FiShield,
-  FiUser,
   FiUsers,
+  FiMessageCircle,
+  FiUnlock,
+  FiX,
+  FiAlertCircle,
 } from "react-icons/fi";
 
 import styles from "./matches.module.scss";
@@ -36,8 +37,6 @@ type MatchProfile = {
   online: boolean;
   height: string;
   maritalStatus: string;
-  mobile: string | null;
-  isMobileVisible: boolean;
   newMatch: boolean;
   about: string;
 };
@@ -48,6 +47,28 @@ type ApiResponse = {
   success: boolean;
   message?: string;
   users: MatchProfile[];
+};
+
+type ContactBalance = {
+  freeTotal: number;
+  freeUsed: number;
+  freeRemaining: number;
+  contactCredits: number;
+  premiumActive: boolean;
+  premiumUntil: string | null;
+  totalAvailable: number | "unlimited";
+  unlockedCount: number;
+};
+
+type ContactUnlockResponse = {
+  success: boolean;
+  message?: string;
+  mobile?: string;
+  profile?: {
+    mobile?: string;
+    name?: string;
+  };
+  alreadyUnlocked?: boolean;
 };
 
 // Cache matches while navigating within the website.
@@ -69,14 +90,13 @@ async function getCachedMatches(
     const response = await fetch("/api/matches", {
       method: "GET",
       cache: "no-store",
+      credentials: "include",
     });
 
     const data = (await response.json()) as ApiResponse;
 
     if (!response.ok || !data.success) {
-      throw new Error(
-        data.message || "Failed to load matches",
-      );
+      throw new Error(data.message || "Failed to load matches");
     }
 
     const users: MatchProfile[] = Array.isArray(data.users)
@@ -102,65 +122,134 @@ export default function MatchesPage() {
   const [profiles, setProfiles] = useState<MatchProfile[]>(
     () => matchesCache ?? [],
   );
+
   const [activeTab, setActiveTab] = useState<Tab>("all");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("compatibility");
 
-  // const [shortlisted, setShortlisted] = useState<string[]>([]);
   const { isFavorite, toggleFavorite } = useFavorites();
 
   const [loading, setLoading] = useState(
     () => matchesCache === null,
   );
+
   const [error, setError] = useState("");
 
-/*
- * Load matches from cache or API
- */
-useEffect(() => {
-  let mounted = true;
+  // Contact unlock states
+  const [contactBalance, setContactBalance] =
+    useState<ContactBalance | null>(null);
 
-  async function loadMatches() {
-    try {
-      setError("");
+  const [contactLoading, setContactLoading] = useState(false);
+  const [unlockingProfileId, setUnlockingProfileId] = useState("");
 
-      // Cached profiles are already available.
-      if (matchesCache !== null) {
-        setProfiles(matchesCache);
-        setLoading(false);
-        return;
-      }
+  const [contactError, setContactError] = useState("");
 
-      setLoading(true);
+  const [contactDialog, setContactDialog] = useState(false);
+  const [plansDialog, setPlansDialog] = useState(false);
 
-      const users = await getCachedMatches();
+  const [selectedContact, setSelectedContact] = useState<{
+    name: string;
+    mobile: string;
+  } | null>(null);
 
-      if (mounted) {
-        setProfiles(users);
-      }
-    } catch (err) {
-      console.error("Failed to load matches:", err);
+  /*
+   * Load matches
+   */
+  useEffect(() => {
+    let mounted = true;
 
-      if (mounted) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Something went wrong while loading matches.",
-        );
-      }
-    } finally {
-      if (mounted) {
-        setLoading(false);
+    async function loadMatches() {
+      try {
+        setError("");
+
+        if (matchesCache !== null) {
+          setProfiles(matchesCache);
+          setLoading(false);
+          return;
+        }
+
+        setLoading(true);
+
+        const users = await getCachedMatches();
+
+        if (mounted) {
+          setProfiles(users);
+        }
+      } catch (err) {
+        console.error("Failed to load matches:", err);
+
+        if (mounted) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Something went wrong while loading matches.",
+          );
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
-  }
 
-  void loadMatches();
+    void loadMatches();
 
-  return () => {
-    mounted = false;
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  /*
+   * Load contact balance
+   */
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadContactBalance() {
+      try {
+        const response = await fetch("/api/contacts/balance", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
+
+        const data = await response.json();
+
+        if (mounted && response.ok && data.success) {
+          setContactBalance(data.balance);
+        }
+      } catch (err) {
+        console.error("CONTACT_BALANCE_ERROR:", err);
+      }
+    }
+
+    void loadContactBalance();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  /*
+   * Refresh contact balance
+   */
+  const refreshContactBalance = async () => {
+    try {
+      const response = await fetch("/api/contacts/balance", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setContactBalance(data.balance);
+      }
+    } catch (err) {
+      console.error("CONTACT_BALANCE_REFRESH_ERROR:", err);
+    }
   };
-}, []);
 
   /*
    * Dynamic stats
@@ -181,9 +270,6 @@ useEffect(() => {
   const filteredProfiles = useMemo(() => {
     let result = [...profiles];
 
-    /*
-     * Tabs
-     */
     if (activeTab === "high") {
       result = result.filter(
         (profile) => profile.compatibility >= 90,
@@ -196,9 +282,6 @@ useEffect(() => {
       );
     }
 
-    /*
-     * Search
-     */
     if (search.trim()) {
       const query = search.trim().toLowerCase();
 
@@ -210,14 +293,11 @@ useEffect(() => {
           profile.education,
           profile.maritalStatus,
         ].some((value) =>
-          String(value).toLowerCase().includes(query),
+          String(value ?? "").toLowerCase().includes(query),
         ),
       );
     }
 
-    /*
-     * Sort
-     */
     result.sort((a, b) => {
       if (sortBy === "compatibility") {
         return b.compatibility - a.compatibility;
@@ -233,16 +313,19 @@ useEffect(() => {
     return result;
   }, [profiles, activeTab, search, sortBy]);
 
+  /*
+   * Retry
+   */
   const handleRetry = async () => {
     try {
       setLoading(true);
       setError("");
-  
+
       const users = await getCachedMatches(true);
       setProfiles(users);
     } catch (err) {
       console.error("MATCHES_RETRY_ERROR:", err);
-  
+
       setError(
         err instanceof Error
           ? err.message
@@ -254,21 +337,111 @@ useEffect(() => {
   };
 
   /*
-   * Shortlist
+   * Favorite
    */
   const handleFavoriteToggle = async (id: string) => {
     try {
       await toggleFavorite(id);
-    } catch (error) {
-      console.error("MATCHES_FAVORITE_ERROR:", error);
-  
+    } catch (err) {
+      console.error("MATCHES_FAVORITE_ERROR:", err);
+
       alert(
-        error instanceof Error
-          ? error.message
+        err instanceof Error
+          ? err.message
           : "Unable to update favorites. Please try again.",
       );
     }
   };
+
+  /*
+   * Contact unlock
+   */
+
+  const handleUnlockContact = async (profile: MatchProfile) => {
+    if (unlockingProfileId) return;
+  
+    setContactError("");
+    setSelectedContact(null);
+    setUnlockingProfileId(profile.id);
+  
+    let showLoaderForTwoSeconds = false;
+    let unlockStartedAt = 0;
+  
+    try {
+      const response = await fetch("/api/contacts/unlock", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          profileId: profile.id,
+        }),
+      });
+  
+      const data =
+        (await response.json()) as ContactUnlockResponse;
+  
+      // Credits khatam hone par loader nahi dikhana.
+      if (response.status === 402) {
+        await refreshContactBalance();
+        setPlansDialog(true);
+        return;
+      }
+  
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Unable to unlock this contact.",
+        );
+      }
+  
+      const mobile = String(
+        data.profile?.mobile || data.mobile || "",
+      ).replace(/\D/g, "");
+  
+      if (!mobile) {
+        throw new Error(
+          "Contact unlocked, but mobile number was not returned by the API.",
+        );
+      }
+  
+      // Successful unlock ke baad 2-second loader start hoga.
+      unlockStartedAt = Date.now();
+      showLoaderForTwoSeconds = true;
+  
+      setSelectedContact({
+        name: data.profile?.name || profile.name,
+        mobile,
+      });
+  
+      await refreshContactBalance();
+  
+    } catch (err) {
+      console.error("MATCHES_CONTACT_UNLOCK_ERROR:", err);
+  
+      setContactError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again.",
+      );
+    } finally {
+      if (showLoaderForTwoSeconds) {
+        const elapsed = Date.now() - unlockStartedAt;
+        const remainingTime = Math.max(0, 1000 - elapsed);
+  
+        await new Promise((resolve) =>
+          setTimeout(resolve, remainingTime),
+        );
+      }
+  
+      setUnlockingProfileId("");
+  
+      if (showLoaderForTwoSeconds) {
+        setContactDialog(true);
+      }
+    }
+  };
+  
 
   /*
    * Loading
@@ -313,13 +486,9 @@ useEffect(() => {
             </div>
 
             <h2>Unable to load matches</h2>
-
             <p>{error}</p>
 
-            <button
-              type="button"
-              onClick={handleRetry}
-            >
+            <button type="button" onClick={handleRetry}>
               Try again
             </button>
           </section>
@@ -349,23 +518,6 @@ useEffect(() => {
               and what you&apos;re looking for.
             </p>
           </div>
-
-          {/* <div className={styles.headerStats}>
-            <div>
-              <strong>{totalMatches}</strong>
-              <span>Total matches</span>
-            </div>
-
-            <div>
-              <strong>{newMatches}</strong>
-              <span>New matches</span>
-            </div>
-
-            <div>
-              <strong>{highMatches}</strong>
-              <span>90%+ compatible</span>
-            </div>
-          </div> */}
         </section>
 
         {/* Search & Sort */}
@@ -388,19 +540,11 @@ useEffect(() => {
             <div>
               <select
                 value={sortBy}
-                onChange={(event) =>
-                  setSortBy(event.target.value)
-                }
+                onChange={(event) => setSortBy(event.target.value)}
                 aria-label="Sort matches"
               >
-                <option value="compatibility">
-                  Compatibility
-                </option>
-
-                <option value="newest">
-                  New matches
-                </option>
-
+                <option value="compatibility">Compatibility</option>
+                <option value="newest">New matches</option>
                 <option value="name">Name</option>
               </select>
 
@@ -413,35 +557,26 @@ useEffect(() => {
         <div className={styles.tabs}>
           <button
             type="button"
-            className={
-              activeTab === "all" ? styles.activeTab : ""
-            }
+            className={activeTab === "all" ? styles.activeTab : ""}
             onClick={() => setActiveTab("all")}
           >
-            All matches
-            <span>{totalMatches}</span>
+            All matches <span>{totalMatches}</span>
           </button>
 
           <button
             type="button"
-            className={
-              activeTab === "high" ? styles.activeTab : ""
-            }
+            className={activeTab === "high" ? styles.activeTab : ""}
             onClick={() => setActiveTab("high")}
           >
-            Highly compatible
-            <span>{highMatches}</span>
+            Highly compatible <span>{highMatches}</span>
           </button>
 
           <button
             type="button"
-            className={
-              activeTab === "new" ? styles.activeTab : ""
-            }
+            className={activeTab === "new" ? styles.activeTab : ""}
             onClick={() => setActiveTab("new")}
           >
-            New matches
-            <span>{newMatches}</span>
+            New matches <span>{newMatches}</span>
           </button>
         </div>
 
@@ -464,6 +599,38 @@ useEffect(() => {
           </div>
         </div>
 
+        {/* Contact balance */}
+        {contactBalance && (
+          <div className={styles.contactBalanceBar}>
+            <div>
+              <FiUnlock aria-hidden="true" />
+              <span>
+                {contactBalance.premiumActive
+                  ? "Unlimited contact unlocks active"
+                  : `${contactBalance.freeRemaining} free + ${contactBalance.contactCredits} pack credits`}
+              </span>
+            </div>
+
+            <Link href="/contact-plans">
+              View plans
+            </Link>
+          </div>
+        )}
+
+        {contactError && (
+          <div className={styles.contactError}>
+            <FiAlertCircle />
+            <span>{contactError}</span>
+            <button
+              type="button"
+              onClick={() => setContactError("")}
+              aria-label="Dismiss error"
+            >
+              <FiX />
+            </button>
+          </div>
+        )}
+
         {/* Results */}
         {filteredProfiles.length > 0 ? (
           <section className={styles.results}>
@@ -477,18 +644,14 @@ useEffect(() => {
                       : "Recommended for you"}
                 </h2>
 
-                <span>
-                  {filteredProfiles.length} profiles
-                </span>
+                <span>{filteredProfiles.length} profiles</span>
               </div>
             </div>
 
             <div className={styles.profileGrid}>
               {filteredProfiles.map((profile) => {
                 const isShortlisted = isFavorite(profile.id);
-
-                const cleanMobile = profile.mobile ? String(profile.mobile).replace(/\D/g, "") : "";
-                const canShowMobile = profile.isMobileVisible === true && cleanMobile.length > 0;
+                const isUnlocking = unlockingProfileId === profile.id;
 
                 return (
                   <article
@@ -520,9 +683,7 @@ useEffect(() => {
                         )}
 
                         {profile.online && (
-                          <span
-                            className={styles.onlineDot}
-                          />
+                          <span className={styles.onlineDot} />
                         )}
                       </Link>
 
@@ -532,10 +693,7 @@ useEffect(() => {
                           fill="currentColor"
                         />
 
-                        <strong>
-                          {profile.compatibility}%
-                        </strong>
-
+                        <strong>{profile.compatibility}%</strong>
                         <span>match</span>
                       </div>
                     </div>
@@ -544,9 +702,7 @@ useEffect(() => {
                     <div className={styles.cardContent}>
                       {/* Name */}
                       <div className={styles.nameRow}>
-                        <Link
-                          href={`/profile/${profile.id}`}
-                        >
+                        <Link href={`/profile/${profile.id}`}>
                           <h3>{profile.name}</h3>
                         </Link>
 
@@ -563,17 +719,13 @@ useEffect(() => {
                       {/* Basic Information */}
                       <div className={styles.basicInfo}>
                         <span>{profile.age} years</span>
-                        {/* <span>{profile.height}</span> */}
-                        {/* <span>•</span> */}
-                        {/* <span>
-                          {profile.maritalStatus}
-                        </span> */}
-                          {profile.cast?.trim() && (
-                              <>
-                                <span>•</span>
-                                <span>{profile.cast}</span>
-                              </>
-                            )}
+
+                        {profile.cast?.trim() && (
+                          <>
+                            <span>•</span>
+                            <span>{profile.cast}</span>
+                          </>
+                        )}
                       </div>
 
                       {/* Location */}
@@ -582,40 +734,22 @@ useEffect(() => {
                         <span>{profile.location}</span>
                       </div>
 
-                      {/* Profession */}
-                      {/* <div className={styles.profession}>
-                        <FiUser aria-hidden="true" />
-                        <span>{profile.profession}</span>
-                      </div> */}
+                      {/* Education & Religion */}
+                      {(profile.education?.trim() ||
+                        profile.religionabout?.trim()) && (
+                        <div className={styles.profileDetails}>
+                          {profile.education?.trim() && (
+                            <span>{profile.education}</span>
+                          )}
 
-                      {/* Education */}
-                      <div className={styles.profileDetails}>
-                       {/* Education & Religion */}
-                        {(profile.education?.trim() ||
-                          profile.religionabout?.trim()) && (
-                          <div className={styles.profileDetails}>
-                            {profile.education?.trim() && (
-                              <span>{profile.education}</span>
-                            )}
-
-                            {profile.religionabout?.trim() && (
-                              <span>{profile.religionabout}</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* About */}
-                      {/* <p className={styles.about}>
-                        {profile.about}
-                      </p> */}
+                          {profile.religionabout?.trim() && (
+                            <span>{profile.religionabout}</span>
+                          )}
+                        </div>
+                      )}
 
                       {/* Actions */}
                       <div className={styles.cardActions}>
-                        {/* Shortlist */}
-                       
-
-                        {/* View Profile */}
                         <Link
                           href={`/profile/${profile.id}`}
                           className={styles.viewProfile}
@@ -623,63 +757,55 @@ useEffect(() => {
                           View profile
                         </Link>
 
-                        {/* Message */}
+                        <button
+                          type="button"
+                          className={`${styles.shortlistButton} ${
+                            isShortlisted ? styles.shortlisted : ""
+                          }`}
+                          onClick={() => handleFavoriteToggle(profile.id)}
+                          aria-label={
+                            isShortlisted
+                              ? `Remove ${profile.name} from favorites`
+                              : `Add ${profile.name} to favorites`
+                          }
+                          title={
+                            isShortlisted
+                              ? "Remove from favorites"
+                              : "Add to favorites"
+                          }
+                        >
+                          <FiHeart
+                            aria-hidden="true"
+                            fill={isShortlisted ? "currentColor" : "none"}
+                          />
+                        </button>
+
+                        {/* Contact unlock */}
+                        <button
+                          type="button"
+                          className={styles.callButton}
+                          disabled={Boolean(unlockingProfileId)}
+                          onClick={() => handleUnlockContact(profile)}
+                          aria-label={`Unlock contact of ${profile.name}`}
+                          title={`Unlock contact of ${profile.name}`}
+                        >
+                          {isUnlocking ? (
+                            <span className={styles.buttonSpinner} />
+                          ) : (
+                            <FiPhone aria-hidden="true" />
+                          )}
+                        </button>
 
                         <button
-                            type="button"
-                            className={`${styles.shortlistButton} ${
-                              isShortlisted ? styles.shortlisted : ""
-                            }`}
-                            onClick={() => handleFavoriteToggle(profile.id)}
-                            aria-label={
-                              isShortlisted
-                                ? `Remove ${profile.name} from favorites`
-                                : `Add ${profile.name} to favorites`
-                            }
-                            title={
-                              isShortlisted
-                                ? "Remove from favorites"
-                                : "Add to favorites"
-                            }
-                          >
-                            <FiHeart
-                              aria-hidden="true"
-                              fill={isShortlisted ? "currentColor" : "none"}
-                            />
-                          </button>
-                        {/* Call */}
-                        
-                        {/* Call */}
-                        {canShowMobile && (
-                          <a
-                            href={`tel:${cleanMobile}`}
-                            className={styles.callButton}
-                            aria-label={`Call ${profile.name}`}
-                            title={`Call ${profile.name}`}
-                          >
-                            <FiPhone aria-hidden="true" />
-                          </a>
-                        )}
-
-                        {/* WhatsApp */}
-                        {canShowMobile && (
-                          <a
-                            href={`https://wa.me/${cleanMobile}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.whatsappButton}
-                            aria-label={`WhatsApp ${profile.name}`}
-                            title={`WhatsApp ${profile.name}`}
-                          >
-                            <Image
-                              src="/public/images/logo/whatsapp.png"
-                              alt="WhatsApp"
-                              width={20}
-                              height={20}
-                            />
-                          </a>
-                        )}
-
+                          type="button"
+                          className={styles.whatsappButton}
+                          disabled={Boolean(unlockingProfileId)}
+                          onClick={() => handleUnlockContact(profile)}
+                          aria-label={`Unlock WhatsApp of ${profile.name}`}
+                          title={`Unlock WhatsApp of ${profile.name}`}
+                        >
+                          <FiMessageCircle aria-hidden="true" />
+                        </button>
                       </div>
                     </div>
                   </article>
@@ -688,7 +814,6 @@ useEffect(() => {
             </div>
           </section>
         ) : (
-          /* Empty Results */
           <section className={styles.emptyState}>
             <div className={styles.emptyIcon}>
               <FiUsers aria-hidden="true" />
@@ -698,8 +823,7 @@ useEffect(() => {
 
             <p>
               We couldn&apos;t find any profiles matching your
-              preferences above 50%. Try updating your
-              preferences.
+              preferences above 50%. Try updating your preferences.
             </p>
 
             <button
@@ -713,29 +837,162 @@ useEffect(() => {
             </button>
           </section>
         )}
+      </div>
 
-        {/* Bottom CTA */}
-        {/* <section className={styles.preferenceCard}>
-          <div className={styles.preferenceIcon}>
-            <FiHeart aria-hidden="true" />
+      {/* Unlock loader */}
+      {unlockingProfileId && (
+        <div className={styles.contactOverlay}>
+          <div className={styles.contactLoader}>
+            <div className={styles.loaderSpinner} />
+            <h3>Unlocking contact...</h3>
+            <p>Please wait while we securely retrieve the contact details.</p>
           </div>
+        </div>
+      )}
 
-          <div>
-            <strong>Not finding the right matches?</strong>
+      {/* Contact success dialog */}
+      {contactDialog && selectedContact && (
+        <div
+          className={styles.contactOverlay}
+          onClick={() => setContactDialog(false)}
+        >
+          <section
+            className={styles.contactDialog}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="contact-dialog-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className={styles.dialogClose}
+              onClick={() => setContactDialog(false)}
+              aria-label="Close dialog"
+            >
+              <FiX />
+            </button>
+
+            <div className={styles.contactSuccessIcon}>
+              <FiCheck />
+            </div>
+
+            <span className={styles.contactEyebrow}>
+              CONTACT UNLOCKED
+            </span>
+
+            <h2 id="contact-dialog-title">
+              {selectedContact.name}
+            </h2>
 
             <p>
-              Update your partner preferences to discover
-              profiles that better match what you&apos;re
-              looking for.
+              Contact details are now available. Start a conversation
+              and take the next step.
             </p>
-          </div>
 
-          <Link href="/dashboard/preferences">
-            Update preferences
-            <FiChevronDown aria-hidden="true" />
-          </Link>
-        </section> */}
-      </div>
+            <div className={styles.mobileNumber}>
+              <FiPhone />
+              <strong>{selectedContact.mobile}</strong>
+            </div>
+
+            <div className={styles.contactActions}>
+              <a
+                href={`tel:${selectedContact.mobile}`}
+                className={styles.dialogCallButton}
+              >
+                <FiPhone />
+                Call Now
+              </a>
+
+              <a
+                href={`https://wa.me/${selectedContact.mobile}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.dialogWhatsAppButton}
+              >
+                <FiMessageCircle />
+                WhatsApp
+              </a>
+            </div>
+
+            <button
+              type="button"
+              className={styles.dialogSecondaryButton}
+              onClick={() => setContactDialog(false)}
+            >
+              Done
+            </button>
+          </section>
+        </div>
+      )}
+
+      {/* Plans dialog */}
+      {plansDialog && (
+        <div
+          className={styles.contactOverlay}
+          onClick={() => setPlansDialog(false)}
+        >
+          <section
+            className={styles.contactDialog}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="plans-dialog-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className={styles.dialogClose}
+              onClick={() => setPlansDialog(false)}
+              aria-label="Close dialog"
+            >
+              <FiX />
+            </button>
+
+            <div className={styles.contactPlanIcon}>
+              <FiUnlock />
+            </div>
+
+            <span className={styles.contactEyebrow}>
+              CONTACT LIMIT REACHED
+            </span>
+
+            <h2 id="plans-dialog-title">
+              Continue connecting
+            </h2>
+
+            <p>
+              You have used your available contact unlocks.
+              Choose a plan to unlock more profiles.
+            </p>
+
+            <div className={styles.planOptions}>
+              <div>
+                <strong>Contact Pack · ₹50</strong>
+                <span>Get 20 additional contact unlocks.</span>
+              </div>
+
+              <div>
+                <strong>Monthly Premium · ₹100</strong>
+                <span>Unlimited contact unlocks for 30 days.</span>
+              </div>
+            </div>
+
+            <Link
+              href="/contact-plans"
+              className={styles.dialogPrimaryButton}
+            >
+              View Contact Plans
+            </Link>
+
+            <button
+              type="button"
+              className={styles.dialogSecondaryButton}
+              onClick={() => setPlansDialog(false)}
+            >
+              Maybe later
+            </button>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

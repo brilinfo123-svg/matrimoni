@@ -827,7 +827,567 @@
     .filterOverlay {
     display: none;
     }
+    .contactBalance {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 22px;
+      padding: 16px 20px;
+      background: #fff;
+      border: 1px solid #ead9e0;
+      border-radius: 14px;
     
+      div {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+    
+      span {
+        color: #777;
+        font-size: 13px;
+      }
+    
+      strong {
+        color: #7e2648;
+        font-size: 17px;
+      }
+    
+      button {
+        border: 0;
+        border-radius: 8px;
+        padding: 11px 16px;
+        background: #7e2648;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+    }
+    
+    .unlockContactButton {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 10px 12px;
+      border: 0;
+      border-radius: 8px;
+      background: #7e2648;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    
+    .contactPrivate {
+      color: #888;
+      font-size: 12px;
+    }
+    
+    .contactModalOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(25, 10, 17, 0.65);
+      overflow-y: auto;
+    }
+    
+    .contactModal {
+      position: relative;
+      width: 100%;
+      max-width: 470px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 30px;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.2);
+    
+      h2 {
+        margin: 10px 0;
+        color: #34202a;
+        font-size: 25px;
+        line-height: 1.3;
+      }
+    
+      > p {
+        margin-bottom: 22px;
+        color: #777;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+    }
+    
+    .contactModalClose {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 0;
+      border-radius: 50%;
+      background: #f7eef2;
+      color: #7e2648;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    
+    .contactModalEyebrow {
+      color: #be5b77;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .callButtonLoading {
+      min-width: 112px;
+      justify-content: center;
+      cursor: wait;
+      opacity: 1 !important;
+      background: #fff5f8 !important;
+      border: 1px solid #e8bdcc !important;
+      color: #7e2648 !important;
+    }
+    
+    .unlockLoader {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .unlockModalOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(32, 13, 22, 0.65);
+      backdrop-filter: blur(8px);
+      animation: unlockFadeIn 0.25s ease;
+    }
+    
+    .unlockModal {
+      width: 100%;
+      max-width: 370px;
+      padding: 38px 28px;
+      border-radius: 24px;
+      background: #fff;
+      text-align: center;
+      box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
+      animation: unlockModalIn 0.35s ease;
+    
+      h2 {
+        margin: 20px 0 9px;
+        color: #70213f;
+        font-size: 22px;
+        font-weight: 750;
+      }
+    
+      p {
+        margin: 0;
+        color: #777;
+        font-size: 13px;
+        line-height: 1.7;
+      }
+    
+      small {
+        display: block;
+        margin-top: 14px;
+        color: #9a7180;
+        font-size: 11px;
+      }
+    }
+    
+    .unlockLoaderIcon {
+      position: relative;
+      width: 76px;
+      height: 76px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto;
+      border-radius: 50%;
+      background: #fbedf2;
+      color: #7e2648;
+    }
+    
+    .unlockSpinner {
+      width: 43px;
+      height: 43px;
+      stroke-width: 2.5;
+      animation: unlockSpin 0.9s linear infinite;
+    }
+    
+    .unlockLoaderCheck {
+      position: absolute;
+      right: -3px;
+      bottom: -3px;
+      width: 27px;
+      height: 27px;
+      display: grid;
+      place-items: center;
+      border: 3px solid white;
+      border-radius: 50%;
+      background: #be5b77;
+      color: white;
+      font-size: 13px;
+    }
+    
+    .unlockProgress {
+      width: 100%;
+      height: 5px;
+      overflow: hidden;
+      margin-top: 25px;
+      border-radius: 20px;
+      background: #f4e4ea;
+    
+      span {
+        display: block;
+        width: 40%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #7e2648, #be5b77);
+        animation: unlockProgressMove 1.3s ease-in-out infinite;
+      }
+    }
+    
+    @keyframes unlockSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    
+    @keyframes unlockFadeIn {
+      from {
+        opacity: 0;
+      }
+    
+      to {
+        opacity: 1;
+      }
+    }
+    
+    @keyframes unlockModalIn {
+      from {
+        opacity: 0;
+        transform: translateY(15px) scale(0.96);
+      }
+    
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    
+    @keyframes unlockProgressMove {
+      0% {
+        transform: translateX(-110%);
+      }
+    
+      100% {
+        transform: translateX(260%);
+      }
+    }
+    
+    @media (prefers-reduced-motion: reduce) {
+      .unlockSpinner,
+      .unlockProgress span {
+        animation-duration: 3s;
+      }
+    }
+    .loaderSpinner {
+      width: 16px;
+      height: 16px;
+      display: inline-block;
+      flex-shrink: 0;
+      border: 2px solid #e8bdcc;
+      border-top-color: #7e2648;
+      border-right-color: #be5b77;
+      border-radius: 50%;
+      animation: unlockSpin 0.7s linear infinite;
+    }
+    
+    @keyframes unlockSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    
+    @media (prefers-reduced-motion: reduce) {
+      .loaderSpinner {
+        animation-duration: 2s;
+      }
+    }
+    .contactPlan {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 14px;
+      padding: 17px;
+      border: 1px solid #ead9e0;
+      border-radius: 12px;
+    
+      h3 {
+        margin: 0 0 6px;
+        color: #442536;
+        font-size: 16px;
+      }
+    
+      strong {
+        color: #7e2648;
+        font-size: 25px;
+      }
+    
+      p {
+        margin: 5px 0 0;
+        color: #777;
+        font-size: 12px;
+      }
+    
+      button {
+        flex-shrink: 0;
+        padding: 10px 13px;
+        border: 0;
+        border-radius: 8px;
+        background: #7e2648;
+        color: white;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+    }
+    .contactDialogOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(25, 10, 17, 0.65);
+    }
+    
+    .contactDialog {
+      position: relative;
+      width: 100%;
+      max-width: 390px;
+      padding: 30px 24px;
+      border-radius: 20px;
+      background: #fff;
+      text-align: center;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.2);
+    
+      h2 {
+        margin: 8px 0;
+        color: #432536;
+        font-size: 24px;
+      }
+    }
+    
+    .contactDialogClose {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 34px;
+      height: 34px;
+      border: 0;
+      border-radius: 50%;
+      background: #f8edf1;
+      color: #7e2648;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .contactDialogIcon {
+      display: grid;
+      place-items: center;
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 14px;
+      border-radius: 50%;
+      background: #f8edf1;
+      color: #7e2648;
+      font-size: 25px;
+    }
+    
+    .contactDialogEyebrow {
+      color: #be5b77;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .contactDialogLocation {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: #888;
+      font-size: 13px;
+    }
+    .contactNumberRow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding-left: 40px;
+      @media (max-width: 413px) {
+        padding-left: 0px;
+      }
+      strong {
+        color: #7e2648;
+        font-size: 21px;
+        letter-spacing: 1px;
+        overflow-wrap: anywhere;
+        @media (max-width: 413px) {
+          font-size: 18px !important;
+        }
+      }
+    }
+    
+    .copyNumberButton {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex-shrink: 0;
+      padding: 9px 12px;
+      border: 1px solid #ead9e0;
+      border-radius: 8px;
+      background: #fff;
+      color: #7e2648;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      @media (max-width: 413px) {
+        padding: 6px 6px;
+        font-size: 14px;
+      }
+    
+      &:hover {
+        background: #f8edf1;
+      }
+    }
+    .contactNumber {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 22px 0;
+      padding: 12px;
+      border: 1px solid #ead9e0;
+      border-radius: 12px;
+      background: #fff8fa;
+    
+      span {
+        color: #888;
+        font-size: 12px;
+      }
+    
+      strong {
+        color: #7e2648;
+        font-size: 23px;
+        letter-spacing: 1px;
+      }
+    }
+    
+    .contactDialogActions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    
+      a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 13px 8px;
+        border-radius: 9px;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+      }
+    }
+    
+    .contactCallAction {
+      background: #7e2648;
+    }
+    
+    .contactWhatsappAction {
+      background: #168b55;
+    }
+    
+    .contactDialogNote {
+      margin: 18px 0 0;
+      color: #999;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .premiumPlan {
+      border-color: #be5b77;
+      background: #fff8fa;
+    }
+    
+    .premiumLabel {
+      display: block;
+      margin-bottom: 7px;
+      color: #be5b77;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+    
+    .demoNotice {
+      display: block;
+      margin-top: 18px;
+      color: #999;
+      text-align: center;
+      font-size: 11px;
+    }
+    
+    @media (max-width: 480px) {
+      .contactBalance {
+        align-items: flex-start;
+        flex-direction: column;
+    
+        button {
+          width: 100%;
+        }
+      }
+    
+      .contactModal {
+        padding: 25px 18px;
+    
+        h2 {
+          font-size: 21px;
+        }
+      }
+    
+      .contactPlan {
+        align-items: stretch;
+        flex-direction: column;
+    
+        button {
+          width: 100%;
+        }
+      }
+    }
     @media (max-width: 1050px) {
     .contentLayout {
     grid-template-columns: 245px minmax(0, 1fr);

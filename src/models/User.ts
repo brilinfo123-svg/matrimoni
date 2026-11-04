@@ -1,4 +1,3 @@
-
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IUser extends Document {
@@ -44,6 +43,13 @@ export interface IUser extends Document {
   isEmailVerified: boolean;
   isMobileVerified: boolean;
   isProfileComplete: boolean;
+
+  // Contact monetization fields
+  contactCredits: number;
+  freeContactUnlocksUsed: number;
+  premiumUntil: Date | null;
+  unlockedProfiles: mongoose.Types.ObjectId[];
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -251,14 +257,36 @@ const UserSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
+
+    // Contact monetization fields
+      contactCredits: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      freeContactUnlocksUsed: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+
+      premiumUntil: {
+        type: Date,
+        default: null,
+      },
+
+      unlockedProfiles: {
+        type: [Schema.Types.ObjectId],
+        ref: "User",
+        default: [],
+      },
   },
   {
     timestamps: true,
   },
 );
 
-const User =
-  (mongoose.models.User as Model<IUser>) ||
-  mongoose.model<IUser>("User", UserSchema);
+const User = (mongoose.models.User as Model<IUser>) || mongoose.model<IUser>("User", UserSchema);
 
 export default User;
