@@ -966,13 +966,23 @@ export default function ProfilePage() {
 
                 {/* UNLOCKED PROFILES */}
 
-                <div className={styles.unlockStats}>
-                  <span>Total Profiles Unlocked</span>
+              <div className={styles.unlockStats}>
+              <Link
+                  href="/unlocked-profiles"
+                  className={styles.unlockedProfilesLink}
+                >
+                  View unlocked profiles
+                  <FiArrowRight aria-hidden="true" />
+                </Link>
+                
 
-                  <strong>
-                    {contactBalance.unlockedCount}
-                  </strong>
-                </div>
+                <strong>
+                  <span>Profiles Unlocked</span>
+                  <b>{contactBalance.unlockedCount}</b>
+                </strong>
+
+                
+              </div>
 
                 <Link
                   href="/contact-plans"

@@ -531,7 +531,21 @@
     }
     
 /* ACTIVE CONTACT PLAN */
+.unlockedProfilesLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #7e2648;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: gap 0.2s ease;
 
+  &:hover {
+    gap: 10px;
+    text-decoration: underline;
+  }
+}
 .premiumPlan {
     padding: 22px;
     border-radius: 14px;
@@ -673,6 +687,20 @@
   
     strong {
       color: #70213f;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      b{
+        font-size: 14px;
+        background-color: rgb(12, 154, 12);
+        width: 35px;
+        height: 35px;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+      }
     }
   }
   

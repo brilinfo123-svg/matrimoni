@@ -97,6 +97,149 @@
   color: #a83268;
 }
 
+.contactError {
+  margin-top: 12px;
+  color: #c62828;
+  font-size: 13px;
+}
+
+.contactOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(25, 12, 19, 0.68);
+  backdrop-filter: blur(7px);
+}
+
+.contactDialog {
+  position: relative;
+  width: 100%;
+  max-width: 430px;
+  padding: 36px 28px;
+  border-radius: 22px;
+  background: #fff;
+  text-align: center;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.2);
+
+  h2 {
+    margin: 14px 0 8px;
+    color: #30212a;
+    font-size: 23px;
+  }
+
+  p {
+    margin: 0;
+    color: #777;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+}
+
+.contactDialogClose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #f8eef2;
+  color: #7e2648;
+  cursor: pointer;
+}
+
+.contactLoaderSpinner {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 20px;
+  border: 4px solid #f2dce5;
+  border-top-color: #7e2648;
+  border-radius: 50%;
+  animation: contactSpin 0.8s linear infinite;
+}
+
+@keyframes contactSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.contactSuccessIcon {
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 16px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8f7ed;
+  color: #21834a;
+  font-size: 30px;
+}
+
+.contactEyebrow {
+  color: #7e2648;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.contactMobileNumber {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 22px 0;
+  padding: 15px;
+  border: 1px solid #f0dce4;
+  border-radius: 12px;
+  background: #fcf7f9;
+  color: #7e2648;
+  font-size: 18px;
+}
+
+.contactDialogActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+
+  a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 46px;
+    padding: 10px;
+    border-radius: 10px;
+    background: #7e2648;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  a:last-child {
+    background: #168b50;
+  }
+}
+
+.contactDoneButton {
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #eadce2;
+  border-radius: 10px;
+  background: #fff;
+  color: #7e2648;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* =========================================================
    PROFILE HERO
    ========================================================= */

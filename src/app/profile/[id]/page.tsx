@@ -22,6 +22,9 @@ import {
   FiShield,
   FiUser,
   FiUsers,
+  FiMessageCircle,
+  FiUnlock,
+  FiX,
 } from "react-icons/fi";
 
 import styles from "./profile.module.scss";
@@ -121,7 +124,12 @@ export default function UserProfilePage() {
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [interestSent, setInterestSent] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const [contactUnlocked, setContactUnlocked] = useState(false);
+  const [contactMobile, setContactMobile] = useState("");
+  const [unlockingContact, setUnlockingContact] = useState(false);
+  const [contactDialog, setContactDialog] = useState(false);
+  const [contactError, setContactError] = useState("");
+    const { isFavorite, toggleFavorite } = useFavorites();
   const isShortlisted = id ? isFavorite(id) : false;
 
   const handleFavoriteToggle = async () => {
@@ -141,6 +149,130 @@ export default function UserProfilePage() {
       setFavoriteLoading(false);
     }
   };
+
+  const handleContactClick = async () => {
+    if (!id || unlockingContact) return;
+
+    // Already unlocked: directly open dialog.
+    if (contactUnlocked && contactMobile) {
+      setContactDialog(true);
+      return;
+    }
+
+    setContactError("");
+    setUnlockingContact(true);
+
+    let successfulUnlock = false;
+    let unlockStartedAt = 0;
+
+    try {
+      const response = await fetch("/api/contacts/unlock", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          profileId: id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.status === 402) {
+        window.location.href = "/contact-plans";
+        return;
+      }
+
+      if (!response.ok || !data.success) {
+        throw new Error(
+          data.message || "Unable to unlock this contact."
+        );
+      }
+
+      const mobile = String(
+        data.profile?.mobile || data.mobile || ""
+      ).replace(/\D/g, "");
+
+      if (!mobile) {
+        throw new Error(
+          "Mobile number was not returned by the API."
+        );
+      }
+
+      successfulUnlock = true;
+      unlockStartedAt = Date.now();
+
+      setContactMobile(mobile);
+      setContactUnlocked(true);
+    } catch (error) {
+      console.error("CONTACT_UNLOCK_ERROR:", error);
+
+      setContactError(
+        error instanceof Error
+          ? error.message
+          : "Unable to unlock contact."
+      );
+    } finally {
+      if (successfulUnlock) {
+        const elapsed = Date.now() - unlockStartedAt;
+        const remaining = Math.max(0, 2000 - elapsed);
+
+        await new Promise((resolve) =>
+          setTimeout(resolve, remaining)
+        );
+
+        setContactDialog(true);
+      }
+
+      setUnlockingContact(false);
+    }
+  };
+
+useEffect(() => {
+  if (!id) return;
+
+  let mounted = true;
+
+  async function checkUnlockedContact() {
+    try {
+      const response = await fetch("/api/contacts/unlocked", {
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) return;
+
+      const profiles = Array.isArray(data.profiles)
+        ? data.profiles
+        : [];
+
+      const unlockedProfile = profiles.find(
+        (item: any) =>
+          String(item.id || item._id || item.profileId) === id
+      );
+
+      const mobile = String(
+        unlockedProfile?.mobile || ""
+      ).replace(/\D/g, "");
+
+      if (mounted && unlockedProfile && mobile) {
+        setContactUnlocked(true);
+        setContactMobile(mobile);
+      }
+    } catch (error) {
+      console.error("UNLOCKED_CONTACT_CHECK_ERROR:", error);
+    }
+  }
+
+  void checkUnlockedContact();
+
+  return () => {
+    mounted = false;
+  };
+}, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -363,47 +495,46 @@ export default function UserProfilePage() {
             </div>
 
             {/* ACTIONS */}
+            
             <div className={styles.actions}>
+              {/* FREE CHAT */}
               <Link
                 href={`/messages?userId=${profile.id}`}
                 className={styles.messageButton}
               >
-                <Image
-                  src="/public/images/logo/message.png"
-                  alt="Message"
-                  width={20}
-                  height={20}
-                />
+                <FiMessageCircle />
                 <span>Message</span>
               </Link>
 
-              {phone && (
-                <a
-                  href={`https://wa.me/${phone.replace(/\D/g, "")}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.whatsappButton}
-                >
-                  <Image
-                    src="/public/images/logo/whatsapp.png"
-                    alt="WhatsApp"
-                    width={20}
-                    height={20}
-                  />
-                  <span>WhatsApp</span>
-                </a>
-              )}
+              {/* CALL */}
+              <button
+                type="button"
+                className={styles.callButton}
+                onClick={handleContactClick}
+                disabled={unlockingContact}
+              >
+                {unlockingContact ? (
+                  <span>Unlocking...</span>
+                ) : (
+                  <>
+                    <FiPhone />
+                    <span>Call</span>
+                  </>
+                )}
+              </button>
 
-              {phone && (
-                <a
-                  href={`tel:${phone.replace(/[^\d+]/g, "")}`}
-                  className={styles.callButton}
-                >
-                  <FiPhone />
-                  <span>Call</span>
-                </a>
-              )}
+              {/* WHATSAPP */}
+              <button
+                type="button"
+                className={styles.whatsappButton}
+                onClick={handleContactClick}
+                disabled={unlockingContact}
+              >
+                <FiMessageCircle />
+                <span>WhatsApp</span>
+              </button>
 
+              {/* FAVORITE */}
               <button
                 type="button"
                 className={`${styles.shortlistButton} ${
@@ -417,17 +548,19 @@ export default function UserProfilePage() {
                     : "Add to favorites"
                 }
                 aria-pressed={isShortlisted}
-                title={
-                  isShortlisted
-                    ? "Remove from favorites"
-                    : "Add to favorites"
-                }
               >
                 <FiHeart
                   fill={isShortlisted ? "currentColor" : "none"}
                 />
               </button>
             </div>
+
+            {contactError && (
+              <p className={styles.contactError} role="alert">
+                {contactError}
+              </p>
+            )}
+
           </div>
         </section>
 
@@ -739,6 +872,88 @@ export default function UserProfilePage() {
           )}
         </div>
       )}
+
+      {/* CONTACT LOADER */}
+      {unlockingContact && (
+        <div className={styles.contactOverlay}>
+          <div className={styles.contactDialog}>
+            <div className={styles.contactLoaderSpinner} />
+            <h2>Unlocking contact...</h2>
+            <p>Please wait while we securely retrieve the contact details.</p>
+          </div>
+        </div>
+      )}
+
+      {/* CONTACT DIALOG */}
+      {contactDialog && contactUnlocked && contactMobile && (
+        <div
+          className={styles.contactOverlay}
+          onClick={() => setContactDialog(false)}
+        >
+          <section
+            className={styles.contactDialog}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="contact-dialog-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className={styles.contactDialogClose}
+              onClick={() => setContactDialog(false)}
+              aria-label="Close dialog"
+            >
+              <FiX />
+            </button>
+
+            <div className={styles.contactSuccessIcon}>
+              <FiCheck />
+            </div>
+
+            <span className={styles.contactEyebrow}>
+              CONTACT UNLOCKED
+            </span>
+
+            <h2 id="contact-dialog-title">
+              {profile.name}
+            </h2>
+
+            <p>
+              You can now call or connect with this member on WhatsApp.
+            </p>
+
+            <div className={styles.contactMobileNumber}>
+              <FiPhone />
+              <strong>{contactMobile}</strong>
+            </div>
+
+            <div className={styles.contactDialogActions}>
+              <a href={`tel:${contactMobile}`}>
+                <FiPhone />
+                <span>Call Now</span>
+              </a>
+
+              <a
+                href={`https://wa.me/${contactMobile}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FiMessageCircle />
+                <span>WhatsApp</span>
+              </a>
+            </div>
+
+            <button
+              type="button"
+              className={styles.contactDoneButton}
+              onClick={() => setContactDialog(false)}
+            >
+              Done
+            </button>
+          </section>
+        </div>
+      )}
+
     </div>
   );
 }
