@@ -22,6 +22,7 @@ import {
 import styles from "./matches.module.scss";
 
 type MatchProfile = {
+  gender: any;
   religionabout: string;
   id: string;
   name: string;
@@ -652,7 +653,11 @@ export default function MatchesPage() {
               {filteredProfiles.map((profile) => {
                 const isShortlisted = isFavorite(profile.id);
                 const isUnlocking = unlockingProfileId === profile.id;
-
+                const normalizedGender = profile.gender?.trim().toLowerCase();
+                const fallbackImage =
+                  normalizedGender === "female"
+                    ? "public/images/profiles/female-placeholder.webp"
+                    : "public/images/profiles/male-placeholder.webp";
                 return (
                   <article
                     key={profile.id}
@@ -668,35 +673,39 @@ export default function MatchesPage() {
                     </div>
 
                     {/* Photo */}
-                    <div className={styles.photoWrapper}>
-                      <Link
-                        href={`/profile/${profile.id}`}
-                        className={styles.profilePhoto}
-                      >
-                        {profile.photo ? (
-                          <img
-                            src={profile.photo}
-                            alt={profile.name}
-                          />
-                        ) : (
-                          <span>{profile.initials}</span>
-                        )}
+                  <div className={styles.photoWrapper}>
+                    <Link
+                      href={`/profile/${profile.id}`}
+                      className={styles.profilePhoto}
+                    >
+                      <img
+                        src={profile.photo || fallbackImage}
+                        alt={`${profile.name} profile`}
+                        loading="lazy"
+                        onError={(event) => {
+                          const image = event.currentTarget;
 
-                        {profile.online && (
-                          <span className={styles.onlineDot} />
-                        )}
-                      </Link>
+                          if (image.src !== window.location.origin + fallbackImage) {
+                            image.src = fallbackImage;
+                          }
+                        }}
+                      />
 
-                      <div className={styles.matchBadge}>
-                        <FiHeart
-                          aria-hidden="true"
-                          fill="currentColor"
-                        />
+                      {profile.online && (
+                        <span className={styles.onlineDot} />
+                      )}
+                    </Link>
 
-                        <strong>{profile.compatibility}%</strong>
-                        <span>match</span>
-                      </div>
+                    <div className={styles.matchBadge}>
+                      <FiHeart
+                        aria-hidden="true"
+                        fill="currentColor"
+                      />
+
+                      <strong>{profile.compatibility}%</strong>
+                      <span>match</span>
                     </div>
+                  </div>
 
                     {/* Content */}
                     <div className={styles.cardContent}>

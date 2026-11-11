@@ -160,11 +160,11 @@ export default function ContactPlansPage() {
                   ? "Unlimited contacts"
                   : `${balance.freeRemaining + balance.contactCredits} contacts available`}
               </h2>
-              <p>
+              {/* <p>
                 {balance.freeRemaining} free unlocks remaining
                 {" · "}
                 {balance.contactCredits} pack credits
-              </p>
+              </p> */}
             </div>
 
             <div className={styles.balanceIcon}>

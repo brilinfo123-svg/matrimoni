@@ -38,12 +38,19 @@
     background: rgba(168, 50, 104, 0.045);
     }
     
-    .container {
+    :global(.container) {
     position: relative;
     z-index: 1;
-    width: min(100% - 40px, 1240px);
+    // width: min(100% - 40px, 1240px);
+    width: 100%;
     margin: 0 auto;
+    padding: 0 60px;
+    max-width: 1920px !important;
+
+    @media screen and (max-width: 1440px) {
+      padding: 0 15px;
     }
+  }
     
     .pageHeader {
     display: flex;
@@ -434,8 +441,14 @@
     
     .profileGrid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 18px;
+    @media screen and (min-width: 1024.99px) and (max-width: 1440px) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    @media screen and (min-width: 768px) and (max-width: 1024px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     }
     
     .profileCard {
@@ -461,7 +474,7 @@
     .profileImage {
     position: relative;
     display: grid;
-    height: 235px;
+    height: auto;
     place-items: center;
     overflow: hidden;
     background:
@@ -473,6 +486,13 @@
     );
     img{
       z-index: 9;
+      width: 100%;
+      height: 340px;
+      object-fit: cover;
+      @media screen and (max-width: 767px) {
+        height: 300px;
+        max-width: 480px;
+      }
     }
     }
     
@@ -529,17 +549,6 @@
     border-color: #86efac;
   }
 }
-    .profileImage::before {
-    width: 210px;
-    height: 210px;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    }
-    
-    .profileImage::after {
-    width: 300px;
-    height: 300px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    }
     
     .profileImage > span:first-child {
     position: relative;
@@ -1388,6 +1397,7 @@
         }
       }
     }
+    
     @media (max-width: 1050px) {
     .contentLayout {
     grid-template-columns: 245px minmax(0, 1fr);
@@ -1395,10 +1405,6 @@
     
     .profileGrid {
     gap: 14px;
-    }
-    
-    .profileImage {
-    height: 205px;
     }
     }
     
@@ -1493,9 +1499,11 @@
           display: none;
         }
     }
-    @media (max-width: 650px) {
-    .container {
-    width: min(100% - 28px, 1240px);
+    @media (max-width:767px) {
+    :global(.container) {
+        width: min(100% - 0px, 1240px);
+        padding: 0 10px !important;
+        max-width: 480px !important;
     }
     
     .pageHeader {
@@ -1542,10 +1550,6 @@
     .profileGrid {
     grid-template-columns: 1fr;
     }
-    
-    .profileImage {
-    height: 260px;
-    }
     }
     
     @media (max-width: 420px) {
@@ -1567,10 +1571,6 @@
     
     .mobileFilterButton svg {
     width: 15px;
-    }
-    
-    .profileImage {
-    height: 235px;
     }
     
   

@@ -87,6 +87,18 @@ export async function POST(request: Request) {
     const smtpPassword = process.env.SMTP_PASSWORD;
     const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
     const smtpPort = Number(process.env.SMTP_PORT || 465);
+    console.log("SMTP CONFIG CHECK:", {
+      user: smtpUser,
+      passwordLength: smtpPassword?.length,
+      passwordStartsWithSpace: /^\s/.test(
+        process.env.SMTP_PASSWORD || ""
+      ),
+      passwordEndsWithSpace: /\s$/.test(
+        process.env.SMTP_PASSWORD || ""
+      ),
+      host: smtpHost,
+      port: smtpPort,
+    });
 
     if (!smtpUser || !smtpPassword) {
       console.error("Contact form SMTP credentials are missing.");
@@ -99,12 +111,16 @@ export async function POST(request: Request) {
 
     const transporter = nodemailer.createTransport({
       host: smtpHost,
-      port: smtpPort,
-      secure: smtpPort === 465,
+      port: 587,
+      secure: false,
       auth: {
         user: smtpUser,
         pass: smtpPassword,
       },
+      authMethod: "LOGIN",
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000,
     });
 
     const safeName = escapeHtml(cleanName);

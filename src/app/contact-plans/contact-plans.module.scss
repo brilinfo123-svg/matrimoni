@@ -154,7 +154,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 20px;
-    padding: 22px 26px;
+    padding: 9px 26px;
     margin-bottom: 20px;
     border-radius: 18px;
     color: white;
@@ -162,8 +162,8 @@
     box-shadow: 0 12px 30px rgba(112, 33, 63, 0.13);
   
     h2 {
-      margin: 8px 0 5px;
-      font-size: 23px;
+      margin: 0;
+      font-size: 18px;
     }
   
     p {
@@ -181,8 +181,8 @@
   }
   
   .balanceIcon {
-    width: 54px;
-    height: 54px;
+    width: 44px;
+    height: 44px;
     display: grid;
     place-items: center;
     border-radius: 16px;

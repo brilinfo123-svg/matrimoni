@@ -15,12 +15,10 @@ function calculateAge(dateOfBirth: string | Date) {
   const today = new Date();
 
   let age =
-    today.getFullYear() -
-    birthDate.getFullYear();
+    today.getFullYear() - birthDate.getFullYear();
 
   const monthDifference =
-    today.getMonth() -
-    birthDate.getMonth();
+    today.getMonth() - birthDate.getMonth();
 
   if (
     monthDifference < 0 ||
@@ -51,7 +49,7 @@ export async function GET() {
       },
     })
       .select(
-        "_id firstName lastName dateOfBirth city state profession education photos profilePhoto isEmailVerified isMobileVerified mobile"
+        "_id firstName lastName gender dateOfBirth city state profession education photos profilePhoto isEmailVerified isMobileVerified mobile"
       )
       .sort({ createdAt: -1 })
       .limit(4)
@@ -68,8 +66,8 @@ export async function GET() {
         name: `${user.firstName || ""} ${
           user.lastName || ""
         }`.trim(),
+        gender: user.gender,
         mobile: user.mobile,
-        mobileType: typeof user.mobile,
       }))
     );
 
@@ -82,13 +80,11 @@ export async function GET() {
       const lastName = user.lastName || "";
 
       const name =
-        `${firstName} ${lastName}`.trim() ||
-        "Member";
+        `${firstName} ${lastName}`.trim() || "Member";
 
       const initials =
-        `${firstName.charAt(0)}${lastName.charAt(
-          0
-        )}`.toUpperCase() || "US";
+        `${firstName.charAt(0)}${lastName.charAt(0)}`
+          .toUpperCase() || "US";
 
       const location = [
         user.city,
@@ -113,6 +109,14 @@ export async function GET() {
       }
 
       /* -----------------------------------------------
+         GENDER
+      ------------------------------------------------ */
+
+      const gender = String(user.gender || "")
+        .trim()
+        .toLowerCase();
+
+      /* -----------------------------------------------
          VERIFIED STATUS
       ------------------------------------------------ */
 
@@ -125,8 +129,7 @@ export async function GET() {
       ------------------------------------------------ */
 
       const mobile =
-        user.mobile &&
-        String(user.mobile).trim()
+        user.mobile && String(user.mobile).trim()
           ? String(user.mobile).trim()
           : null;
 
@@ -137,13 +140,12 @@ export async function GET() {
         location:
           location || "Location not specified",
         profession:
-          user.profession ||
-          "Profession not specified",
+          user.profession || "Profession not specified",
         education:
-          user.education ||
-          "Education not specified",
+          user.education || "Education not specified",
         image,
         initials,
+        gender,
         verified,
         mobile,
       };
@@ -151,7 +153,11 @@ export async function GET() {
 
     console.log(
       "FEATURED PROFILES RESPONSE:",
-      profiles
+      profiles.map((profile) => ({
+        name: profile.name,
+        gender: profile.gender,
+        image: profile.image,
+      }))
     );
 
     return NextResponse.json({

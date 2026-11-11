@@ -578,6 +578,7 @@ export async function GET() {
 
           initials: getInitials(firstName, lastName),
           photo: getPhoto(user.photos),
+          gender: normalizeGender(user.gender) || "",
 
           verified:
             Boolean(user.isEmailVerified) ||

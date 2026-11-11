@@ -596,6 +596,7 @@
   // grid-template-columns:minmax(150px, 1.4fr) minmax(120px, 1fr) 110px 110px 48px;
   gap: 9px;
   margin-top: 20px;
+  flex-wrap: wrap;
 }
 
 .interestButton,

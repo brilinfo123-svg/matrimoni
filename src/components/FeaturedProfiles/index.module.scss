@@ -559,7 +559,7 @@
   }
 
   .imageWrapper {
-    height: 360px;
+    height: 370px;
   }
 
   .profileContent {
@@ -663,5 +663,70 @@
   .viewProfile svg,
   .viewAllButton {
     transition: none;
+  }
+}
+
+/* =====================================
+   MOBILE & TABLET PROFILE SLIDER
+===================================== */
+
+@media (max-width: 1024px) {
+  .profileGrid {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    gap: 18px;
+
+    padding: 5px 2px 20px;
+
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .profileCard {
+    flex: 0 0 320px;
+    width: 320px;
+    min-width: 320px;
+
+    scroll-snap-align: start;
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .profileGrid {
+    gap: 14px;
+    margin-right: -16px;
+    padding-right: 16px;
+  }
+
+  .profileCard {
+    flex: 0 0 86%;
+    width: 86%;
+    min-width: 86%;
+
+    scroll-snap-align: center;
+  }
+}
+
+/* Desktop: Keep existing grid */
+@media (min-width: 1025px) {
+  .profileGrid {
+    display: grid;
+    overflow: visible;
+  }
+
+  .profileCard {
+    width: auto;
+    min-width: 0;
   }
 }

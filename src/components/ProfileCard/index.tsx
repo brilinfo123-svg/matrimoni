@@ -62,8 +62,16 @@ export default function ProfileCard({
   const [contactNumber, setContactNumber] = useState("");
   const [numberCopied, setNumberCopied] = useState(false);
   const [unlocking, setUnlocking] = useState(false);
-
+  const [imageError, setImageError] = useState(false);
   const favorite = isFavorite(profile.id);
+  const normalizedGender = profile.gender?.trim().toLowerCase();
+
+const fallbackImage =
+  normalizedGender === "female"
+    ? "public/images/profiles/female-placeholder.webp"
+    : "public/images/profiles/male-placeholder.webp";
+
+  const profileImageSrc = profile.photo && !imageError ? profile.photo : fallbackImage;
   const canShowMobile = profile.isMobileVisible === true;
 
   const cleanMobile = contactNumber.replace(/\D/g, "");
@@ -125,15 +133,17 @@ export default function ProfileCard({
           aria-label={`View ${profile.name}'s profile`}
         >
           <div className={styles.profileImage}>
-            {profile.photo ? (
-              <img
-                src={profile.photo}
-                alt={`${profile.name} profile`}
-                loading="lazy"
-              />
-            ) : (
-              <span>{profile.initials}</span>
-            )}
+          <img
+  src={profileImageSrc}
+  alt={`${profile.name} profile`}
+  loading="lazy"
+  className={
+    profile.photo && !imageError
+      ? styles.profilePhoto
+      : styles.placeholderPhoto
+  }
+  onError={() => setImageError(true)}
+/>
 
             <div className={styles.compatibility}>
               <FiStar aria-hidden="true" />
