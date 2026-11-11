@@ -236,8 +236,6 @@ function calculateProfileCompletion(
     Boolean(profile.profession?.trim()),
     Boolean(profile.company?.trim()),
     Boolean(profile.income?.trim()),
-    Boolean(profile.fatherOccupation?.trim()),
-    Boolean(profile.motherOccupation?.trim()),
     Boolean(profile.diet?.trim()),
     Boolean(profile.smoking?.trim()),
     Boolean(profile.drinking?.trim()),

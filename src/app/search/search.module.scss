@@ -832,7 +832,15 @@
     font-size: 11px;
     font-weight: 800;
     }
-    
+    .premiumCountdown {
+      display: block;
+      margin-top: 7px;
+      color: #a83268;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.6;
+      font-variant-numeric: tabular-nums;
+    }
     .filterOverlay {
     display: none;
     }
@@ -851,6 +859,7 @@
         display: flex;
         flex-direction: column;
         gap: 5px;
+        text-align: center;
       }
     
       span {

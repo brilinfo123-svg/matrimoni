@@ -20,8 +20,6 @@ export interface IUser extends Document {
   profession: string;
   company: string;
   income: string;
-  fatherOccupation: string;
-  motherOccupation: string;
   aboutYourself: string;
   diet: string;
   smoking: string;
@@ -40,8 +38,6 @@ export interface IUser extends Document {
   isMobileVisible: boolean;
   isActive: boolean;
   favorites: mongoose.Types.ObjectId[];
-  isEmailVerified: boolean;
-  isMobileVerified: boolean;
   isProfileComplete: boolean;
 
   // Contact monetization fields
@@ -150,16 +146,6 @@ const UserSchema = new Schema<IUser>(
       default: "",
       trim: true,
     },
-    fatherOccupation: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-    motherOccupation: {
-      type: String,
-      default: "",
-      trim: true,
-    },
     aboutYourself: {
       type: String,
       default: "",
@@ -244,14 +230,6 @@ const UserSchema = new Schema<IUser>(
       type: [Schema.Types.ObjectId],
       ref: "User",
       default: [],
-    },
-    isEmailVerified: {
-      type: Boolean,
-      default: false,
-    },
-    isMobileVerified: {
-      type: Boolean,
-      default: false,
     },
     isProfileComplete: {
       type: Boolean,

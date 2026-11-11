@@ -46,8 +46,6 @@ type FormState = {
   profession: string;
   company: string;
   income: string;
-  fatherOccupation: string;
-  motherOccupation: string;
   aboutYourself: string;
   diet: string;
   smoking: string;
@@ -110,8 +108,6 @@ const emptyForm: FormState = {
   profession: "",
   company: "",
   income: "",
-  fatherOccupation: "",
-  motherOccupation: "",
   aboutYourself: "",
   diet: "",
   smoking: "",
@@ -195,8 +191,6 @@ function profileToForm(profile: ProfileData): FormState {
     profession: profile.profession || "",
     company: profile.company || "",
     income: profile.income || "",
-    fatherOccupation: profile.fatherOccupation || "",
-    motherOccupation: profile.motherOccupation || "",
     aboutYourself: profile.aboutYourself || "",
     diet: profile.diet || "",
     smoking: profile.smoking || "",
@@ -890,10 +884,9 @@ const handleSubmit = async (
           </div>
 
           <div className={styles.completionCard}>
-            <div className={styles.completionCircle}>
+          <div className={styles.completionCircle} style={{ "--completion": `${completion}%` } as React.CSSProperties}>
               <strong>{completion}%</strong>
             </div>
-
             <div>
               <strong>Profile completion</strong>
               <span>
@@ -1335,42 +1328,7 @@ const handleSubmit = async (
               </div>
             </section>
 
-            {/* ABOUT ME */}
-            <section id="about" className={styles.card}>
-              <SectionHeader
-                icon={<FiHeart aria-hidden="true" />}
-                title="About me"
-                description="Share what makes you unique."
-              />
-
-              <div className={styles.textareaWrapper}>
-                <textarea
-                  value={form.aboutYourself}
-                  onChange={(event) =>
-                    updateField(
-                      "aboutYourself",
-                      event.target.value,
-                    )
-                  }
-                  maxLength={500}
-                  rows={6}
-                  placeholder="Tell people about yourself..."
-                />
-
-                <span>
-                  {form.aboutYourself.length}/500
-                </span>
-              </div>
-
-              <div className={styles.tip}>
-                <FiInfo aria-hidden="true" />
-                <span>
-                  Talk about your personality, interests, values
-                  and what matters to you. Avoid sharing phone
-                  numbers or email addresses.
-                </span>
-              </div>
-            </section>
+          
 
             {/* EDUCATION & CAREER */}
             <section id="education" className={styles.card}>
@@ -1433,7 +1391,7 @@ const handleSubmit = async (
             </section>
 
             {/* FAMILY */}
-            <section id="family" className={styles.card}>
+            {/* <section id="family" className={styles.card}>
               <SectionHeader
                 icon={<FiUser aria-hidden="true" />}
                 title="Family details"
@@ -1465,7 +1423,7 @@ const handleSubmit = async (
                   share information you are comfortable displaying.
                 </span>
               </div>
-            </section>
+            </section> */}
 
             {/* LIFESTYLE */}
             <section id="lifestyle" className={styles.card}>
@@ -1616,7 +1574,42 @@ const handleSubmit = async (
                 </span>
               </div>
             </section>
+                  {/* ABOUT ME */}
+            <section id="about" className={styles.card}>
+              <SectionHeader
+                icon={<FiHeart aria-hidden="true" />}
+                title="About me"
+                description="Share what makes you unique."
+              />
 
+              <div className={styles.textareaWrapper}>
+                <textarea
+                  value={form.aboutYourself}
+                  onChange={(event) =>
+                    updateField(
+                      "aboutYourself",
+                      event.target.value,
+                    )
+                  }
+                  maxLength={500}
+                  rows={6}
+                  placeholder="Tell people about yourself..."
+                />
+
+                <span>
+                  {form.aboutYourself.length}/500
+                </span>
+              </div>
+
+              <div className={styles.tip}>
+                <FiInfo aria-hidden="true" />
+                <span>
+                  Talk about your personality, interests, values
+                  and what matters to you. Avoid sharing phone
+                  numbers or email addresses.
+                </span>
+              </div>
+            </section>
             {/* VERIFICATION */}
             <section className={styles.verificationCard}>
               <div className={styles.verificationIcon}>

@@ -56,8 +56,6 @@
     income: string;
 
     familyType: string;
-    fatherOccupation: string;
-    motherOccupation: string;
     diet: string;
     smoking: string;
     drinking: string;
@@ -150,8 +148,6 @@
     income: "",
 
     familyType: "",
-    fatherOccupation: "",
-    motherOccupation: "",
     diet: "",
     smoking: "",
     drinking: "",
@@ -341,12 +337,6 @@
         if (!formData.firstName.trim()) {
           return "Please enter your first name.";
         }
-    
-        if (!formData.dateOfBirth) {
-          return "Please select your date of birth.";
-        }
-        
-    
         if (!formData.state.trim()) {
           return "Please select your state.";
         }
@@ -360,12 +350,15 @@
         if (!formData.education) {
           return "Please select your highest education.";
         }
-    
         if (!formData.profession) {
           return "Please select your profession.";
         }
       }
-    
+      if (currentStep === 5) {
+        if (!formData.dateOfBirth) {
+          return "Please select your date of birth.";
+        }
+      }
       // Step 6 - Partner Preferences
       if (currentStep === 6) {
         if (!formData.partnerAgeMin || !formData.partnerAgeMax) {
@@ -1033,15 +1026,6 @@
       <div className={styles.fieldsGrid}>
         <Field label="First name" id="firstName" value={formData.firstName} placeholder="Your first name" icon={<FiUser aria-hidden="true" />} onChange={value => updateField("firstName", value)} required />
         <Field label="Last name" id="lastName" value={formData.lastName} placeholder="Your last name" onChange={value => updateField("lastName", value)} />
-        <div className={`${styles.field} ${styles.dateOfBirthField}`}>
-          <label htmlFor="dateOfBirth"> Date of birth <span className={styles.required}>*</span></label>
-          <div className={`${styles.inputWrapper} ${styles.dateInputWrapper}`}>
-            <input id="dateOfBirth" type="date" value={formData.dateOfBirth} max={getMaximumDateOfBirth()} onChange={(event) => updateField("dateOfBirth", event.target.value)} required className={styles.dateInput}/>
-          </div>
-          <span className={styles.fieldHint}>
-            You must be at least 18 years old to create an account.
-          </span>
-        </div>
         <SelectField label="Mother tongue" id="motherTongue" value={formData.motherTongue} placeholder="Select mother tongue" options={["Hindi", "English", "Punjabi", "Bengali", "Gujarati", "Marathi", "Tamil", "Telugu", "Kannada", "Malayalam", "Urdu", "Assamese", "Odia", "Konkani", "Rajasthani", "Haryanvi", "Bhojpuri", "Maithili", "Awadhi", "Chhattisgarhi", "Sindhi", "Kashmiri", "Manipuri (Meitei)", "Santhali", "Dogri", "Bodo", "Tulu", "Mizo", "Khasi", "Garo", "Tripuri", "Nagpuri", "Sourashtra", "Other"]} onChange={value => updateField("motherTongue", value)} />
         <SelectField label="Marital status" id="maritalStatus" value={formData.maritalStatus} placeholder="Select marital status" options={["Never married", "Divorced", "Widowed", "Separated",]} onChange={(value) => updateField("maritalStatus", value)}/>
         <StateCityField state={formData.state} city={formData.city} stateId="currentState" cityId="currentCity" onStateChange={value => updateField("state", value)} onCityChange={value => updateField("city", value)} required />
@@ -1080,19 +1064,24 @@
   }: StepProps) {
     return (
       <div className={styles.fieldsGrid}>
-    <Field label="Father's occupation" id="fatherOccupation" value={formData.fatherOccupation} placeholder="Optional" onChange={(value) => updateField("fatherOccupation", value)} />
-    <Field label="Mother's occupation" id="motherOccupation" value={formData.motherOccupation} placeholder="Optional" onChange={(value) => updateField("motherOccupation", value)} />
     <SelectField label="Diet" id="diet" value={formData.diet} placeholder="Select diet" options={["Vegetarian", "Non-vegetarian", "Vegan", "Eggetarian", "Other"]} onChange={(value) => updateField("diet", value)} />
     <SelectField label="Smoking" id="smoking" value={formData.smoking} placeholder="Select" options={["Never", "Occasionally", "Regularly", "Prefer not to say"]} onChange={(value) => updateField("smoking", value)} />
     <SelectField label="Drinking" id="drinking" value={formData.drinking} placeholder="Select" options={["Never", "Occasionally", "Regularly", "Prefer not to say"]} onChange={(value) => updateField("drinking", value)} />
-    {/* About Yourself */}
-  {/* About Yourself - Full Width */}
-  <div className={`${styles.field} ${styles.aboutYourselfField}`}>
-    <label htmlFor="aboutYourself">About Yourself <span className={styles.fieldHint}> (Optional)</span></label>
-    <textarea id="aboutYourself" value={formData.aboutYourself} onChange={event => updateField("aboutYourself", event.target.value.slice(0, 1000))} placeholder="Tell us about your personality, Your Family, interests, hobbies, values and what makes you unique..." maxLength={1000} rows={5} />
-    <span className={styles.fieldHint}>{formData.aboutYourself.length}/1000 characters</span>
-  </div>
-  </div>
+    <div className={`${styles.field} ${styles.dateOfBirthField}`}>
+          <label htmlFor="dateOfBirth"> Date of birth <span className={styles.required}>*</span></label>
+          <div className={`${styles.inputWrapper} ${styles.dateInputWrapper}`}>
+            <input id="dateOfBirth" type="date" value={formData.dateOfBirth} max={getMaximumDateOfBirth()} onChange={(event) => updateField("dateOfBirth", event.target.value)} required className={styles.dateInput}/>
+          </div>
+          <span className={styles.fieldHint}>
+            You must be at least 18 years old to create an account.
+          </span>
+        </div>
+      <div className={`${styles.field} ${styles.aboutYourselfField}`}>
+        <label htmlFor="aboutYourself">About Yourself <span className={styles.fieldHint}> (Optional)</span></label>
+        <textarea id="aboutYourself" value={formData.aboutYourself} onChange={event => updateField("aboutYourself", event.target.value.slice(0, 1000))} placeholder="Tell us about your personality, Your Family, interests, hobbies, values and what makes you unique..." maxLength={1000} rows={5} />
+        <span className={styles.fieldHint}>{formData.aboutYourself.length}/1000 characters</span>
+      </div>
+      </div>
     );
   }
 

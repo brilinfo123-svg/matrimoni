@@ -68,7 +68,20 @@ function getAgeRange(value: string) {
     max: Number(match[2]),
   };
 }
+function formatPremiumRemaining(milliseconds: number) {
+  if (milliseconds <= 0) {
+    return "Premium expired";
+  }
 
+  const totalSeconds = Math.floor(milliseconds / 1000);
+
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${days} Days ${hours} Hours ${minutes} Minutes ${seconds} Seconds`;
+}
 type ContactBalance = {
   freeTotal: number;
   freeUsed: number;
@@ -164,26 +177,27 @@ export default function SearchPage() {
   // DYNAMIC CONTACT SYSTEM
   // --------------------------------------------------
 
-  const [contactBalance, setContactBalance] =
-    useState<ContactBalance | null>(null);
+  const [contactBalance, setContactBalance] = useState<ContactBalance | null>(null);
+  const [currentTime, setCurrentTime] = useState(Date.now());
 
-  const [unlockedContacts, setUnlockedContacts] =
-    useState<string[]>([]);
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+  
+    return () => window.clearInterval(timer);
+  }, []);
+  const [unlockedContacts, setUnlockedContacts] = useState<string[]>([]);
 
-  const [showContactPlans, setShowContactPlans] =
-    useState(false);
+  const [showContactPlans, setShowContactPlans] = useState(false);
 
   const [contactLoading, setContactLoading] = useState(true);
   const [planLoading, setPlanLoading] = useState(false);
 
   const premiumActive = contactBalance?.premiumActive ?? false;
-
-  const contactsRemaining = premiumActive
-    ? "Unlimited"
-    : contactBalance
-      ? contactBalance.freeRemaining +
-        contactBalance.contactCredits
-      : "...";
+  const premiumRemaining = contactBalance?.premiumUntil ? new Date(contactBalance.premiumUntil).getTime() - currentTime: 0;
+  const premiumCountdown = formatPremiumRemaining(premiumRemaining,);
+  const contactsRemaining = premiumActive ? "Unlimited" : contactBalance? contactBalance.freeRemaining + contactBalance.contactCredits: "...";
 
   // --------------------------------------------------
   // LOAD CONTACT BALANCE + UNLOCKED PROFILES
@@ -683,18 +697,17 @@ export default function SearchPage() {
 
                 <strong>
                   {premiumActive
-                    ? "Unlimited contacts"
+                    ? "Unlimited contacts for"
                     : `${contactsRemaining} contacts remaining`}
                 </strong>
 
-                {contactBalance?.premiumUntil && (
-                  <small>
-                    Premium expiry:{" "}
-                    {new Date(
-                      contactBalance.premiumUntil,
-                    ).toLocaleDateString("en-IN")}
-                  </small>
-                )}
+                 {premiumActive && contactBalance?.premiumUntil && (
+                    <small className={styles.premiumCountdown}>
+                      {premiumCountdown === "Premium expired"
+                        ? "Premium expired"
+                        : `${premiumCountdown}`}
+                    </small>
+                  )}
               </div>
 
               <button

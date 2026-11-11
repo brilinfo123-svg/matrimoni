@@ -33,9 +33,6 @@ const stringLimits: Record<string, number> = {
   company: 200,
   income: 100,
 
-  fatherOccupation: 150,
-  motherOccupation: 150,
-
   aboutYourself: 500,
 
   diet: 100,
@@ -131,9 +128,6 @@ function calculateCompletion(user: Record<string, any>): number {
     user.profession,
     user.company,
     user.income,
-
-    user.fatherOccupation,
-    user.motherOccupation,
 
     user.aboutYourself,
 

@@ -39,8 +39,6 @@ export async function POST(request: Request) {
       profession,
       company,
       income,
-      fatherOccupation,
-      motherOccupation,
       aboutYourself,
       diet,
       smoking,
@@ -196,10 +194,6 @@ export async function POST(request: Request) {
       profession,
       company,
       income,
-
-      fatherOccupation,
-      motherOccupation,
-
       aboutYourself:
         typeof aboutYourself === "string"
           ? aboutYourself.trim().slice(0, 1000)
@@ -228,9 +222,6 @@ export async function POST(request: Request) {
       photoPublicIds: validPhotoEntries.map(
         (photo) => photo.publicId
       ),
-
-      isEmailVerified: false,
-      isMobileVerified: false,
       isProfileComplete: true,
     });
 
