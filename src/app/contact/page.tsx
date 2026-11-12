@@ -129,8 +129,8 @@ export default function ContactPage() {
             <div>
               <h3>Email Support</h3>
               <p>Send us your questions anytime.</p>
-              <a href="mailto:support@evermilan.com">
-                support@evermilan.com
+              <a href="mailto:evermilan.official@gmail.com">
+                evermilan.official@gmail.com
               </a>
             </div>
           </div>
@@ -144,7 +144,7 @@ export default function ContactPage() {
               <p>
                 Have a concern about a profile or your privacy?
               </p>
-              <Link href="/safety-tips">Visit Safety Centre</Link>
+              <Link href="/safety">Visit Safety Centre</Link>
             </div>
           </div>
 

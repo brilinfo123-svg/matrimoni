@@ -58,6 +58,10 @@ const footerLinks = {
       label: "Terms & Conditions",
       href: "/terms",
     },
+    {
+      label: "Refund & Cancellation Policy",
+      href: "/refund",
+    },
     // {
     //   label: "Cookie Policy",
     //   href: "/cookies",
@@ -128,14 +132,14 @@ export default function Footer() {
 
             {/* Email */}
             <a
-              href="mailto:support@matrimonial.com"
+              href="mailto:evermilan.official@gmail.com"
               className={styles.emailLink}
             >
               <span className={styles.emailIcon}>
                 <FiMail aria-hidden="true" />
               </span>
 
-              <span>support@EveryMilan.com</span>
+              <span>evermilan.official@gmail.com</span>
             </a>
           </div>
 

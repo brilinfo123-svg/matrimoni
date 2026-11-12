@@ -240,9 +240,6 @@ export default function TermsPage() {
                         <span className={styles.contactLabel}>
                           EMAIL SUPPORT
                         </span>
-                        <a href="mailto:support@evermilan.com">
-                          support@evermilan.com
-                        </a>
                         <Link href="/contact">
                           Visit Contact Us
                         </Link>
@@ -269,8 +266,8 @@ export default function TermsPage() {
             </div>
 
             <div className={styles.relatedLinks}>
-              <Link href="/privacy-policy">Privacy Policy</Link>
-              <Link href="/safety-tips">Safety Centre</Link>
+              <Link href="/privacy">Privacy Policy</Link>
+              <Link href="/safety">Safety Centre</Link>
               <Link href="/contact">Contact Us</Link>
             </div>
           </article>

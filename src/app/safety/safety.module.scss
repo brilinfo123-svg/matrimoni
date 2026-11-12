@@ -39,6 +39,9 @@
   bottom: -150px;
   left: -130px;
   background: rgba(217, 106, 145, 0.07);
+  @media screen and (max-width: 767px) {
+    display: none;
+  }
 }
 
 .heroGrid {
@@ -63,6 +66,10 @@
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  @media screen and (max-width: 767px) {
+    display: flex;
+    justify-content: center;
+  }
 }
 
 .eyebrowIcon {
@@ -319,12 +326,14 @@
 }
 
 .tipsSection {
-  padding: 115px 0;
+  padding: 0px 60px 60px;
   background: #ffffff;
 }
 
 .sectionHeading {
   max-width: 720px;
+  text-align: center;
+  margin: 0 auto;
 }
 
 .eyebrowLine {
@@ -338,8 +347,8 @@
 .sectionHeading h2 {
   margin-top: 20px;
   color: #272024;
-  font-size: clamp(36px, 4vw, 56px);
-  line-height: 1.04;
+  font-size: clamp(36px, 4vw, 50px);
+  line-height: 1.2;
   letter-spacing: -0.045em;
 }
 
@@ -349,6 +358,9 @@
   color: #74696e;
   font-size: 17px;
   line-height: 1.75;
+  @media screen and (max-width: 767px) {
+    font-size: 16px;
+  }
 }
 
 .tipsGrid {
@@ -415,7 +427,7 @@
 }
 
 .warningSection {
-  padding: 0 0 115px;
+  padding: 0 0 60;
   background: #ffffff;
 }
 
@@ -446,6 +458,9 @@
   background: #ffffff;
   box-shadow: 0 10px 25px rgba(168, 50, 104, 0.08);
   font-size: 23px;
+  @media screen and (max-width: 767px) {
+    margin: auto;
+  }
 }
 
 .smallLabel {
@@ -507,7 +522,7 @@
 }
 
 .protectionSection {
-  padding: 115px 0;
+  padding: 50px 0;
   background: #fbfafb;
 }
 
@@ -581,7 +596,10 @@
   color: #292226;
   font-size: clamp(36px, 4vw, 54px);
   line-height: 1.03;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.045em; 
+  @media screen and (max-width: 767px) {
+    text-align: center;
+  }
 }
 
 .protectionContent > p {
@@ -651,6 +669,9 @@
 .reportSection {
   padding: 0 0 115px;
   background: #fbfafb;
+  @media screen and (max-width: 767px) {
+    padding: 0 0 30px;
+  }
 }
 
 .reportPanel {
@@ -673,6 +694,9 @@
   color: #a83268;
   background: #fff0f5;
   font-size: 24px;
+  @media screen and (max-width: 767px) {
+    margin: 0 auto;
+  }
 }
 
 .reportContent > span {
@@ -867,15 +891,17 @@
 /* Mobile */
 @media (max-width: 600px) {
   .hero {
-    padding: 65px 0 70px;
+    padding: 65px 0 0px;
   }
-
+  .heroContent {
+    text-align: center;
+  }
   .heroGrid {
     gap: 25px;
   }
 
   .heroTitle {
-    font-size: clamp(42px, 12vw, 58px);
+    font-size: clamp(40px, 12vw, 40px);
   }
 
   .heroDescription {
@@ -963,15 +989,16 @@
 
   .warningIntro {
     flex-direction: column;
+    text-align: center;
   }
 
   .protectionVisual {
-    min-height: 330px;
+    min-height: 170px;
   }
 
   .protectionCircle {
-    width: 250px;
-    height: 250px;
+    width: 160px;
+    height: 160px;
   }
 
   .protectionIcon {
@@ -1006,6 +1033,7 @@
   .reportPanel {
     grid-template-columns: 1fr;
     padding: 28px 22px;
+    text-align: center;
   }
 
   .reportActions {
@@ -1022,7 +1050,7 @@
   }
 
   .finalSection {
-    padding-bottom: 75px;
+    padding-bottom: 40px;
   }
 
   .finalCard {

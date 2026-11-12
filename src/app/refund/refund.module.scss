@@ -1,0 +1,379 @@
+.page {
+    min-height: 100vh;
+    background: #faf7f8;
+    padding: 35px 20px 60px;
+    color: #30232a;
+  }
+  
+  .container {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  
+  .backLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: #7e2648;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    margin-bottom: 28px;
+    transition: color 0.2s ease;
+  
+    &:hover {
+      color: #be5b77;
+    }
+  }
+  
+  .hero {
+    text-align: center;
+    padding: 48px 25px;
+    border-radius: 24px;
+    background: linear-gradient(135deg, #7e2648, #a74365);
+    color: #fff;
+    box-shadow: 0 15px 40px rgba(126, 38, 72, 0.15);
+  
+    h1 {
+      font-size: clamp(30px, 5vw, 43px);
+      line-height: 1.2;
+      margin: 16px 0;
+      font-weight: 750;
+      letter-spacing: -1px;
+    }
+  
+    p {
+      max-width: 650px;
+      margin: 0 auto;
+      color: rgba(255, 255, 255, 0.86);
+      font-size: 15px;
+      line-height: 1.8;
+    }
+  }
+  
+  .heroIcon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 17px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.15);
+    display: grid;
+    place-items: center;
+    font-size: 29px;
+  }
+  
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    font-weight: 700;
+    color: #f4cbd7;
+  }
+  
+  .updated {
+    display: inline-block;
+    margin-top: 22px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.72);
+  }
+  
+  .introCard {
+    display: flex;
+    align-items: flex-start;
+    gap: 17px;
+    margin: 30px 0;
+    padding: 24px;
+    border: 1px solid #f0dce3;
+    border-radius: 17px;
+    background: #fff;
+  
+    h2 {
+      font-size: 18px;
+      color: #7e2648;
+      margin: 0 0 8px;
+    }
+  
+    p {
+      margin: 0;
+      color: #76666e;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+  }
+  
+  .introIcon {
+    flex-shrink: 0;
+    color: #be5b77;
+    font-size: 25px;
+    margin-top: 2px;
+  }
+  
+  .content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .policySection {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 17px;
+    padding: 28px 24px;
+    background: #fff;
+    border: 1px solid #f1e7eb;
+    border-radius: 17px;
+  
+    h2 {
+      margin: 0 0 13px;
+      color: #51243a;
+      font-size: 20px;
+      font-weight: 700;
+    }
+  
+    p {
+      margin: 0 0 13px;
+      color: #74656c;
+      font-size: 14px;
+      line-height: 1.85;
+  
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  
+    ul {
+      padding-left: 20px;
+      margin: 12px 0 16px;
+  
+      li {
+        padding-left: 5px;
+        margin-bottom: 11px;
+        color: #74656c;
+        font-size: 14px;
+        line-height: 1.8;
+  
+        &::marker {
+          color: #be5b77;
+        }
+      }
+    }
+  }
+  
+  .sectionNumber {
+    width: 43px;
+    height: 43px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    background: #f9edf1;
+    color: #9c3c5d;
+    font-size: 13px;
+    font-weight: 800;
+  }
+  
+  .planGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 15px;
+    margin: 22px 0;
+  }
+  
+  .planCard {
+    padding: 22px;
+    border-radius: 15px;
+    background: #fcf7f9;
+    border: 1px solid #f0dce3;
+  
+    h3 {
+      color: #51243a;
+      font-size: 16px;
+      margin: 13px 0 8px;
+    }
+  
+    strong {
+      display: block;
+      font-size: 25px;
+      color: #8e3153;
+      margin-bottom: 5px;
+    }
+  
+    span {
+      color: #81717a;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+  }
+  
+  .planIcon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: #f2dce5;
+    color: #8e3153;
+    font-size: 19px;
+  }
+  
+  .requestCard {
+    margin-top: 20px;
+    padding: 22px;
+    border-radius: 15px;
+    background: #fcf7f9;
+    border: 1px solid #f0dce3;
+  
+    h3 {
+      color: #51243a;
+      font-size: 15px;
+      margin: 0 0 17px;
+    }
+  }
+  
+  .requestList {
+    list-style: none;
+    padding: 0 !important;
+    margin: 0 0 20px !important;
+  
+    li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 0 !important;
+      margin-bottom: 12px !important;
+  
+      svg {
+        flex-shrink: 0;
+        color: #a44364;
+        margin-top: 3px;
+      }
+    }
+  }
+  
+  .contactButton,
+  .footerButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 22px;
+    min-height: 44px;
+    border-radius: 10px;
+    background: #7e2648;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 650;
+    text-decoration: none;
+    transition: background 0.2s ease, transform 0.2s ease;
+  
+    &:hover {
+      background: #a74365;
+      transform: translateY(-2px);
+    }
+  }
+  
+  .infoRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    padding: 17px;
+    margin: 15px 0;
+    border-radius: 13px;
+    background: #fcf7f9;
+  
+    svg {
+      flex-shrink: 0;
+      margin-top: 3px;
+      color: #a44364;
+      font-size: 20px;
+    }
+  
+    p {
+      margin: 0;
+    }
+  }
+  
+  .footerCard {
+    text-align: center;
+    margin-top: 30px;
+    padding: 38px 25px;
+    background: #fff;
+    border: 1px solid #f0dce3;
+    border-radius: 20px;
+  
+    h2 {
+      color: #51243a;
+      font-size: 23px;
+      margin: 14px 0 9px;
+    }
+  
+    p {
+      max-width: 530px;
+      margin: 0 auto 20px;
+      color: #81717a;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+  }
+  
+  .footerIcon {
+    width: 54px;
+    height: 54px;
+    margin: 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: 17px;
+    background: #f9edf1;
+    color: #8e3153;
+    font-size: 24px;
+  }
+  
+  .footer {
+    text-align: center;
+    padding-top: 28px;
+    color: #a08f97;
+    font-size: 12px;
+  }
+  
+  @media (max-width: 650px) {
+    .page {
+      padding: 22px 14px 40px;
+    }
+  
+    .hero {
+      padding: 38px 19px;
+      border-radius: 19px;
+  
+      h1 {
+        font-size: 30px;
+      }
+  
+      p {
+        font-size: 14px;
+      }
+    }
+  
+    .introCard {
+      padding: 19px;
+    }
+  
+    .policySection {
+      grid-template-columns: 1fr;
+      gap: 13px;
+      padding: 22px 18px;
+  
+      h2 {
+        font-size: 18px;
+      }
+    }
+  
+    .planGrid {
+      grid-template-columns: 1fr;
+    }
+  
+    .planCard {
+      padding: 19px;
+    }
+  
+    .footerCard {
+      padding: 30px 18px;
+    }
+  }

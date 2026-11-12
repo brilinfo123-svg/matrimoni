@@ -326,24 +326,6 @@ export default function SafetyPage() {
                   </div>
                 ))}
               </div>
-
-              <div className={styles.protectionActions}>
-                <Link
-                  href="/dashboard/settings/privacy"
-                  className={styles.outlineButton}
-                >
-                  <FiLock aria-hidden="true" />
-                  <span>Privacy settings</span>
-                </Link>
-
-                <Link
-                  href="/contact"
-                  className={styles.textButton}
-                >
-                  Get help
-                  <FiArrowRight aria-hidden="true" />
-                </Link>
-              </div>
             </div>
           </div>
         </div>
@@ -360,15 +342,8 @@ export default function SafetyPage() {
               <span>Something doesn't feel right?</span>
 
               <h2>
-                You can always block or report
-                <span> an unwanted interaction.</span>
+              You can always Contact Us
               </h2>
-
-              <p>
-                If another member makes you uncomfortable or appears
-                suspicious, use the available controls and step away
-                from the conversation.
-              </p>
             </div>
 
             <div className={styles.reportActions}>
