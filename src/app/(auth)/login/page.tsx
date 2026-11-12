@@ -311,6 +311,10 @@ export default function LoginPage() {
        * HTTP-only session cookie is available
        * when the destination page loads.
        */
+     // Notify Header that login was successful
+      window.dispatchEvent(new Event("auth-change"));
+
+      // Redirect after login
       window.location.assign(redirectTo);
     } catch (error) {
       console.error(

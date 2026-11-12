@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -18,6 +19,14 @@ import styles from "./search.module.scss";
 import ProfileCard, {
   type Profile,
 } from "@/components/ProfileCard/index";
+
+// Additional database fields used by filters
+type SearchProfile = Profile & {
+  state?: string;
+  city?: string;
+  religion?: string;
+  cast?: string;
+};
 
 function FilterSelect({
   label,
@@ -68,6 +77,7 @@ function getAgeRange(value: string) {
     max: Number(match[2]),
   };
 }
+
 function formatPremiumRemaining(milliseconds: number) {
   if (milliseconds <= 0) {
     return "Premium expired";
@@ -82,6 +92,28 @@ function formatPremiumRemaining(milliseconds: number) {
 
   return `${days} Days ${hours} Hours ${minutes} Minutes ${seconds} Seconds`;
 }
+
+function uniqueSorted(values: (string | undefined | null)[]) {
+  return Array.from(
+    new Set(
+      values
+        .filter((value): value is string => Boolean(value?.trim()))
+        .map((value) => value.trim()),
+    ),
+  ).sort((a, b) => a.localeCompare(b));
+}
+
+function isAny(value: string) {
+  const normalized = value.trim().toLowerCase();
+
+  return (
+    !normalized ||
+    normalized === "any" ||
+    normalized === "all" ||
+    normalized.startsWith("any ")
+  );
+}
+
 type ContactBalance = {
   freeTotal: number;
   freeUsed: number;
@@ -93,12 +125,12 @@ type ContactBalance = {
   unlockedCount: number;
 };
 
-let profilesCache: Profile[] | null = null;
-let profilesRequest: Promise<Profile[]> | null = null;
+let profilesCache: SearchProfile[] | null = null;
+let profilesRequest: Promise<SearchProfile[]> | null = null;
 
 async function getCachedProfiles(
   forceRefresh = false,
-): Promise<Profile[]> {
+): Promise<SearchProfile[]> {
   if (!forceRefresh && profilesCache !== null) {
     return profilesCache;
   }
@@ -121,7 +153,7 @@ async function getCachedProfiles(
       );
     }
 
-    const users: Profile[] = Array.isArray(data.users)
+    const users: SearchProfile[] = Array.isArray(data.users)
       ? data.users
       : [];
 
@@ -146,7 +178,7 @@ export default function SearchPage() {
   // PROFILES
   // --------------------------------------------------
 
-  const [profiles, setProfiles] = useState<Profile[]>(
+  const [profiles, setProfiles] = useState<SearchProfile[]>(
     () => profilesCache ?? [],
   );
 
@@ -161,12 +193,20 @@ export default function SearchPage() {
   // --------------------------------------------------
 
   const [search, setSearch] = useState("");
+
+  const [state, setState] = useState("Any state");
   const [location, setLocation] = useState("Any location");
+
+  const [religion, setReligion] = useState("Any religion");
+  const [cast, setCast] = useState("Any cast");
+
   const [age, setAge] = useState("Any age");
   const [education, setEducation] = useState("Any education");
   const [profession, setProfession] = useState("Any profession");
   const [maritalStatus, setMaritalStatus] = useState("Any status");
+
   const [sort, setSort] = useState("Newest");
+
   const [showUnlockLoader, setShowUnlockLoader] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -177,16 +217,19 @@ export default function SearchPage() {
   // DYNAMIC CONTACT SYSTEM
   // --------------------------------------------------
 
-  const [contactBalance, setContactBalance] = useState<ContactBalance | null>(null);
+  const [contactBalance, setContactBalance] =
+    useState<ContactBalance | null>(null);
+
   const [currentTime, setCurrentTime] = useState(Date.now());
 
   useEffect(() => {
     const timer = window.setInterval(() => {
       setCurrentTime(Date.now());
     }, 1000);
-  
+
     return () => window.clearInterval(timer);
   }, []);
+
   const [unlockedContacts, setUnlockedContacts] = useState<string[]>([]);
 
   const [showContactPlans, setShowContactPlans] = useState(false);
@@ -195,9 +238,18 @@ export default function SearchPage() {
   const [planLoading, setPlanLoading] = useState(false);
 
   const premiumActive = contactBalance?.premiumActive ?? false;
-  const premiumRemaining = contactBalance?.premiumUntil ? new Date(contactBalance.premiumUntil).getTime() - currentTime: 0;
-  const premiumCountdown = formatPremiumRemaining(premiumRemaining,);
-  const contactsRemaining = premiumActive ? "Unlimited" : contactBalance? contactBalance.freeRemaining + contactBalance.contactCredits: "...";
+
+  const premiumRemaining = contactBalance?.premiumUntil
+    ? new Date(contactBalance.premiumUntil).getTime() - currentTime
+    : 0;
+
+  const premiumCountdown = formatPremiumRemaining(premiumRemaining);
+
+  const contactsRemaining = premiumActive
+    ? "Unlimited"
+    : contactBalance
+      ? contactBalance.freeRemaining + contactBalance.contactCredits
+      : "...";
 
   // --------------------------------------------------
   // LOAD CONTACT BALANCE + UNLOCKED PROFILES
@@ -326,7 +378,7 @@ export default function SearchPage() {
     profile: Profile,
   ): Promise<string | null> => {
     let loaderStartTime = 0;
-  
+
     try {
       const response = await fetch("/api/contacts/unlock", {
         method: "POST",
@@ -337,65 +389,61 @@ export default function SearchPage() {
           profileId: profile.id,
         }),
       });
-  
+
       const data = await response.json();
-  
-      // Limit khatam: direct Upgrade dialog, no loader
+
       if (response.status === 402) {
         await loadContactData();
         setShowContactPlans(true);
         return null;
       }
-  
+
       if (!response.ok || !data.success) {
         if (response.status === 401) {
           alert("Please login to unlock contact details.");
         } else {
           alert(data.message || "Unable to unlock contact details.");
         }
-  
+
         return null;
       }
-  
+
       const mobile = data.profile?.mobile;
-  
+
       if (!mobile) {
         alert("Contact number is not available for this profile.");
         return null;
       }
-  
-      // Successful unlock: show loader for minimum 2 seconds
+
       loaderStartTime = Date.now();
       setShowUnlockLoader(true);
-  
+
       setUnlockedContacts((current) =>
         current.includes(profile.id)
           ? current
           : [...current, profile.id],
       );
-  
+
       await loadContactData();
-  
+
       return String(mobile);
     } catch (error) {
       console.error("UNLOCK_CONTACT_ERROR:", error);
       alert("Something went wrong while unlocking this contact.");
       return null;
     } finally {
-      // Only wait and hide loader if it was actually started
       if (loaderStartTime > 0) {
         const elapsed = Date.now() - loaderStartTime;
         const remainingTime = Math.max(0, 2000 - elapsed);
-  
+
         await new Promise<void>((resolve) => {
           window.setTimeout(resolve, remainingTime);
         });
-  
+
         setShowUnlockLoader(false);
       }
     }
   };
-  
 
   // --------------------------------------------------
   // DEMO PLAN ACTIVATION
@@ -426,7 +474,6 @@ export default function SearchPage() {
         return;
       }
 
-      // Refresh MongoDB balance
       await loadContactData();
 
       setShowContactPlans(false);
@@ -457,50 +504,83 @@ export default function SearchPage() {
   // FILTER OPTIONS FROM DATABASE
   // --------------------------------------------------
 
+  // STATE OPTIONS
+  const stateOptions = useMemo(() => {
+    return [
+      "Any state",
+      ...uniqueSorted(profiles.map((profile) => profile.state)),
+    ];
+  }, [profiles]);
+
+  // CITY OPTIONS - DEPENDENT ON SELECTED STATE
   const locationOptions = useMemo(() => {
-    const locations = profiles
-      .map((profile) => profile.city)
-      .filter(Boolean);
+    const matchingProfiles = isAny(state)
+      ? profiles
+      : profiles.filter(
+          (profile) =>
+            profile.state?.trim().toLowerCase() ===
+            state.trim().toLowerCase(),
+        );
 
     return [
       "Any location",
-      ...Array.from(new Set(locations)).sort(),
+      ...uniqueSorted(
+        matchingProfiles.map((profile) => profile.city),
+      ),
+    ];
+  }, [profiles, state]);
+
+  // RELIGION OPTIONS
+  const religionOptions = useMemo(() => {
+    return [
+      "Any religion",
+      ...uniqueSorted(profiles.map((profile) => profile.religion)),
     ];
   }, [profiles]);
 
-  const educationOptions = useMemo(() => {
-    const values = profiles
-      .map((profile) => profile.education)
-      .filter(Boolean);
+  // CAST OPTIONS - DEPENDENT ON SELECTED RELIGION
+  const castOptions = useMemo(() => {
+    const matchingProfiles = isAny(religion)
+      ? profiles
+      : profiles.filter(
+          (profile) =>
+            profile.religion?.trim().toLowerCase() ===
+            religion.trim().toLowerCase(),
+        );
 
+    return [
+      "Any cast",
+      ...uniqueSorted(
+        matchingProfiles.map((profile) => profile.cast),
+      ),
+    ];
+  }, [profiles, religion]);
+
+  // EDUCATION OPTIONS
+  const educationOptions = useMemo(() => {
     return [
       "Any education",
-      ...Array.from(new Set(values)).sort(),
+      ...uniqueSorted(profiles.map((profile) => profile.education)),
     ];
   }, [profiles]);
 
+  // PROFESSION OPTIONS
   const professionOptions = useMemo(() => {
-    const values = profiles
-      .map((profile) => profile.profession)
-      .filter(Boolean);
-
     return [
       "Any profession",
-      ...Array.from(new Set(values)).sort(),
+      ...uniqueSorted(profiles.map((profile) => profile.profession)),
     ];
   }, [profiles]);
 
+  // MARITAL STATUS OPTIONS
   const maritalStatusOptions = useMemo(() => {
-    const values = profiles
-      .map((profile) => profile.maritalStatus)
-      .filter(Boolean);
-
     return [
       "Any status",
-      ...Array.from(new Set(values)).sort(),
+      ...uniqueSorted(profiles.map((profile) => profile.maritalStatus)),
     ];
   }, [profiles]);
 
+  // AGE OPTIONS
   const ageOptions = useMemo(() => {
     const ages = profiles
       .map((profile) => profile.age)
@@ -539,7 +619,7 @@ export default function SearchPage() {
   const filteredProfiles = useMemo(() => {
     let result = [...profiles];
 
-    // Search
+    // SEARCH
     if (search.trim()) {
       const query = search.toLowerCase().trim();
 
@@ -548,8 +628,11 @@ export default function SearchPage() {
           profile.name,
           profile.profession,
           profile.location,
+          profile.city,
+          profile.state,
           profile.education,
           profile.religion,
+          profile.cast,
           profile.motherTongue,
           profile.company,
           profile.college,
@@ -562,19 +645,48 @@ export default function SearchPage() {
       });
     }
 
-    // Location
-    if (location !== "Any location") {
+    // STATE
+    if (!isAny(state)) {
       result = result.filter(
-        (profile) => profile.city === location,
+        (profile) =>
+          profile.state?.trim().toLowerCase() ===
+          state.trim().toLowerCase(),
       );
     }
 
-    // Age
+    // CITY
+    if (!isAny(location)) {
+      result = result.filter(
+        (profile) =>
+          profile.city?.trim().toLowerCase() ===
+          location.trim().toLowerCase(),
+      );
+    }
+
+    // RELIGION
+    if (!isAny(religion)) {
+      result = result.filter(
+        (profile) =>
+          profile.religion?.trim().toLowerCase() ===
+          religion.trim().toLowerCase(),
+      );
+    }
+
+    // CAST
+    if (!isAny(cast)) {
+      result = result.filter(
+        (profile) =>
+          profile.cast?.trim().toLowerCase() ===
+          cast.trim().toLowerCase(),
+      );
+    }
+
+    // AGE
     const selectedAgeRange = getAgeRange(age);
 
     if (selectedAgeRange) {
       result = result.filter((profile) => {
-        if (profile.age === null) {
+        if (profile.age === null || profile.age === undefined) {
           return false;
         }
 
@@ -585,35 +697,35 @@ export default function SearchPage() {
       });
     }
 
-    // Education
-    if (education !== "Any education") {
+    // EDUCATION
+    if (!isAny(education)) {
       result = result.filter(
         (profile) => profile.education === education,
       );
     }
 
-    // Profession
-    if (profession !== "Any profession") {
+    // PROFESSION
+    if (!isAny(profession)) {
       result = result.filter(
         (profile) => profile.profession === profession,
       );
     }
 
-    // Marital status
-    if (maritalStatus !== "Any status") {
+    // MARITAL STATUS
+    if (!isAny(maritalStatus)) {
       result = result.filter(
         (profile) => profile.maritalStatus === maritalStatus,
       );
     }
 
-    // Verified profiles
+    // VERIFIED PROFILES
     if (verifiedOnly) {
       result = result.filter(
         (profile) => profile.verified,
       );
     }
 
-    // Sorting
+    // SORTING
     if (sort === "Newest") {
       result.sort((a, b) => {
         const dateA = a.createdAt
@@ -632,7 +744,10 @@ export default function SearchPage() {
   }, [
     profiles,
     search,
+    state,
     location,
+    religion,
+    cast,
     age,
     education,
     profession,
@@ -659,11 +774,18 @@ export default function SearchPage() {
 
   const resetFilters = () => {
     setSearch("");
+
+    setState("Any state");
     setLocation("Any location");
+
+    setReligion("Any religion");
+    setCast("Any cast");
+
     setAge("Any age");
     setEducation("Any education");
     setProfession("Any profession");
     setMaritalStatus("Any status");
+
     setSort("Newest");
     setVerifiedOnly(false);
   };
@@ -701,13 +823,13 @@ export default function SearchPage() {
                     : `${contactsRemaining} contacts remaining`}
                 </strong>
 
-                 {premiumActive && contactBalance?.premiumUntil && (
-                    <small className={styles.premiumCountdown}>
-                      {premiumCountdown === "Premium expired"
-                        ? "Premium expired"
-                        : `${premiumCountdown}`}
-                    </small>
-                  )}
+                {premiumActive && contactBalance?.premiumUntil && (
+                  <small className={styles.premiumCountdown}>
+                    {premiumCountdown === "Premium expired"
+                      ? "Premium expired"
+                      : premiumCountdown}
+                  </small>
+                )}
               </div>
 
               <button
@@ -797,11 +919,42 @@ export default function SearchPage() {
             </div>
 
             <div className={styles.filters}>
+              {/* STATE */}
               <FilterSelect
-                label="Location"
+                label="State"
+                value={state}
+                options={stateOptions}
+                onChange={(value) => {
+                  setState(value);
+                  setLocation("Any location");
+                }}
+              />
+
+              {/* CITY */}
+              <FilterSelect
+                label="City"
                 value={location}
                 options={locationOptions}
                 onChange={setLocation}
+              />
+
+              {/* RELIGION */}
+              <FilterSelect
+                label="Religion"
+                value={religion}
+                options={religionOptions}
+                onChange={(value) => {
+                  setReligion(value);
+                  setCast("Any cast");
+                }}
+              />
+
+              {/* CAST */}
+              <FilterSelect
+                label="Cast"
+                value={cast}
+                options={castOptions}
+                onChange={setCast}
               />
 
               <FilterSelect

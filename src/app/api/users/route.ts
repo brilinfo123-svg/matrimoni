@@ -338,25 +338,25 @@ export async function GET() {
     );
 
     // 10. Filter by matching city or state
-    const locationMatchedUsers = oppositeGenderUsers
-      .map((user) => {
-        const locationScore = getLocationScore(
-          {
-            state: currentUser.state,
-            city: currentUser.city,
-          },
-          {
-            state: user.state,
-            city: user.city,
-          },
-        );
+    // 10. Include ALL opposite-gender profiles.
+// Location is used only for ranking, not exclusion.
+const locationMatchedUsers = oppositeGenderUsers.map((user) => {
+  const locationScore = getLocationScore(
+    {
+      state: currentUser.state,
+      city: currentUser.city,
+    },
+    {
+      state: user.state,
+      city: user.city,
+    },
+  );
 
-        return {
-          user,
-          locationScore,
-        };
-      })
-      .filter(({ locationScore }) => locationScore > 0);
+  return {
+    user,
+    locationScore,
+  };
+});
 
     console.log(
       "DISCOVER LOCATION MATCHED:",

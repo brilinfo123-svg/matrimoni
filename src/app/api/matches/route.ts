@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import mongoose from "mongoose";
@@ -8,8 +7,8 @@ import { verifyAuthToken } from "@/lib/auth";
 
 type UserDocument = {
   _id: mongoose.Types.ObjectId;
-  mobile: string;
 
+  mobile?: string;
   isMobileVisible?: boolean;
   isActive?: boolean;
 
@@ -57,6 +56,7 @@ type UserDocument = {
   partnerState?: string;
   partnerCity?: string;
   partnerReligion?: string;
+  partnerCast?: string;
   partnerEducation?: string;
   partnerProfession?: string;
   partnerMaritalStatus?: string;
@@ -68,6 +68,7 @@ type UserDocument = {
     state?: string;
     city?: string;
     religion?: string;
+    cast?: string;
     education?: string;
     profession?: string;
     maritalStatus?: string;
@@ -80,6 +81,7 @@ type UserDocument = {
     state?: string;
     city?: string;
     religion?: string;
+    cast?: string;
     education?: string;
     profession?: string;
     maritalStatus?: string;
@@ -190,50 +192,6 @@ function getAboutYourself(user: UserDocument): string {
   return aboutYourself || about;
 }
 
-/* Match preference values */
-
-function valueMatches(
-  candidateValue: unknown,
-  preferredValue: unknown,
-): boolean | null {
-  if (
-    preferredValue === undefined ||
-    preferredValue === null ||
-    String(preferredValue).trim() === ""
-  ) {
-    return null;
-  }
-
-  const candidate = normalize(candidateValue);
-
-  if (!candidate) return false;
-
-  if (Array.isArray(preferredValue)) {
-    return preferredValue.some((value) => {
-      const preferred = normalize(value);
-
-      return (
-        Boolean(preferred) &&
-        (
-          candidate === preferred ||
-          candidate.includes(preferred) ||
-          preferred.includes(candidate)
-        )
-      );
-    });
-  }
-
-  const preferred = normalize(preferredValue);
-
-  if (!preferred) return null;
-
-  return (
-    candidate === preferred ||
-    candidate.includes(preferred) ||
-    preferred.includes(candidate)
-  );
-}
-
 /* Get partner preferences, with field-by-field fallbacks */
 
 function getPartnerPreferences(user: UserDocument) {
@@ -266,6 +224,11 @@ function getPartnerPreferences(user: UserDocument) {
       preferences.religion ??
       user.partnerReligion,
 
+    cast:
+      partner.cast ??
+      preferences.cast ??
+      user.partnerCast,
+
     education:
       partner.education ??
       preferences.education ??
@@ -288,7 +251,71 @@ function getPartnerPreferences(user: UserDocument) {
   };
 }
 
-/* State OR city must match */
+/* Match preference values */
+
+function valueMatches(
+  candidateValue: unknown,
+  preferredValue: unknown,
+): boolean | null {
+  if (
+    preferredValue === undefined ||
+    preferredValue === null ||
+    String(preferredValue).trim() === ""
+  ) {
+    return null;
+  }
+
+  // Any / All means no restriction
+  if (Array.isArray(preferredValue)) {
+    if (preferredValue.length === 0) return null;
+
+    const activePreferences = preferredValue
+      .map((value) => normalize(value))
+      .filter(Boolean);
+
+    if (
+      activePreferences.length === 0 ||
+      activePreferences.some((value) =>
+        ["any", "all", "any location", "any state", "any city"].includes(value),
+      )
+    ) {
+      return null;
+    }
+
+    const candidate = normalize(candidateValue);
+
+    if (!candidate) return false;
+
+    return activePreferences.some(
+      (preferred) =>
+        candidate === preferred ||
+        candidate.includes(preferred) ||
+        preferred.includes(candidate),
+    );
+  }
+
+  const preferred = normalize(preferredValue);
+
+  if (
+    ["any", "all", "any location", "any state", "any city"].includes(
+      preferred,
+    )
+  ) {
+    return null;
+  }
+
+  const candidate = normalize(candidateValue);
+
+  if (!candidate) return false;
+
+  return (
+    candidate === preferred ||
+    candidate.includes(preferred) ||
+    preferred.includes(candidate)
+  );
+}
+
+/* Match preferred state OR city */
 
 function matchesPreferredLocation(
   currentUser: UserDocument,
@@ -296,32 +323,23 @@ function matchesPreferredLocation(
 ): boolean {
   const preferences = getPartnerPreferences(currentUser);
 
-  const preferredState = preferences.state;
-  const preferredCity = preferences.city;
+  const stateMatch = valueMatches(
+    candidate.state,
+    preferences.state,
+  );
 
-  const hasStatePreference =
-    preferredState !== undefined &&
-    preferredState !== null &&
-    String(preferredState).trim() !== "";
+  const cityMatch = valueMatches(
+    candidate.city,
+    preferences.city,
+  );
 
-  const hasCityPreference =
-    preferredCity !== undefined &&
-    preferredCity !== null &&
-    String(preferredCity).trim() !== "";
-
-  if (!hasStatePreference && !hasCityPreference) {
+  // Both unrestricted: allow every location
+  if (stateMatch === null && cityMatch === null) {
     return true;
   }
 
-  const stateMatched = hasStatePreference
-    ? valueMatches(candidate.state, preferredState) === true
-    : false;
-
-  const cityMatched = hasCityPreference
-    ? valueMatches(candidate.city, preferredCity) === true
-    : false;
-
-  return stateMatched || cityMatched;
+  // State OR city must match
+  return stateMatch === true || cityMatch === true;
 }
 
 /* Calculate compatibility score */
@@ -343,7 +361,9 @@ function calculateCompatibility(
 
     totalWeight += weight;
 
-    if (matched) matchedWeight += weight;
+    if (matched) {
+      matchedWeight += weight;
+    }
   };
 
   /* Age: 30% */
@@ -351,7 +371,10 @@ function calculateCompatibility(
   const ageMin = preferences.ageMin;
   const ageMax = preferences.ageMax;
 
-  if (ageMin !== undefined || ageMax !== undefined) {
+  if (
+    (ageMin !== undefined && String(ageMin).trim() !== "") ||
+    (ageMax !== undefined && String(ageMax).trim() !== "")
+  ) {
     const candidateAge = calculateAge(candidate.dateOfBirth);
 
     if (candidateAge !== null) {
@@ -365,7 +388,12 @@ function calculateCompatibility(
           ? Number(ageMax)
           : 999;
 
-      addScore(30, candidateAge >= min && candidateAge <= max);
+      if (Number.isFinite(min) && Number.isFinite(max)) {
+        addScore(
+          30,
+          candidateAge >= min && candidateAge <= max,
+        );
+      }
     }
   }
 
@@ -383,11 +411,18 @@ function calculateCompatibility(
     valueMatches(candidate.city, preferences.city),
   );
 
-  /* Religion: 15% */
+  /* Religion: 10% */
 
   addScore(
-    15,
+    10,
     valueMatches(candidate.religion, preferences.religion),
+  );
+
+  /* Caste: 5% */
+
+  addScore(
+    5,
+    valueMatches(candidate.cast, preferences.cast),
   );
 
   /* Education: 10% */
@@ -486,11 +521,18 @@ export async function GET() {
 
     const usersCollection = db.collection<UserDocument>("users");
 
+    const currentUserId = new mongoose.Types.ObjectId(userId);
+
     /* 5. Get current user */
 
-    const currentUser = await usersCollection.findOne({
-      _id: new mongoose.Types.ObjectId(userId),
-    });
+    const currentUser = await usersCollection.findOne(
+      { _id: currentUserId },
+      {
+        projection: {
+          password: 0,
+        },
+      },
+    );
 
     if (!currentUser) {
       return NextResponse.json(
@@ -517,22 +559,33 @@ export async function GET() {
 
     /* 7. Find opposite gender */
 
-    const targetGender = currentGender === "male" ? "female" : "male";
+    const targetGender =
+      currentGender === "male" ? "female" : "male";
 
     /* 8. Get active users, newest first */
 
     const allCandidates = await usersCollection
-      .find({
-        _id: { $ne: new mongoose.Types.ObjectId(userId) },
-        isActive: true,
-      })
+      .find(
+        {
+          _id: { $ne: currentUserId },
+          isActive: true,
+        },
+        {
+          projection: {
+            password: 0,
+            email: 0,
+            mobile: 0,
+          },
+        },
+      )
       .sort({ createdAt: -1 })
       .toArray();
 
     /* 9. Filter by opposite gender */
 
     const candidates = allCandidates.filter(
-      (candidate) => normalizeGender(candidate.gender) === targetGender,
+      (candidate) =>
+        normalizeGender(candidate.gender) === targetGender,
     );
 
     /* 10. Filter by preferred state OR city */
@@ -546,7 +599,10 @@ export async function GET() {
 
     const profiles = locationMatchedCandidates
       .map((user) => {
-        const compatibility = calculateCompatibility(currentUser, user);
+        const compatibility = calculateCompatibility(
+          currentUser,
+          user,
+        );
 
         const firstName = user.firstName || "";
         const lastName = user.lastName || "";
@@ -560,24 +616,29 @@ export async function GET() {
           .filter(Boolean)
           .join(", ");
 
-        const mobileVisible = user.isMobileVisible === true;
-
         const aboutYourself = getAboutYourself(user);
 
         return {
           id: user._id.toString(),
+
           name,
           age: age ?? 0,
+
           location: location || "Location not added",
+          city: user.city || "",
+          state: user.state || "",
 
           profession: user.profession || "",
           education: user.education || "",
           cast: user.cast?.trim() || "",
+          religion: user.religion || "",
+          motherTongue: user.motherTongue || "",
 
           compatibility,
 
           initials: getInitials(firstName, lastName),
           photo: getPhoto(user.photos),
+
           gender: normalizeGender(user.gender) || "",
 
           verified:
@@ -589,8 +650,9 @@ export async function GET() {
           height: user.height || "Not specified",
           maritalStatus: user.maritalStatus || "Not specified",
 
-          mobile: mobileVisible ? String(user.mobile || "") : "",
-          isMobileVisible: mobileVisible,
+          // Mobile number is available only through the contact unlock API.
+          mobile: "",
+          isMobileVisible: user.isMobileVisible === true,
 
           newMatch: user.createdAt
             ? Date.now() -
@@ -598,10 +660,7 @@ export async function GET() {
               1000 * 60 * 60 * 24 * 7
             : false,
 
-          /* Actual About Yourself value from MongoDB */
           aboutYourself,
-
-          /* Keep about consistent with the actual introduction */
           about: aboutYourself,
 
           religionabout: user.religion || "",
@@ -611,17 +670,35 @@ export async function GET() {
       })
 
       /* 12. Keep matches with at least 30% compatibility */
+
       .filter((profile) => profile.compatibility >= 30)
 
       /* 13. Highest compatibility first */
+
       .sort((a, b) => b.compatibility - a.compatibility);
+
+    console.log("MATCHES SUMMARY:", {
+      currentUser: currentUserId.toString(),
+      currentGender,
+      targetGender,
+      activeOppositeGenderCandidates: candidates.length,
+      locationMatchedCandidates: locationMatchedCandidates.length,
+      finalMatches: profiles.length,
+    });
 
     /* 14. Return response */
 
-    return NextResponse.json({
-      success: true,
-      users: profiles,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        users: profiles,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      },
+    );
   } catch (error) {
     console.error("GET /api/matches error:", error);
 
