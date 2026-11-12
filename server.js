@@ -446,7 +446,7 @@ const io = new Server(httpServer, {
 
   cors: {
     origin: [
-      "https://matrimoni-two.vercel.app",
+      "https://evermilan.vercel.app/",
       "http://localhost:3000",
       "http://127.0.0.1:3000",
     ],
