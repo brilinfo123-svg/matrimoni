@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   FiArrowLeft,
   FiHeart,
@@ -139,7 +140,54 @@ export default function AboutPage() {
           </Link>
         </div>
       </section>
+      <section className={styles.founderSection}>
+    <div className={styles.founderImageWrapper}>
+      <Image
+        src="/public/images/profiles/akashverma.jpg"
+        alt="Akash Verma - Founder and CEO of EverMilan"
+        width={420} 
+        height={480}
+        className={styles.founderImage}
+      />
+      
+    </div>
 
+  <div className={styles.founderContent}>
+    <span className={styles.sectionLabel}>MEET OUR FOUNDER</span>
+
+    <h2>
+      A message from our <span>Founder & CEO</span>
+    </h2>
+
+    <h3>Akash Verma</h3>
+
+    <span className={styles.founderRole}>
+      Founder & Chief Executive Officer, EverMilan
+    </span>
+
+    <p>
+      I believe that finding the right life partner is one of the
+      most meaningful journeys in life. Every person deserves the
+      opportunity to find someone who understands their dreams,
+      respects their values, and stands beside them through life.
+    </p>
+
+    <p>
+      With EverMilan, my vision is to create a trusted and welcoming
+      matrimonial platform where meaningful relationships can begin
+      and beautiful stories can unfold.
+    </p>
+
+    <p>
+      Thank you for being part of the EverMilan journey.
+    </p>
+
+    <div className={styles.founderSignature}>
+      <FiHeart />
+      **Akash Verma**
+    </div>
+  </div>
+      </section>
       <section className={styles.valuesSection}>
         <div className={styles.sectionHeader}>
           <span className={styles.sectionLabel}>WHAT MATTERS TO US</span>
@@ -190,7 +238,6 @@ export default function AboutPage() {
           ))}
         </div>
       </section>
-
       <section className={styles.promiseSection}>
         <div className={styles.promiseIcon}>
           <FiShield />
