@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -6,6 +7,16 @@ import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 import PasswordReset from "@/models/PasswordReset";
 import { sendPasswordResetOtp } from "@/lib/email";
+
+import {
+  handleCorsOptions,
+  addCorsHeaders,
+} from "@/lib/cors";
+
+// Handle browser CORS preflight request.
+export async function OPTIONS(request: Request) {
+  return handleCorsOptions(request);
+}
 
 export async function POST(request: Request) {
   try {
@@ -16,12 +27,15 @@ export async function POST(request: Request) {
       .toLowerCase();
 
     if (!email) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Email address is required.",
-        },
-        { status: 400 },
+      return addCorsHeaders(
+        request,
+        NextResponse.json(
+          {
+            success: false,
+            message: "Email address is required.",
+          },
+          { status: 400 },
+        ),
       );
     }
 
@@ -33,22 +47,28 @@ export async function POST(request: Request) {
 
     // Don't reveal whether email exists.
     if (!user) {
-      return NextResponse.json({
-        success: true,
-        message:
-          "If an account exists with this email, a verification code has been sent.",
-      });
+      return addCorsHeaders(
+        request,
+        NextResponse.json({
+          success: true,
+          message:
+            "If an account exists with this email, a verification code has been sent.",
+        }),
+      );
     }
 
     if (user.isActive === false) {
-      return NextResponse.json({
-        success: true,
-        message:
-          "If an account exists with this email, a verification code has been sent.",
-      });
+      return addCorsHeaders(
+        request,
+        NextResponse.json({
+          success: true,
+          message:
+            "If an account exists with this email, a verification code has been sent.",
+        }),
+      );
     }
 
-    // Generate 6 digit OTP
+    // Generate 6 digit OTP.
     const otp = crypto
       .randomInt(100000, 1000000)
       .toString();
@@ -79,24 +99,30 @@ export async function POST(request: Request) {
       otp,
     );
 
-    return NextResponse.json({
-      success: true,
-      message:
-        "If an account exists with this email, a verification code has been sent.",
-    });
+    return addCorsHeaders(
+      request,
+      NextResponse.json({
+        success: true,
+        message:
+          "If an account exists with this email, a verification code has been sent.",
+      }),
+    );
   } catch (error) {
     console.error(
       "FORGOT_PASSWORD_API_ERROR:",
       error,
     );
 
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          "Unable to process your request.",
-      },
-      { status: 500 },
+    return addCorsHeaders(
+      request,
+      NextResponse.json(
+        {
+          success: false,
+          message:
+            "Unable to process your request.",
+        },
+        { status: 500 },
+      ),
     );
   }
 }

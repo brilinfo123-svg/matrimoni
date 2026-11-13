@@ -5,6 +5,15 @@ import { connectDB } from "@/lib/mongodb";
 import User from "@/models/User";
 import PasswordReset from "@/models/PasswordReset";
 
+import {
+  handleCorsOptions,
+  addCorsHeaders,
+} from "@/lib/cors";
+
+export async function OPTIONS(request: Request) {
+  return handleCorsOptions(request);
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -17,24 +26,30 @@ export async function POST(request: Request) {
     const password = body.password;
 
     if (!email || !otp || !password) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Email, verification code and password are required.",
-        },
-        { status: 400 },
+      return addCorsHeaders(
+        request,
+        NextResponse.json(
+          {
+            success: false,
+            message:
+              "Email, verification code and password are required.",
+          },
+          { status: 400 },
+        ),
       );
     }
 
     if (password.length < 8) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Password must be at least 8 characters.",
-        },
-        { status: 400 },
+      return addCorsHeaders(
+        request,
+        NextResponse.json(
+          {
+            success: false,
+            message:
+              "Password must be at least 8 characters.",
+          },
+          { status: 400 },
+        ),
       );
     }
 
@@ -46,24 +61,30 @@ export async function POST(request: Request) {
       });
 
     if (!resetRequest) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Password reset request is invalid or expired.",
-        },
-        { status: 400 },
+      return addCorsHeaders(
+        request,
+        NextResponse.json(
+          {
+            success: false,
+            message:
+              "Password reset request is invalid or expired.",
+          },
+          { status: 400 },
+        ),
       );
     }
 
     if (!resetRequest.verified) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Please verify the OTP first.",
-        },
-        { status: 400 },
+      return addCorsHeaders(
+        request,
+        NextResponse.json(
+          {
+            success: false,
+            message:
+              "Please verify the OTP first.",
+          },
+          { status: 400 },
+        ),
       );
     }
 
@@ -75,13 +96,16 @@ export async function POST(request: Request) {
         _id: resetRequest._id,
       });
 
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Password reset request has expired.",
-        },
-        { status: 400 },
+      return addCorsHeaders(
+        request,
+        NextResponse.json(
+          {
+            success: false,
+            message:
+              "Password reset request has expired.",
+          },
+          { status: 400 },
+        ),
       );
     }
 
@@ -90,13 +114,16 @@ export async function POST(request: Request) {
     }).select("+password");
 
     if (!user) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Unable to reset password.",
-        },
-        { status: 400 },
+      return addCorsHeaders(
+        request,
+        NextResponse.json(
+          {
+            success: false,
+            message:
+              "Unable to reset password.",
+          },
+          { status: 400 },
+        ),
       );
     }
 
@@ -113,24 +140,30 @@ export async function POST(request: Request) {
       _id: resetRequest._id,
     });
 
-    return NextResponse.json({
-      success: true,
-      message:
-        "Password has been changed successfully.",
-    });
+    return addCorsHeaders(
+      request,
+      NextResponse.json({
+        success: true,
+        message:
+          "Password has been changed successfully.",
+      }),
+    );
   } catch (error) {
     console.error(
       "RESET_PASSWORD_ERROR:",
       error,
     );
 
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          "Unable to reset your password.",
-      },
-      { status: 500 },
+    return addCorsHeaders(
+      request,
+      NextResponse.json(
+        {
+          success: false,
+          message:
+            "Unable to reset your password.",
+        },
+        { status: 500 },
+      ),
     );
   }
 }

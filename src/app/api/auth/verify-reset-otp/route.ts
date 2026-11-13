@@ -1,8 +1,18 @@
+
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
 import { connectDB } from "@/lib/mongodb";
 import PasswordReset from "@/models/PasswordReset";
+
+import {
+  handleCorsOptions,
+  addCorsHeaders,
+} from "@/lib/cors";
+
+export async function OPTIONS(request: Request) {
+  return handleCorsOptions(request);
+}
 
 export async function POST(request: Request) {
   try {
@@ -12,17 +22,19 @@ export async function POST(request: Request) {
       ?.trim()
       .toLowerCase();
 
-    const otp = body.otp
-      ?.trim();
+    const otp = body.otp?.trim();
 
     if (!email || !otp) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Email and verification code are required.",
-        },
-        { status: 400 },
+      return addCorsHeaders(
+        request,
+        NextResponse.json(
+          {
+            success: false,
+            message:
+              "Email and verification code are required.",
+          },
+          { status: 400 },
+        ),
       );
     }
 
@@ -34,13 +46,16 @@ export async function POST(request: Request) {
       });
 
     if (!resetRequest) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Verification code is invalid or expired.",
-        },
-        { status: 400 },
+      return addCorsHeaders(
+        request,
+        NextResponse.json(
+          {
+            success: false,
+            message:
+              "Verification code is invalid or expired.",
+          },
+          { status: 400 },
+        ),
       );
     }
 
@@ -52,24 +67,30 @@ export async function POST(request: Request) {
         _id: resetRequest._id,
       });
 
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Verification code has expired.",
-        },
-        { status: 400 },
+      return addCorsHeaders(
+        request,
+        NextResponse.json(
+          {
+            success: false,
+            message:
+              "Verification code has expired.",
+          },
+          { status: 400 },
+        ),
       );
     }
 
     if (resetRequest.attempts >= 5) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Too many incorrect attempts. Please request a new code.",
-        },
-        { status: 429 },
+      return addCorsHeaders(
+        request,
+        NextResponse.json(
+          {
+            success: false,
+            message:
+              "Too many incorrect attempts. Please request a new code.",
+          },
+          { status: 429 },
+        ),
       );
     }
 
@@ -82,13 +103,16 @@ export async function POST(request: Request) {
       resetRequest.attempts += 1;
       await resetRequest.save();
 
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Invalid verification code.",
-        },
-        { status: 400 },
+      return addCorsHeaders(
+        request,
+        NextResponse.json(
+          {
+            success: false,
+            message:
+              "Invalid verification code.",
+          },
+          { status: 400 },
+        ),
       );
     }
 
@@ -96,24 +120,30 @@ export async function POST(request: Request) {
 
     await resetRequest.save();
 
-    return NextResponse.json({
-      success: true,
-      message:
-        "Verification code verified successfully.",
-    });
+    return addCorsHeaders(
+      request,
+      NextResponse.json({
+        success: true,
+        message:
+          "Verification code verified successfully.",
+      }),
+    );
   } catch (error) {
     console.error(
       "VERIFY_RESET_OTP_ERROR:",
       error,
     );
 
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          "Unable to verify the code.",
-      },
-      { status: 500 },
+    return addCorsHeaders(
+      request,
+      NextResponse.json(
+        {
+          success: false,
+          message:
+            "Unable to verify the code.",
+        },
+        { status: 500 },
+      ),
     );
   }
 }
