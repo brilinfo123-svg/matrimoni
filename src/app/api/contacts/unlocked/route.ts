@@ -6,12 +6,58 @@ import User from "@/models/User";
 
 // Allowed Expo Web origins.
 // Production origins can be added using EXPO_WEB_ORIGINS.
+
 function getAllowedOrigins() {
   return (process.env.EXPO_WEB_ORIGINS || "")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
 }
+
+function getCorsHeaders(request: Request) {
+  const origin = request.headers.get("origin") || "";
+  const allowedOrigins = getAllowedOrigins();
+
+  let isLocalhost = false;
+
+  try {
+    const url = new URL(origin);
+
+    isLocalhost =
+      url.protocol === "http:" &&
+      ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+  } catch {
+    isLocalhost = false;
+  }
+
+  const originAllowed =
+    !origin ||
+    allowedOrigins.includes(origin) ||
+    isLocalhost;
+
+  const headers = new Headers();
+
+  if (origin && originAllowed) {
+    headers.set("Access-Control-Allow-Origin", origin);
+    headers.set("Access-Control-Allow-Credentials", "true");
+    headers.set("Vary", "Origin");
+  }
+
+  headers.set(
+    "Access-Control-Allow-Methods",
+    "GET, POST, DELETE, OPTIONS"
+  );
+
+  headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, Accept, Cache-Control"
+  );
+
+  headers.set("Access-Control-Max-Age", "86400");
+
+  return headers;
+}
+
 
 function getCorsHeaders(request: Request) {
   const origin = request.headers.get("origin") || "";
