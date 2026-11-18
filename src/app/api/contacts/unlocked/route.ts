@@ -59,46 +59,7 @@ function getCorsHeaders(request: Request) {
 }
 
 
-function getCorsHeaders(request: Request) {
-  const origin = request.headers.get("origin") || "";
-
-  const allowedOrigins = getAllowedOrigins();
-
-  // Allow localhost on any port for Expo development.
-  let isLocalhost = false;
-
-  try {
-    const url = new URL(origin);
-
-    isLocalhost =
-      url.protocol === "http:" &&
-      ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
-  } catch {
-    isLocalhost = false;
-  }
-
-  const originAllowed =
-    !origin ||
-    allowedOrigins.includes(origin) ||
-    isLocalhost;
-
-  const headers = new Headers();
-
-  if (origin && originAllowed) {
-    headers.set("Access-Control-Allow-Origin", origin);
-    headers.set("Access-Control-Allow-Credentials", "true");
-    headers.set("Vary", "Origin");
-  }
-
-  headers.set("Access-Control-Allow-Methods", "GET, DELETE, OPTIONS");
-  headers.set(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, Accept"
-  );
-  headers.set("Access-Control-Max-Age", "86400");
-
-  return headers;
-}
+// Removed duplicate implementation of getCorsHeaders function.
 
 function corsResponse(response: NextResponse, request: Request) {
   const corsHeaders = getCorsHeaders(request);
